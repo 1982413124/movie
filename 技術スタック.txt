@@ -1,0 +1,5 @@
+フロントエンド : Next.js
+
+バックエンド : Flask
+
+データベース : PostgreSQL
