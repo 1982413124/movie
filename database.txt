@@ -1,0 +1,71 @@
+PostgreSQL
+
+構成
+-users
+ -
+ -
+ -
+
+-movies :映画テーブル
+ -id               :主キー ID
+ -title            :タイトル
+ -genre　　　　　　 :ジャンル
+ -duration_minutes :上映時間
+ -age_rating       :年齢制限
+ -synopsis         :あらすじ
+ -poster_image     :ポスター画像
+ -release_date     :公開日
+ -created_at       :作成日
+ -updated_at       :更新日
+
+-screenings
+ -id               :主キー
+ -movie_id         :FK (movies.id)
+ -theater_id       :FK (theaters.id)
+ -screening_date   :上映日
+ -start_time       :開始時間
+ -end_time         :終了時間
+ -screen_name      :スクリーン名 
+ -total_seats      :総座席数
+ -remaining_seats  :残席数
+ -created_at       :作成日
+
+-theaters
+ -id               :主キー
+ -theater_name     :映画館名
+ -created_at       :作成日
+
+-orders
+ -id               :主キー
+ -user_id          :FK (users.id)
+ -order_num        :注文番号
+ -pay_datetime     :購入日時
+ -total_price      :合計金額
+ -created_at       :作成日
+
+-order_details
+ -id               :主キー
+ -order_id         :FK (orders.id)
+ -screening_id     :FK (screenings.id)
+ -seat_num         :座席番号
+ -ticket_num       :チケット枚数
+ -price            :金額
+ -created_at       :作成日
+
+-seats
+ -id             :主キー
+ -screening_id   :FK (screenings.id)
+ -row_name       :行 (A〜H)
+ -col_num        :列 (1〜7)
+ -seat_label     :座席名 (例: A-1)
+ -is_reserved    :予約済みフラグ (boolean)
+ -created_at     :作成日
+
+-payments
+ -id               :主キー
+ -order_id         :Fk (orders.id)
+ -pay_method       :支払い方法
+ -pay_num          :決済番号
+ -pay_status       :決済状態(成功or失敗)
+ -paid_at          :決済日時
+ -created_at       :作成日
