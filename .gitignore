@@ -1,0 +1,149 @@
+# =====================
+# 動画・メディアファイル
+# =====================
+*.mp4
+*.mkv
+*.avi
+*.mov
+*.wmv
+*.flv
+*.webm
+*.m4v
+*.mpg
+*.mpeg
+*.ts
+*.mts
+*.m2ts
+*.vob
+*.3gp
+
+# 音声ファイル
+*.mp3
+*.aac
+*.wav
+*.flac
+*.ogg
+*.m4a
+*.wma
+*.ac3
+
+# 画像ファイル（大容量素材）
+*.psd
+*.psb
+*.ai
+*.xcf
+*.tif
+*.tiff
+*.bmp
+*.raw
+*.cr2
+*.nef
+*.arw
+
+# =====================
+# 編集プロジェクトファイル
+# =====================
+# Adobe Premiere Pro
+*.prproj
+*.prel
+# Adobe After Effects
+*.aep
+*.aepx
+# DaVinci Resolve
+*.drp
+# Final Cut Pro
+*.fcpbundle/
+# Kdenlive
+*.kdenlive
+
+# =====================
+# 機密情報・認証情報
+# =====================
+.env
+.env.*
+!.env.example
+secrets/
+credentials/
+*.pem
+*.key
+*.p12
+*.pfx
+*.cer
+
+# APIキー・設定ファイル
+config/local.*
+config/secrets.*
+
+# =====================
+# キャッシュ・一時ファイル
+# =====================
+.cache/
+tmp/
+temp/
+*.tmp
+*.bak
+*.swp
+*.swo
+*~
+
+# ログファイル
+logs/
+*.log
+
+# =====================
+# OSが生成するファイル
+# =====================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+.directory
+
+# =====================
+# エディタ・IDE
+# =====================
+.vscode/
+.idea/
+*.sublime-workspace
+*.suo
+*.user
+
+# =====================
+# ビルド・出力
+# =====================
+dist/
+build/
+output/
+export/
+render/
+
+# Node.js（スクリプトツール等）
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python（自動化スクリプト等）
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+
+# =====================
+# その他
+# =====================
+# サムネイル・プレビュー生成物
+thumbnails/
+previews/
+proxy/
