@@ -33,13 +33,13 @@ export default function Home() {
         <input
           type="text"
           placeholder="Search in Video"
-          className="w-96 p-3 border-2 border-black rounded-full"
+          className="w-96 rounded-full border-2 border-[var(--border-strong)] bg-[var(--surface-bg)] p-3 text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
         />
       </div>
 
       <div className="flex">
         {/* サイド */}
-        <aside className="w-64 p-6 bg-gray-300 min-h-screen">
+        <aside className="min-h-screen w-64 bg-[var(--surface-muted)] p-6 text-[var(--text-primary)]">
           <p className="mb-4">上映スケジュール</p>
           <p className="mb-4">映画一覧</p>
           <p className="mb-4">購入情報確認</p>
@@ -48,7 +48,7 @@ export default function Home() {
 
         {/* 映画一覧 */}
         <main className="flex-1 p-8">
-          <h1 className="text-4xl font-bold mb-10">注目映画</h1>
+          <h1 className="mb-10 text-4xl font-bold">注目映画</h1>
 
           <div className="grid grid-cols-3 gap-8">
             {movies.map((movie, index) => (

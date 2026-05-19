@@ -147,3 +147,8 @@ venv/
 thumbnails/
 previews/
 proxy/
+
+# CodeGraph
+.agents/
+.codegraph/
+skills-lock.json

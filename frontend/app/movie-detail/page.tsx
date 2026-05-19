@@ -1,30 +1,32 @@
 "use client";
 
+import Link from "next/link";
+
 import Header from "../components/Header";
 
 export default function MovieDetailPage() {
   return (
-    <div className="font-sans bg-gray-100 min-h-screen">
+    <div className="min-h-screen bg-[var(--page-bg)] font-sans text-[var(--text-primary)]">
       {/* ヘッダー */}
       <Header />
 
       {/* メイン */}
-      <main className="flex p-8 max-w-3xl mx-auto bg-white mt-8 rounded-lg shadow-md">
+      <main className="mx-auto mt-8 flex max-w-3xl rounded-lg bg-[var(--surface-bg)] p-8 shadow-md">
         {/* ポスター画像 */}
-        <div className="w-56 h-80 bg-gray-300 flex items-center justify-center text-sm text-gray-500 mr-8">
+        <div className="mr-8 flex h-80 w-56 items-center justify-center bg-[var(--surface-muted)] text-sm text-[var(--text-muted)]">
           ポスター画像
         </div>
         {/* 映画情報 */}
         <div className="flex-1">
-          <h1 className="text-2xl font-bold mb-1">映画タイトル</h1>
-          <div className="text-gray-500 mb-2">
+          <h1 className="mb-1 text-2xl font-bold">映画タイトル</h1>
+          <div className="mb-2 text-[var(--text-muted)]">
             サブタイトル（例：HOME COMING）
           </div>
           <div className="flex gap-2 mb-2">
-            <span className="border border-gray-500 rounded px-2 py-0.5 text-xs">
+            <span className="rounded border border-[var(--border-strong)] px-2 py-0.5 text-xs">
               ジャンル
             </span>
-            <span className="border border-gray-500 rounded px-2 py-0.5 text-xs">
+            <span className="rounded border border-[var(--border-strong)] px-2 py-0.5 text-xs">
               アクション
             </span>
           </div>
@@ -34,7 +36,7 @@ export default function MovieDetailPage() {
           </div>
           <div className="mb-4">
             <strong>あらすじ</strong>
-            <div className="text-sm text-gray-700 mt-1">
+            <div className="mt-1 text-sm text-[var(--text-primary)]">
               ここに映画のあらすじが入ります。ここに映画のあらすじが入ります。ここに映画のあらすじが入ります。
             </div>
           </div>
@@ -45,7 +47,7 @@ export default function MovieDetailPage() {
               {["11", "12", "13", "14", "15", "16"].map((day, idx) => (
                 <button
                   key={day}
-                  className={`px-3 py-2 rounded border border-gray-500 text-base ${idx === 0 ? "bg-gray-200 font-bold" : "bg-white"}`}
+                  className={`rounded border border-[var(--border-strong)] px-3 py-2 text-base ${idx === 0 ? "bg-[var(--surface-muted)] font-bold" : "bg-[var(--surface-bg)]"}`}
                 >
                   {day}
                 </button>
@@ -63,18 +65,21 @@ export default function MovieDetailPage() {
               ].map((slot, idx) => (
                 <button
                   key={slot.time}
-                  className={`px-4 py-2 rounded border border-gray-500 text-left ${idx === 0 ? "bg-cyan-100" : "bg-white"} ${slot.seats === "70/70" ? "text-gray-400" : "text-gray-900"}`}
+                  className={`rounded border px-4 py-2 text-left ${idx === 0 ? "border-[var(--selection-border)] bg-[var(--selection-bg)] text-[var(--selection-text)]" : "border-[var(--border-strong)] bg-[var(--surface-bg)]"} ${slot.seats === "70/70" ? "text-[var(--text-muted)]" : ""}`}
                 >
                   <div>{slot.time}</div>
-                  <div className="text-xs text-gray-500">{slot.seats} 席</div>
+                  <div className="text-xs text-[var(--text-muted)]">{slot.seats} 席</div>
                 </button>
               ))}
             </div>
           </div>
           {/* 座席選択ボタン */}
-          <button className="w-full py-3 bg-gray-700 text-white rounded-lg text-lg font-bold hover:bg-gray-800 transition-colors">
+          <Link
+            href="/seats"
+            className="block w-full rounded-lg bg-[var(--button-bg)] py-3 text-center text-lg font-bold text-[var(--button-text)] transition-colors hover:bg-[var(--button-hover)]"
+          >
             座席を選択する
-          </button>
+          </Link>
         </div>
       </main>
     </div>
