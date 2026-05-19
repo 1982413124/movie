@@ -1,65 +1,108 @@
 import Image from "next/image";
 
 export default function Home() {
+  const movies = [
+    {
+      title: "SPIDER MAN : HOME COMING",
+      rate: "9.5",
+      count: "1154",
+      image: "/images/man.jpg",
+    },
+    {
+      title: "godzilla",
+      rate: "7.2",
+      count: "133",
+      image: "/images/gozira.jpg",
+    },
+    {
+      title: "HARRY POTTER",
+      rate: "9.5",
+      count: "2590",
+      image: "/images/harry.jpg",
+    },
+  ];
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div className="min-h-screen bg-gray-200">
+      {/* ヘッダー */}
+      <header className="flex h-32 border-b-2 border-black bg-gray-400">
+        <div className="w-48 border-r-2 border-black flex items-center justify-center text-3xl font-bold">
+          HAL
+          <br />
+          CINEMA
+        </div>
+
+        <div className="flex flex-1">
+          <div className="flex-1 border-r-2 border-black flex flex-col items-center justify-center">
+            <div className="text-4xl">⌂</div>
+            ホーム
+          </div>
+
+          <div className="flex-1 border-r-2 border-black flex flex-col items-center justify-center">
+            <div className="text-4xl">🎬</div>
+            上映中
+          </div>
+
+          <div className="flex-1 border-r-2 border-black flex flex-col items-center justify-center">
+            <div className="text-4xl">⌕</div>
+            検索
+          </div>
+
+          <div className="flex-1 flex flex-col items-center justify-center">
+            <div className="text-4xl">◉</div>
+            マイページ
+          </div>
+        </div>
+      </header>
+
+      {/* 検索 */}
+      <div className="flex justify-center py-6">
+        <input
+          type="text"
+          placeholder="Search in Video"
+          className="w-96 p-3 border-2 border-black rounded-full"
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+      </div>
+
+      <div className="flex">
+        {/* サイド */}
+        <aside className="w-64 p-6 bg-gray-300 min-h-screen">
+          <p className="mb-4">上映スケジュール</p>
+          <p className="mb-4">映画一覧</p>
+          <p className="mb-4">購入情報確認</p>
+          <p className="mb-4">予約状況確認</p>
+          <p className="mb-4">キャンペーン情報</p>
+        </aside>
+
+        {/* 映画一覧 */}
+        <main className="flex-1 p-8">
+          <h1 className="text-4xl font-bold mb-10">注目映画</h1>
+
+          <div className="grid grid-cols-3 gap-8">
+            {movies.map((movie, index) => (
+              <div key={index} className="bg-white p-4 rounded-xl shadow-lg">
+                {/* 画像 */}
+                <Image
+                  src={movie.image}
+                  alt={movie.title}
+                  width={500}
+                  height={300}
+                  className="w-full h-80 object-cover rounded-lg mb-4"
+                />
+
+                {/* タイトル */}
+                <h2 className="font-bold text-lg">{movie.title}</h2>
+
+                <div className="flex gap-2 mt-2">
+                  <span>★</span>
+                  <span>{movie.rate}</span>
+                  <span>{movie.count}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </main>
+      </div>
     </div>
   );
 }
