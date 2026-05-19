@@ -72,22 +72,14 @@ function PaymentMethodButton({ isSelected, method, onSelect }) {
       className={[
         "min-h-24 rounded-lg border p-4 text-left transition-colors",
         isSelected
-          ? "border-[var(--selection-border)] bg-[var(--selection-bg)]"
+          ? "border-cyan-400 bg-cyan-50"
           : "border-gray-200 bg-white hover:bg-gray-50",
       ].join(" ")}
     >
-      <span
-        className={`block text-sm font-semibold ${
-          isSelected ? "text-[var(--selection-text)]" : "text-gray-800"
-        }`}
-      >
+      <span className="block text-sm font-semibold text-gray-800">
         {method.label}
       </span>
-      <span
-        className={`mt-2 block text-xs leading-5 ${
-          isSelected ? "text-[var(--selection-text)]" : "text-gray-500"
-        }`}
-      >
+      <span className="mt-2 block text-xs leading-5 text-gray-500">
         {method.description}
       </span>
     </button>

@@ -1,5 +1,4 @@
 import Image from "next/image";
-import Header from "./components/Header";
 
 export default function Home() {
   const movies = [
@@ -24,21 +23,50 @@ export default function Home() {
   ];
 
   return (
-    <div className="min-h-screen bg-[var(--page-bg)] text-[var(--text-primary)]">
-      <Header />
+    <div className="min-h-screen bg-gray-200">
+      {/* ヘッダー */}
+      <header className="flex h-32 border-b-2 border-black bg-gray-400">
+        <div className="flex w-48 items-center justify-center border-r-2 border-black text-3xl font-bold">
+          HAL
+          <br />
+          CINEMA
+        </div>
+
+        <div className="flex flex-1">
+          <div className="flex flex-1 flex-col items-center justify-center border-r-2 border-black">
+            <div className="text-4xl">⌂</div>
+            ホーム
+          </div>
+
+          <div className="flex flex-1 flex-col items-center justify-center border-r-2 border-black">
+            <div className="text-4xl">🎬</div>
+            上映中
+          </div>
+
+          <div className="flex flex-1 flex-col items-center justify-center border-r-2 border-black">
+            <div className="text-4xl">⌕</div>
+            検索
+          </div>
+
+          <div className="flex flex-1 flex-col items-center justify-center">
+            <div className="text-4xl">◉</div>
+            マイページ
+          </div>
+        </div>
+      </header>
 
       {/* 検索 */}
       <div className="flex justify-center py-6">
         <input
           type="text"
           placeholder="Search in Video"
-          className="w-96 rounded-full border-2 border-[var(--border-strong)] bg-[var(--surface-bg)] p-3 text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
+          className="w-96 rounded-full border-2 border-black p-3"
         />
       </div>
 
       <div className="flex">
         {/* サイド */}
-        <aside className="min-h-screen w-64 bg-[var(--surface-muted)] p-6 text-[var(--text-primary)]">
+        <aside className="min-h-screen w-64 bg-gray-300 p-6">
           <p className="mb-4">上映スケジュール</p>
           <p className="mb-4">映画一覧</p>
           <p className="mb-4">購入情報確認</p>
@@ -52,10 +80,7 @@ export default function Home() {
 
           <div className="grid grid-cols-3 gap-8">
             {movies.map((movie, index) => (
-              <div
-                key={index}
-                className="rounded-xl bg-[var(--surface-bg)] p-4 shadow-lg"
-              >
+              <div key={index} className="rounded-xl bg-white p-4 shadow-lg">
                 {/* 画像 */}
                 <Image
                   src={movie.image}

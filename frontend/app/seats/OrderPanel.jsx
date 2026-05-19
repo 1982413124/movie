@@ -87,7 +87,7 @@ function ScreeningButton({ isActive, onClick, screening }) {
       className={[
         "grid w-full grid-cols-[1fr_auto] items-center gap-3 rounded-lg border p-4 text-left transition-colors",
         isActive
-          ? "border-[var(--selection-border)] bg-[var(--selection-bg)] text-[var(--selection-text)]"
+          ? "border-cyan-400 bg-cyan-50"
           : "border-gray-200 bg-white hover:bg-gray-50",
       ].join(" ")}
     >
@@ -95,19 +95,11 @@ function ScreeningButton({ isActive, onClick, screening }) {
         <span className="block font-mono text-xl font-semibold">
           {screening.label}
         </span>
-        <span
-          className={`mt-1 block text-xs ${
-            isActive ? "text-[var(--selection-text)]" : "text-gray-500"
-          }`}
-        >
+        <span className="mt-1 block text-xs text-gray-500">
           {screening.screenName}
         </span>
       </span>
-      <span
-        className={`font-mono text-sm ${
-          isActive ? "text-[var(--selection-text)]" : "text-gray-700"
-        }`}
-      >
+      <span className="font-mono text-sm text-gray-700">
         {countAvailableSeats(screening.id)}席
       </span>
     </button>
