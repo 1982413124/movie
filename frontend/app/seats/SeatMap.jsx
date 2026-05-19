@@ -56,7 +56,10 @@ function SeatMapHeader({ selectedScreening }) {
       <div className="flex gap-4 text-xs text-gray-600">
         <LegendChip label="利用可能" className="border border-gray-300 bg-white" />
         <LegendChip label="予約済み" className="bg-gray-400" />
-        <LegendChip label="選択中" className="bg-cyan-100 ring-1 ring-cyan-400" />
+        <LegendChip
+          label="選択中"
+          className="bg-[var(--selection-bg)] ring-1 ring-[var(--selection-border)]"
+        />
       </div>
     </div>
   );
@@ -107,7 +110,7 @@ function SeatButton({ seat, isSelected, onSeatClick }) {
         isReserved
           ? "cursor-not-allowed border-gray-400 bg-gray-400 opacity-70"
           : isSelected
-            ? "border-cyan-400 bg-cyan-100 shadow-sm"
+            ? "border-[var(--selection-border)] bg-[var(--selection-bg)] shadow-sm"
             : "border-gray-300 bg-white hover:-translate-y-[1px] hover:bg-gray-100 active:translate-y-[1px]",
       ].join(" ")}
     >
