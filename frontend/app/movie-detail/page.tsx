@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import Header from "../components/Header";
 
 export default function MovieDetailPage() {
@@ -72,9 +74,12 @@ export default function MovieDetailPage() {
             </div>
           </div>
           {/* 座席選択ボタン */}
-          <button className="w-full py-3 bg-gray-700 text-white rounded-lg text-lg font-bold hover:bg-gray-800 transition-colors">
+          <Link
+            href="/seats"
+            className="block w-full rounded-lg bg-gray-700 py-3 text-center text-lg font-bold text-white transition-colors hover:bg-gray-800"
+          >
             座席を選択する
-          </button>
+          </Link>
         </div>
       </main>
     </div>
