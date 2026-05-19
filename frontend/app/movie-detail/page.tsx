@@ -1,17 +1,56 @@
 "use client";
 
+import { useState } from "react";
+import Header from "../components/Header";
 import Link from "next/link";
 
-import Header from "../components/Header";
+// サンプル上映日・上映時間データ
+const days = ["11", "12", "13", "14", "15", "16"];
+const timeTable: Record<string, { time: string; seats: string }[]> = {
+  "11": [
+    { time: "08:30 - 10:40", seats: "40/70" },
+    { time: "13:45 - 15:50", seats: "70/70" },
+    { time: "18:00 - 20:10", seats: "20/70" },
+  ],
+  "12": [
+    { time: "09:00 - 11:10", seats: "50/70" },
+    { time: "14:00 - 16:10", seats: "60/70" },
+  ],
+  "13": [
+    { time: "10:00 - 12:10", seats: "30/70" },
+    { time: "15:00 - 17:10", seats: "70/70" },
+  ],
+  "14": [
+    { time: "11:00 - 13:10", seats: "20/70" },
+    { time: "16:00 - 18:10", seats: "55/70" },
+  ],
+  "15": [
+    { time: "12:00 - 14:10", seats: "10/70" },
+    { time: "17:00 - 19:10", seats: "70/70" },
+  ],
+  "16": [
+    { time: "13:00 - 15:10", seats: "70/70" },
+    { time: "18:00 - 20:10", seats: "20/70" },
+  ],
+};
 
 export default function MovieDetailPage() {
+  const [selectedDay, setSelectedDay] = useState(days[0]);
+  const [selectedTime, setSelectedTime] = useState(timeTable[days[0]][0].time);
+
+  // 日付が変わったら時間もリセット
+  const handleDayClick = (day: string) => {
+    setSelectedDay(day);
+    setSelectedTime(timeTable[day][0].time);
+  };
+
   return (
     <div className="font-sans bg-gray-100 min-h-screen">
       {/* ヘッダー */}
       <Header />
 
       {/* メイン */}
-      <main className="flex p-8 max-w-3xl mx-auto bg-white mt-8 rounded-lg shadow-md">
+      <main className="flex p-12 max-w-5xl mx-auto bg-white mt-12 rounded-xl shadow-lg">
         {/* ポスター画像 */}
         <div className="w-56 h-80 bg-gray-300 flex items-center justify-center text-sm text-gray-500 mr-8">
           ポスター画像
@@ -44,10 +83,11 @@ export default function MovieDetailPage() {
           <div className="mb-3">
             <div className="font-bold mb-1">上映日を選択</div>
             <div className="flex gap-2">
-              {["11", "12", "13", "14", "15", "16"].map((day, idx) => (
+              {days.map((day) => (
                 <button
                   key={day}
-                  className={`px-3 py-2 rounded border border-gray-500 text-base ${idx === 0 ? "bg-gray-200 font-bold" : "bg-white"}`}
+                  className={`px-3 py-2 rounded border border-gray-500 text-base ${selectedDay === day ? "bg-gray-200 font-bold" : "bg-white"}`}
+                  onClick={() => handleDayClick(day)}
                 >
                   {day}
                 </button>
@@ -58,14 +98,12 @@ export default function MovieDetailPage() {
           <div className="mb-4">
             <div className="font-bold mb-1">上映時間を選択</div>
             <div className="flex gap-3">
-              {[
-                { time: "08:30 - 10:40", seats: "40/70" },
-                { time: "13:45 - 15:50", seats: "70/70" },
-                { time: "18:00 - 20:10", seats: "20/70" },
-              ].map((slot, idx) => (
+              {timeTable[selectedDay].map((slot) => (
                 <button
                   key={slot.time}
-                  className={`px-4 py-2 rounded border border-gray-500 text-left ${idx === 0 ? "bg-cyan-100" : "bg-white"} ${slot.seats === "70/70" ? "text-gray-400" : "text-gray-900"}`}
+                  className={`px-4 py-2 rounded border border-gray-500 text-left ${selectedTime === slot.time ? "bg-cyan-100 font-bold" : "bg-white"} ${slot.seats === "70/70" ? "text-gray-400" : "text-gray-900"}`}
+                  onClick={() => setSelectedTime(slot.time)}
+                  disabled={slot.seats === "70/70"}
                 >
                   <div>{slot.time}</div>
                   <div className="text-xs text-gray-500">{slot.seats} 席</div>
@@ -74,11 +112,10 @@ export default function MovieDetailPage() {
             </div>
           </div>
           {/* 座席選択ボタン */}
-          <Link
-            href="/seats"
-            className="block w-full rounded-lg bg-gray-700 py-3 text-center text-lg font-bold text-white transition-colors hover:bg-gray-800"
-          >
-            座席を選択する
+          <Link href="/seats">
+            <button className="w-full py-3 bg-gray-700 text-white rounded-lg text-lg font-bold hover:bg-gray-800 transition-colors">
+              座席を選択する
+            </button>
           </Link>
         </div>
       </main>
