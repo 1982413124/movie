@@ -26,29 +26,29 @@ export default function Home() {
     <div className="min-h-screen bg-gray-200">
       {/* ヘッダー */}
       <header className="flex h-32 border-b-2 border-black bg-gray-400">
-        <div className="w-48 border-r-2 border-black flex items-center justify-center text-3xl font-bold">
+        <div className="flex w-48 items-center justify-center border-r-2 border-black text-3xl font-bold">
           HAL
           <br />
           CINEMA
         </div>
 
         <div className="flex flex-1">
-          <div className="flex-1 border-r-2 border-black flex flex-col items-center justify-center">
+          <div className="flex flex-1 flex-col items-center justify-center border-r-2 border-black">
             <div className="text-4xl">⌂</div>
             ホーム
           </div>
 
-          <div className="flex-1 border-r-2 border-black flex flex-col items-center justify-center">
+          <div className="flex flex-1 flex-col items-center justify-center border-r-2 border-black">
             <div className="text-4xl">🎬</div>
             上映中
           </div>
 
-          <div className="flex-1 border-r-2 border-black flex flex-col items-center justify-center">
+          <div className="flex flex-1 flex-col items-center justify-center border-r-2 border-black">
             <div className="text-4xl">⌕</div>
             検索
           </div>
 
-          <div className="flex-1 flex flex-col items-center justify-center">
+          <div className="flex flex-1 flex-col items-center justify-center">
             <div className="text-4xl">◉</div>
             マイページ
           </div>
@@ -60,13 +60,13 @@ export default function Home() {
         <input
           type="text"
           placeholder="Search in Video"
-          className="w-96 p-3 border-2 border-black rounded-full"
+          className="w-96 rounded-full border-2 border-black p-3"
         />
       </div>
 
       <div className="flex">
         {/* サイド */}
-        <aside className="w-64 p-6 bg-gray-300 min-h-screen">
+        <aside className="min-h-screen w-64 bg-gray-300 p-6">
           <p className="mb-4">上映スケジュール</p>
           <p className="mb-4">映画一覧</p>
           <p className="mb-4">購入情報確認</p>
@@ -76,24 +76,24 @@ export default function Home() {
 
         {/* 映画一覧 */}
         <main className="flex-1 p-8">
-          <h1 className="text-4xl font-bold mb-10">注目映画</h1>
+          <h1 className="mb-10 text-4xl font-bold">注目映画</h1>
 
           <div className="grid grid-cols-3 gap-8">
             {movies.map((movie, index) => (
-              <div key={index} className="bg-white p-4 rounded-xl shadow-lg">
+              <div key={index} className="rounded-xl bg-white p-4 shadow-lg">
                 {/* 画像 */}
                 <Image
                   src={movie.image}
                   alt={movie.title}
                   width={500}
                   height={300}
-                  className="w-full h-80 object-cover rounded-lg mb-4"
+                  className="mb-4 h-80 w-full rounded-lg object-cover"
                 />
 
                 {/* タイトル */}
-                <h2 className="font-bold text-lg">{movie.title}</h2>
+                <h2 className="text-lg font-bold">{movie.title}</h2>
 
-                <div className="flex gap-2 mt-2">
+                <div className="mt-2 flex gap-2">
                   <span>★</span>
                   <span>{movie.rate}</span>
                   <span>{movie.count}</span>
