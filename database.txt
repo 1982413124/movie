@@ -1,13 +1,15 @@
 PostgreSQL
 
-構成
+構成(movie)
 -users
- -
- -
- -
+ -id               :主キー
+ -name             :ユーザー名
+ -email            :メールアドレス
+ -password         :パスワード(ハッシュ化する)
+ -created_at       :作成日
 
 -movies :映画テーブル
- -id               :主キー ID
+ -id               :主キー
  -title            :タイトル
  -genre　　　　　　 :ジャンル
  -duration_minutes :上映時間
@@ -53,13 +55,13 @@ PostgreSQL
  -created_at       :作成日
 
 -seats
- -id             :主キー
- -screening_id   :FK (screenings.id)
- -row_name       :行 (A〜H)
- -col_num        :列 (1〜7)
- -seat_label     :座席名 (例: A-1)
- -is_reserved    :予約済みフラグ (boolean)
- -created_at     :作成日
+ -id               :主キー
+ -screening_id     :FK (screenings.id)
+ -row_name         :行 (A〜H)
+ -col_num          :列 (1〜7)
+ -seat_label       :座席名 (例: A-1)
+ -is_reserved      :予約済みフラグ (boolean)
+ -created_at       :作成日
 
 -payments
  -id               :主キー
