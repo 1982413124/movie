@@ -72,7 +72,7 @@ function PaymentMethodButton({ isSelected, method, onSelect }) {
       className={[
         "min-h-24 rounded-lg border p-4 text-left transition-colors",
         isSelected
-          ? "border-[var(--selection-border)] bg-[var(--selection-bg)]"
+          ? "border-[var(--selection-border)] bg-[var(--selection-bg)] text-[var(--selection-text)]"
           : "border-gray-200 bg-white hover:bg-gray-50",
       ].join(" ")}
     >

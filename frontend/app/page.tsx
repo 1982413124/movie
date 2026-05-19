@@ -24,7 +24,7 @@ export default function Home() {
   ];
 
   return (
-    <div className="min-h-screen bg-[var(--page-bg)] text-[var(--text-primary)]">
+    <div className="min-h-screen bg-gray-200">
       <Header />
 
       {/* 検索 */}
@@ -32,13 +32,13 @@ export default function Home() {
         <input
           type="text"
           placeholder="Search in Video"
-          className="w-96 rounded-full border-2 border-[var(--border-strong)] bg-[var(--surface-bg)] p-3 text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
+          className="w-96 rounded-full border-2 border-black p-3"
         />
       </div>
 
       <div className="flex">
         {/* サイド */}
-        <aside className="min-h-screen w-64 bg-[var(--surface-muted)] p-6 text-[var(--text-primary)]">
+        <aside className="min-h-screen w-64 bg-gray-300 p-6">
           <p className="mb-4">上映スケジュール</p>
           <p className="mb-4">映画一覧</p>
           <p className="mb-4">購入情報確認</p>
@@ -52,10 +52,7 @@ export default function Home() {
 
           <div className="grid grid-cols-3 gap-8">
             {movies.map((movie, index) => (
-              <div
-                key={index}
-                className="rounded-xl bg-[var(--surface-bg)] p-4 shadow-lg"
-              >
+              <div key={index} className="rounded-xl bg-white p-4 shadow-lg">
                 {/* 画像 */}
                 <Image
                   src={movie.image}
