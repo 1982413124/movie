@@ -29,7 +29,7 @@ export default function Header() {
 
         {/* 上映中の作品 */}
         <Link
-          href="/movie-detail"
+          href="/movie-now"
           className="flex flex-1 flex-col items-center justify-center gap-2 py-4 transition-colors hover:bg-[var(--nav-hover)]"
         >
           <svg className="h-9 w-9" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
