@@ -3,7 +3,7 @@ import CompleteClient from "./CompleteClient";
 
 export default function CompletePage() {
   return (
-    <div className="min-h-screen bg-gray-100 font-sans">
+    <div className="min-h-screen bg-[var(--page-bg)] font-sans text-[var(--text-primary)]">
       <Header />
       <CompleteClient />
     </div>
