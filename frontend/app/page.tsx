@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Header from "./components/Header";
 
 export default function Home() {
   const movies = [
@@ -24,36 +25,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-200">
-      {/* ヘッダー */}
-      <header className="flex h-32 border-b-2 border-black bg-gray-400">
-        <div className="flex w-48 items-center justify-center border-r-2 border-black text-3xl font-bold">
-          HAL
-          <br />
-          CINEMA
-        </div>
-
-        <div className="flex flex-1">
-          <div className="flex flex-1 flex-col items-center justify-center border-r-2 border-black">
-            <div className="text-4xl">⌂</div>
-            ホーム
-          </div>
-
-          <div className="flex flex-1 flex-col items-center justify-center border-r-2 border-black">
-            <div className="text-4xl">🎬</div>
-            上映中
-          </div>
-
-          <div className="flex flex-1 flex-col items-center justify-center border-r-2 border-black">
-            <div className="text-4xl">⌕</div>
-            検索
-          </div>
-
-          <div className="flex flex-1 flex-col items-center justify-center">
-            <div className="text-4xl">◉</div>
-            マイページ
-          </div>
-        </div>
-      </header>
+      <Header />
 
       {/* 検索 */}
       <div className="flex justify-center py-6">
