@@ -3,7 +3,19 @@
 import Link from "next/link";
 import MainHeader from "./components/MainHeader";
 
+import { useEffect } from "react";
+import gsap from "gsap";
+
 export default function Home() {
+  useEffect(() => {
+    gsap.to(".login-button", {
+      backgroundColor: "#ff7b7b",
+      duration: 1.5,
+      repeat: -1,
+      yoyo: true,
+    });
+  }, []);
+
   const movies = [
     {
       title: "MOVIE TITLE",
@@ -47,15 +59,15 @@ export default function Home() {
 
       {/* 検索 */}
       <div className="flex justify-center items-center gap-5 py-6 bg-white border-b-2 border-black font-bold shadow-sm">
-        {" "}
         <input
           type="text"
           placeholder="Search in Video"
           className="w-[500px] rounded-full border-2 border-gray-400 bg-white px-5 py-3 text-black shadow-sm"
         />
+
         <Link
           href="/movie-login"
-          className="rounded-full bg-black px-8 py-3 text-white font-bold shadow-md transition hover:scale-105 hover:bg-gray-800"
+          className="login-button rounded-full bg-black px-8 py-3 text-white font-bold shadow-md transition hover:scale-105 hover:bg-gray-800"
         >
           新規登録・LOGIN
         </Link>
