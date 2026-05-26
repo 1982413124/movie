@@ -68,7 +68,9 @@ export default function MovieDetailPage() {
                   className={`rounded border px-4 py-2 text-left ${idx === 0 ? "border-[var(--selection-border)] bg-[var(--selection-bg)] text-[var(--selection-text)]" : "border-[var(--border-strong)] bg-[var(--surface-bg)]"} ${slot.seats === "70/70" ? "text-[var(--text-muted)]" : ""}`}
                 >
                   <div>{slot.time}</div>
-                  <div className="text-xs text-[var(--text-muted)]">{slot.seats} 席</div>
+                  <div className="text-xs text-[var(--text-muted)]">
+                    {slot.seats} 席
+                  </div>
                 </button>
               ))}
             </div>

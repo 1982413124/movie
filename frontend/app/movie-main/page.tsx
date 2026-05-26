@@ -1,46 +1,42 @@
-import Image from "next/image";
+"use client";
+
+import Link from "next/link";
 import Header from "../components/Header";
 
 export default function Home() {
   const movies = [
     {
-      title: "SPIDER MAN : HOME COMING",
+      title: "MOVIE TITLE",
       rate: "9.5",
       count: "1154",
-      image: "/images/man.jpg",
     },
     {
-      title: "godzilla",
+      title: "MOVIE TITLE",
       rate: "7.2",
       count: "133",
-      image: "/images/gozira.jpg",
     },
     {
-      title: "HARRY POTTER",
+      title: "MOVIE TITLE",
       rate: "9.5",
       count: "2590",
-      image: "/images/harry.png",
     },
   ];
 
   const nowShowing = [
     {
-      title: "SPIDER MAN : HOME COMING",
+      title: "MOVIE TITLE",
       rate: "9.5",
       count: "1154",
-      image: "/images/man.jpg",
     },
     {
-      title: "godzilla",
+      title: "MOVIE TITLE",
       rate: "7.2",
       count: "133",
-      image: "/images/gozira.jpg",
     },
     {
-      title: "HARRY POTTER",
+      title: "MOVIE TITLE",
       rate: "9.5",
       count: "2590",
-      image: "/images/harry.png",
     },
   ];
 
@@ -50,24 +46,64 @@ export default function Home() {
       <Header />
 
       {/* 検索 */}
-      <div className="flex justify-center py-6">
+      <div className="flex justify-center items-center gap-5 py-6 bg-white border-b-2 border-black font-bold shadow-sm">
+        {" "}
         <input
           type="text"
           placeholder="Search in Video"
-          className="w-96 rounded-full border-2 border-[var(--border-strong)] bg-[var(--surface-bg)] p-3 text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
+          className="w-[500px] rounded-full border-2 border-gray-400 bg-white px-5 py-3 text-black shadow-sm"
         />
+        <Link
+          href="/movie-login"
+          className="rounded-full bg-black px-8 py-3 text-white font-bold shadow-md transition hover:scale-105 hover:bg-gray-800"
+        >
+          LOGIN
+        </Link>
       </div>
 
       <div className="flex">
         {/* サイド */}
+        {/* サイド */}
         <aside className="min-h-screen w-72 bg-white border-r-2 border-gray-300 p-8 text-[var(--text-primary)] shadow-md">
-          <p className="mb-8 text-xl font-semibold">上映スケジュール</p>
+          <Link
+            href="#"
+            className="mb-8 block text-xl font-semibold transition hover:text-blue-500"
+          >
+            上映スケジュール
+          </Link>
 
-          <p className="mb-8 text-xl font-semibold">映画一覧</p>
+          <br />
+          <br />
+          <br />
 
-          <p className="mb-8 text-xl font-semibold">購入情報確認</p>
+          <Link
+            href="#"
+            className="mb-8 block text-xl font-semibold transition hover:text-blue-500"
+          >
+            映画一覧
+          </Link>
 
-          <p className="text-xl font-semibold">予約状況確認</p>
+          <br />
+          <br />
+          <br />
+
+          <Link
+            href="#"
+            className="mb-8 block text-xl font-semibold transition hover:text-blue-500"
+          >
+            購入情報確認
+          </Link>
+
+          <br />
+          <br />
+          <br />
+
+          <Link
+            href="#"
+            className="block text-xl font-semibold transition hover:text-blue-500"
+          >
+            予約状況確認
+          </Link>
         </aside>
 
         {/* 映画一覧 */}
@@ -76,17 +112,39 @@ export default function Home() {
 
           <div className="grid grid-cols-3 gap-8">
             {movies.map((movie, index) => (
-              <div
+              <Link
+                href="/movie-detail"
                 key={index}
-                className="bg-white p-4 rounded-xl shadow-lg flex flex-col items-center"
+                className="bg-white p-4 rounded-xl shadow-lg flex flex-col items-center hover:scale-105 transition cursor-pointer"
               >
-                <Image
-                  src={movie.image}
-                  alt={movie.title}
-                  width={600}
-                  height={300}
-                  className="w-[600px] h-[300px] rounded-lg"
-                />
+                {/* ダミー画像 */}
+                <div
+                  className="w-full bg-gray-200 relative rounded-lg"
+                  style={{ aspectRatio: "2/1" }}
+                >
+                  <svg
+                    className="absolute inset-0 w-full h-full text-gray-400"
+                    viewBox="0 0 100 100"
+                    preserveAspectRatio="none"
+                  >
+                    <line
+                      x1="0"
+                      y1="0"
+                      x2="100"
+                      y2="100"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                    />
+                    <line
+                      x1="100"
+                      y1="0"
+                      x2="0"
+                      y2="100"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                    />
+                  </svg>
+                </div>
 
                 <h2 className="font-bold text-lg mt-4">{movie.title}</h2>
 
@@ -95,7 +153,7 @@ export default function Home() {
                   <span>{movie.rate}</span>
                   <span>{movie.count}</span>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
 
@@ -104,17 +162,39 @@ export default function Home() {
 
             <div className="grid grid-cols-3 gap-8">
               {nowShowing.map((movie, index) => (
-                <div
+                <Link
+                  href="/movie-detail"
                   key={index}
-                  className="bg-white p-4 rounded-xl shadow-lg flex flex-col items-center"
+                  className="bg-white p-4 rounded-xl shadow-lg flex flex-col items-center hover:scale-105 transition cursor-pointer"
                 >
-                  <Image
-                    src={movie.image}
-                    alt={movie.title}
-                    width={600}
-                    height={300}
-                    className="w-[600px] h-[300px] rounded-lg"
-                  />
+                  {/* ダミー画像 */}
+                  <div
+                    className="w-full bg-gray-200 relative rounded-lg"
+                    style={{ aspectRatio: "2/1" }}
+                  >
+                    <svg
+                      className="absolute inset-0 w-full h-full text-gray-400"
+                      viewBox="0 0 100 100"
+                      preserveAspectRatio="none"
+                    >
+                      <line
+                        x1="0"
+                        y1="0"
+                        x2="100"
+                        y2="100"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                      />
+                      <line
+                        x1="100"
+                        y1="0"
+                        x2="0"
+                        y2="100"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                      />
+                    </svg>
+                  </div>
 
                   <h2 className="font-bold text-lg mt-4">{movie.title}</h2>
 
@@ -127,7 +207,7 @@ export default function Home() {
                   <div className="mt-2 rounded-full bg-blue-50 px-3 py-1 text-sm text-blue-700">
                     上映中
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           </div>
