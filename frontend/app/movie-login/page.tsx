@@ -126,12 +126,11 @@ export default function SigninPage() {
             <p className="text-sm font-medium text-red-600">{errorMessage}</p>
           ) : null}
 
-          <button
-            type="submit"
-            className="mt-8 h-11 w-full rounded-md bg-[#4f73c9] text-sm font-bold text-white hover:bg-[#4264b6]"
+          <Link href="/movie-main"
+            className="rounded-full bg-black px-8 py-3 text-white font-bold shadow-md transition hover:scale-105 hover:bg-gray-800"
           >
             登録
-          </button>
+          </Link>
         </form>
 
         <div className="mt-10 border-t border-gray-500 pt-4">
