@@ -7,13 +7,12 @@ import { fileURLToPath } from "node:url";
 const currentDir = dirname(fileURLToPath(import.meta.url));
 const appDir = resolve(currentDir, "../app");
 
-test("mypage exposes login and register links for unauthenticated users", () => {
+test("mypage redirects unauthenticated users to the top page", () => {
   const source = readFileSync(resolve(appDir, "mypage/page.tsx"), "utf8");
 
   assert.equal(existsSync(resolve(appDir, "login/page.tsx")), true);
   assert.equal(existsSync(resolve(appDir, "register/page.tsx")), true);
-  assert.match(source, /href="\/login"/);
-  assert.match(source, /href="\/register"/);
-  assert.match(source, /ログイン/);
-  assert.match(source, /新規登録/);
+  assert.match(source, /router\.replace\("\/"\)/);
+  assert.doesNotMatch(source, /href="\/login"/);
+  assert.doesNotMatch(source, /href="\/register"/);
 });

@@ -46,7 +46,7 @@ export default function SigninPage() {
     }
 
     setErrorMessage("");
-    router.push("/mypage");
+    router.push("/movie-main");
   };
 
   return (
@@ -126,11 +126,12 @@ export default function SigninPage() {
             <p className="text-sm font-medium text-red-600">{errorMessage}</p>
           ) : null}
 
-          <Link href="/movie-main"
+          <button
+            type="submit"
             className="rounded-full bg-black px-8 py-3 text-white font-bold shadow-md transition hover:scale-105 hover:bg-gray-800"
           >
             登録
-          </Link>
+          </button>
         </form>
 
         <div className="mt-10 border-t border-gray-500 pt-4">
