@@ -3,7 +3,7 @@ import ConfirmClient from "../comfirm/ConfirmClient";
 
 export default function ConfirmPage() {
   return (
-    <div className="min-h-screen bg-[var(--page-bg)] font-sans text-[var(--text-primary)]">
+    <div className="min-h-screen bg-gray-100 font-sans">
       <Header />
       <ConfirmClient />
     </div>

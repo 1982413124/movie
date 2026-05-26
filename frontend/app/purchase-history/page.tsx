@@ -56,11 +56,11 @@ const mockData: TicketHistory[] = [
 
 export default function PurchaseHistoryPage() {
   return (
-    <div className="min-h-screen bg-[var(--page-bg)] text-[var(--text-primary)]">
+    <div className="min-h-screen bg-white">
       <Header />
       <main className="mx-auto max-w-6xl px-4 py-8">
-        <h1 className="mb-6 text-2xl font-bold">購入履歴</h1>
-        <div className="overflow-hidden rounded-lg border border-[var(--border-soft)] bg-[var(--surface-bg)]">
+        <h1 className="mb-6 text-2xl font-bold text-gray-800">購入履歴</h1>
+        <div className="overflow-hidden rounded-lg border border-gray-200">
           <HistoryListHeader />
           <ul>
             {mockData.map((item) => (

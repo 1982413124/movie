@@ -2,10 +2,10 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
-  useEffect,
   useMemo,
-  useState,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
 
@@ -18,29 +18,27 @@ type ThemeContextValue = {
 
 const storageKey = "hal-cinema-theme";
 const ThemeContext = createContext<ThemeContextValue | null>(null);
+const listeners = new Set<() => void>();
+
+let currentTheme: Theme = "light";
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<Theme>(getInitialTheme);
+  const theme = useSyncExternalStore(
+    subscribeToTheme,
+    getThemeSnapshot,
+    getServerThemeSnapshot,
+  );
 
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    document.documentElement.dataset.theme = theme;
-    window.localStorage.setItem(storageKey, theme);
+  const toggleTheme = useCallback(() => {
+    setStoredTheme(theme === "light" ? "dark" : "light");
   }, [theme]);
 
   const value = useMemo(
     () => ({
       theme,
-      toggleTheme: () => {
-        setTheme((currentTheme) =>
-          currentTheme === "light" ? "dark" : "light",
-        );
-      },
+      toggleTheme,
     }),
-    [theme],
+    [theme, toggleTheme],
   );
 
   return (
@@ -58,13 +56,52 @@ export function useTheme() {
   return context;
 }
 
-function getInitialTheme(): Theme {
+function subscribeToTheme(listener: () => void) {
+  listeners.add(listener);
+  syncThemeFromStorage();
+
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+function getThemeSnapshot() {
+  return currentTheme;
+}
+
+function getServerThemeSnapshot() {
+  return "light" as Theme;
+}
+
+function syncThemeFromStorage() {
   if (typeof window === "undefined") {
-    return "light";
+    return;
   }
 
   const storedTheme = window.localStorage.getItem(storageKey);
-  return storedTheme === "dark" || storedTheme === "light"
-    ? storedTheme
-    : "light";
+  const nextTheme =
+    storedTheme === "dark" || storedTheme === "light" ? storedTheme : "light";
+
+  applyTheme(nextTheme, false);
+}
+
+function setStoredTheme(theme: Theme) {
+  applyTheme(theme, true);
+}
+
+function applyTheme(theme: Theme, shouldStore: boolean) {
+  const didChange = currentTheme !== theme;
+  currentTheme = theme;
+
+  if (typeof window !== "undefined") {
+    document.documentElement.dataset.theme = theme;
+
+    if (shouldStore) {
+      window.localStorage.setItem(storageKey, theme);
+    }
+  }
+
+  if (didChange) {
+    listeners.forEach((listener) => listener());
+  }
 }
