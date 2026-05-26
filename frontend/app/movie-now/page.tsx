@@ -97,7 +97,7 @@ export default function NowShowingPage() {
 
                 {/* 詳細を見るボタン */}
                 <Link
-                  href={`/movies/${movie.id}`}
+                  href="/movie-detail"
                   className="mt-3 block text-center border border-gray-400 rounded py-1.5 text-sm text-black hover:bg-gray-100"
                 >
                   詳細を見る
