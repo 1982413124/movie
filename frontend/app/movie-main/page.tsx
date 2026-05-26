@@ -1,8 +1,8 @@
 "use client";
-
+ 
 import Link from "next/link";
-import MainHeader from "./components/MainHeader";
-
+import Header from "../components/Header";
+ 
 export default function Home() {
   const movies = [
     {
@@ -21,7 +21,7 @@ export default function Home() {
       count: "2590",
     },
   ];
-
+ 
   const nowShowing = [
     {
       title: "MOVIE TITLE",
@@ -39,12 +39,12 @@ export default function Home() {
       count: "2590",
     },
   ];
-
+ 
   return (
     <div className="min-h-screen bg-gray-200">
       {/* ヘッダー */}
-      <MainHeader />
-
+      <Header />
+ 
       {/* 検索 */}
       <div className="flex justify-center items-center gap-5 py-6 bg-white border-b-2 border-black font-bold shadow-sm">
         {" "}
@@ -53,15 +53,10 @@ export default function Home() {
           placeholder="Search in Video"
           className="w-[500px] rounded-full border-2 border-gray-400 bg-white px-5 py-3 text-black shadow-sm"
         />
-        <Link
-          href="/movie-login"
-          className="rounded-full bg-black px-8 py-3 text-white font-bold shadow-md transition hover:scale-105 hover:bg-gray-800"
-        >
-          新規登録・LOGIN
-        </Link>
       </div>
-
+ 
       <div className="flex">
+        {/* サイド */}
         {/* サイド */}
         <aside className="min-h-screen w-72 bg-white border-r-2 border-gray-300 p-8 text-[var(--text-primary)] shadow-md">
           <Link
@@ -70,33 +65,33 @@ export default function Home() {
           >
             上映スケジュール
           </Link>
-
+ 
           <br />
           <br />
           <br />
-
+ 
           <Link
             href="#"
             className="mb-8 block text-xl font-semibold transition hover:text-blue-500"
           >
             映画一覧
           </Link>
-
+ 
           <br />
           <br />
           <br />
-
+ 
           <Link
             href="#"
             className="mb-8 block text-xl font-semibold transition hover:text-blue-500"
           >
             購入情報確認
           </Link>
-
+ 
           <br />
           <br />
           <br />
-
+ 
           <Link
             href="#"
             className="block text-xl font-semibold transition hover:text-blue-500"
@@ -104,15 +99,15 @@ export default function Home() {
             予約状況確認
           </Link>
         </aside>
-
+ 
         {/* 映画一覧 */}
         <main className="flex-1 p-8">
           <h1 className="mb-10 text-4xl font-bold">注目映画</h1>
-
+ 
           <div className="grid grid-cols-3 gap-8">
             {movies.map((movie, index) => (
               <Link
-                href="/movie-login"
+                href="/movie-detail"
                 key={index}
                 className="bg-white p-4 rounded-xl shadow-lg flex flex-col items-center hover:scale-105 transition cursor-pointer"
               >
@@ -144,9 +139,9 @@ export default function Home() {
                     />
                   </svg>
                 </div>
-
+ 
                 <h2 className="font-bold text-lg mt-4">{movie.title}</h2>
-
+ 
                 <div className="flex gap-2 mt-2">
                   <span>★</span>
                   <span>{movie.rate}</span>
@@ -155,14 +150,14 @@ export default function Home() {
               </Link>
             ))}
           </div>
-
+ 
           <div className="mt-16">
             <h2 className="mb-10 text-4xl font-bold">上映中映画</h2>
-
+ 
             <div className="grid grid-cols-3 gap-8">
               {nowShowing.map((movie, index) => (
                 <Link
-                  href="/movie-login"
+                  href="/movie-detail"
                   key={index}
                   className="bg-white p-4 rounded-xl shadow-lg flex flex-col items-center hover:scale-105 transition cursor-pointer"
                 >
@@ -194,15 +189,15 @@ export default function Home() {
                       />
                     </svg>
                   </div>
-
+ 
                   <h2 className="font-bold text-lg mt-4">{movie.title}</h2>
-
+ 
                   <div className="flex gap-2 mt-2">
                     <span>★</span>
                     <span>{movie.rate}</span>
                     <span>{movie.count}</span>
                   </div>
-
+ 
                   <div className="mt-2 rounded-full bg-blue-50 px-3 py-1 text-sm text-blue-700">
                     上映中
                   </div>
