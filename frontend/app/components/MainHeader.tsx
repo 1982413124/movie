@@ -16,7 +16,7 @@ export default function MainHeader() {
         </div>
 
         <Link
-          href="/movie-login"
+          href="/"
           className="flex flex-1 flex-col items-center justify-center gap-2 py-4 transition-colors hover:bg-[var(--nav-hover)]"
         >
           <svg className="h-9 w-9" fill="currentColor" viewBox="0 0 24 24">
@@ -26,7 +26,7 @@ export default function MainHeader() {
         </Link>
 
         <Link
-          href="/movie-login"
+          href="/register"
           className="flex flex-1 flex-col items-center justify-center gap-2 py-4 transition-colors hover:bg-[var(--nav-hover)]"
         >
           <svg className="h-9 w-9" fill="currentColor" viewBox="0 0 24 24">
@@ -36,7 +36,7 @@ export default function MainHeader() {
         </Link>
 
         <Link
-          href="/movie-login"
+          href="/register"
           className="flex flex-1 flex-col items-center justify-center gap-2 py-4 transition-colors hover:bg-[var(--nav-hover)]"
         >
           <svg className="h-9 w-9" fill="currentColor" viewBox="0 0 24 24">
@@ -46,7 +46,7 @@ export default function MainHeader() {
         </Link>
 
         <Link
-          href="/movie-login"
+          href="/register"
           className="flex flex-1 flex-col items-center justify-center gap-2 py-4 transition-colors hover:bg-[var(--nav-hover)]"
         >
           <svg className="h-9 w-9" fill="currentColor" viewBox="0 0 24 24">

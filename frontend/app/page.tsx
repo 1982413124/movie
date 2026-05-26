@@ -66,8 +66,8 @@ export default function Home() {
         />
 
         <Link
-          href="/movie-login"
-          className="login-button rounded-full bg-black px-8 py-3 text-white font-bold shadow-md transition hover:scale-105 hover:bg-gray-800"
+          href="/register"
+          className="rounded-full bg-black px-8 py-3 text-white font-bold shadow-md transition hover:scale-105 hover:bg-gray-800"
         >
           新規登録・LOGIN
         </Link>
@@ -124,7 +124,7 @@ export default function Home() {
           <div className="grid grid-cols-3 gap-8">
             {movies.map((movie, index) => (
               <Link
-                href="/movie-login"
+                href="/register"
                 key={index}
                 className="bg-white p-4 rounded-xl shadow-lg flex flex-col items-center hover:scale-105 transition cursor-pointer"
               >
@@ -174,7 +174,7 @@ export default function Home() {
             <div className="grid grid-cols-3 gap-8">
               {nowShowing.map((movie, index) => (
                 <Link
-                  href="/movie-login"
+                  href="/register"
                   key={index}
                   className="bg-white p-4 rounded-xl shadow-lg flex flex-col items-center hover:scale-105 transition cursor-pointer"
                 >

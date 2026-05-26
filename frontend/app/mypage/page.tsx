@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import Header from "../components/Header";
@@ -53,6 +53,7 @@ function toProfileForm(account: Account | null): ProfileForm {
 }
 
 export default function MyPage() {
+  const router = useRouter();
   const [activeMenu, setActiveMenu] = useState<MenuKey>("settings");
   const [currentAccount, setCurrentAccount] = useState<Account | null | undefined>(undefined);
   const [form, setForm] = useState<ProfileForm>(emptyForm);
@@ -62,12 +63,19 @@ export default function MyPage() {
   useEffect(() => {
     const frameId = window.requestAnimationFrame(() => {
       const account = getCurrentAccount(window.localStorage) as Account | null;
+
+      if (!account) {
+        setCurrentAccount(null);
+        router.replace("/");
+        return;
+      }
+
       setCurrentAccount(account);
       setForm(toProfileForm(account));
     });
 
     return () => window.cancelAnimationFrame(frameId);
-  }, []);
+  }, [router]);
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
@@ -81,6 +89,7 @@ export default function MyPage() {
     setForm(emptyForm);
     setStatusMessage("");
     setActiveMenu("settings");
+    router.replace("/");
   };
 
   const handleMenuClick = (menuKey: MenuKey) => {
@@ -121,34 +130,7 @@ export default function MyPage() {
   }
 
   if (currentAccount === null) {
-    return (
-      <div className="min-h-screen bg-[var(--page-bg)] font-sans text-[var(--text-primary)]">
-        <Header />
-
-        <main className="mx-auto flex min-h-[calc(100vh-97px)] max-w-3xl items-center px-6 py-10">
-          <section className="w-full rounded-2xl bg-[var(--surface-bg)] p-8 text-center shadow-sm">
-            <h1 className="text-2xl font-bold">マイページを利用するにはアカウント登録が必要です</h1>
-            <p className="mt-3 text-sm text-[var(--text-muted)]">
-              ログイン済みでない場合は、ログインまたは新規登録に進んでください。
-            </p>
-            <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-              <Link
-                href="/login"
-                className="rounded-full border border-[var(--border-strong)] px-8 py-3 text-sm font-bold transition hover:bg-[var(--surface-muted)]"
-              >
-                ログイン
-              </Link>
-              <Link
-                href="/register"
-                className="rounded-full bg-red-500 px-8 py-3 text-sm font-bold text-white transition hover:opacity-90"
-              >
-                新規登録
-              </Link>
-            </div>
-          </section>
-        </main>
-      </div>
-    );
+    return null;
   }
 
   const displayName = form.name || currentAccount.name || "ゲスト";
