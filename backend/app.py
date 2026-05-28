@@ -1,39 +1,52 @@
-import os
-
 from flask import Flask, jsonify
 from flask_cors import CORS
-import psycopg
+from database.db import db_conn
 
 
+# Flaskアプリ
 app = Flask(__name__)
+# フロントからAPIを呼べるようにする
 CORS(app)
-
-DATABASE_URL = os.getenv("DATABASE_URL")
 
 
 @app.get("/health")
 def health():
+    """
+    サーバーが起動しているか確認するAPI
+    """
     return jsonify({"status": "ok"})
 
 
 @app.get("/health/db")
 def health_db():
+    """
+    DBに接続できるか確認するAPI
+    """
     try:
-        with psycopg.connect(DATABASE_URL) as connection:
+        # db_conn()でDB接続を取得
+        # withを使うと自動でクローズされる
+        with db_conn() as connection:
             with connection.cursor() as cursor:
                 cursor.execute("SELECT 1;")
                 row = cursor.fetchone()
 
+        # 成功時はokを返す
         return jsonify({"status": "ok", "db": row[0]})
+
     except Exception as exc:
+        # 失敗時はエラー内容を返す
         return jsonify({"status": "error", "message": str(exc)}), 500
 
 
 @app.get("/api/movies")
-def movies():
+def get_movies():
+    """
+    moviesテーブルの一覧を返すAPI
+    """
     try:
-        with psycopg.connect(DATABASE_URL) as connection:
+        with db_conn() as connection:
             with connection.cursor() as cursor:
+                # 映画一覧を取得
                 cursor.execute(
                     """
                     SELECT id, title, genre, duration_minutes, age_rating, release_date
@@ -43,6 +56,7 @@ def movies():
                 )
                 rows = cursor.fetchall()
 
+        # DBの行データをJSONに変換して返す
         return jsonify(
             [
                 {
@@ -56,5 +70,11 @@ def movies():
                 for row in rows
             ]
         )
+
     except Exception as exc:
         return jsonify({"status": "error", "message": str(exc)}), 500
+
+
+# このファイルを直接実行したときだけ起動する
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000, debug=True)
