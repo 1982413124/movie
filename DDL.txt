@@ -1,0 +1,113 @@
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE movies (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    genre VARCHAR(100),
+    duration_minutes INTEGER NOT NULL,
+    age_rating VARCHAR(20),
+    synopsis TEXT,
+    poster_image TEXT,
+    release_date DATE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE theaters (
+    id SERIAL PRIMARY KEY,
+    theater_name VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE screenings (
+    id SERIAL PRIMARY KEY,
+    movie_id INTEGER NOT NULL,
+    theater_id INTEGER NOT NULL,
+    screening_date DATE NOT NULL,
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+    screen_name VARCHAR(100) NOT NULL,
+    total_seats INTEGER NOT NULL,
+    remaining_seats INTEGER NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_screenings_movie
+        FOREIGN KEY (movie_id)
+        REFERENCES movies(id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_screenings_theater
+        FOREIGN KEY (theater_id)
+        REFERENCES theaters(id)
+        ON DELETE CASCADE
+);
+
+CREATE TABLE orders (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    order_num VARCHAR(100) UNIQUE NOT NULL,
+    pay_datetime TIMESTAMP,
+    total_price INTEGER NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_orders_user
+        FOREIGN KEY (user_id)
+        REFERENCES users(id)
+        ON DELETE CASCADE
+);
+
+CREATE TABLE order_details (
+    id SERIAL PRIMARY KEY,
+    order_id INTEGER NOT NULL,
+    screening_id INTEGER NOT NULL,
+    seat_num VARCHAR(20) NOT NULL,
+    ticket_num INTEGER NOT NULL,
+    price INTEGER NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_order_details_order
+        FOREIGN KEY (order_id)
+        REFERENCES orders(id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_order_details_screening
+        FOREIGN KEY (screening_id)
+        REFERENCES screenings(id)
+        ON DELETE CASCADE
+);
+
+CREATE TABLE seats (
+    id SERIAL PRIMARY KEY,
+    screening_id INTEGER NOT NULL,
+    row_name CHAR(1) NOT NULL,
+    col_num INTEGER NOT NULL,
+    seat_label VARCHAR(10) NOT NULL,
+    is_reserved BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_seats_screening
+        FOREIGN KEY (screening_id)
+        REFERENCES screenings(id)
+        ON DELETE CASCADE
+);
+
+CREATE TABLE payments (
+    id SERIAL PRIMARY KEY,
+    order_id INTEGER NOT NULL,
+    pay_method VARCHAR(50) NOT NULL,
+    pay_num VARCHAR(100) UNIQUE NOT NULL,
+    pay_status VARCHAR(20) NOT NULL,
+    paid_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_payments_order
+        FOREIGN KEY (order_id)
+        REFERENCES orders(id)
+        ON DELETE CASCADE
+);

@@ -15,7 +15,7 @@ export default function EmptyCompletion() {
           </p>
           <Link
             href="/seats"
-            className="mt-8 inline-flex rounded-lg bg-gray-700 px-5 py-4 text-sm font-bold text-white transition-colors hover:bg-gray-800"
+            className="mt-8 inline-flex rounded-lg bg-[var(--button-bg)] px-5 py-4 text-sm font-bold text-[var(--button-text)] transition-colors hover:bg-[var(--button-hover)]"
           >
             座席選択へ戻る
           </Link>

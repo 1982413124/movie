@@ -32,20 +32,20 @@ export default function NowShowingPage() {
   );
 
   return (
-    <div className="font-sans bg-white min-h-screen">
+    <div className="min-h-screen bg-[var(--page-bg)] font-sans text-[var(--text-primary)]">
       <Header />
 
       <main className="max-w-4xl mx-auto px-6 py-8">
 
         {/* (6)(7) タイトル行 + カテゴリ */}
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-xl font-bold text-black">上映中</h1>
-          <div className="flex items-center gap-2 text-sm text-gray-600">
+          <h1 className="text-xl font-bold">上映中</h1>
+          <div className="flex items-center gap-2 text-sm text-[var(--text-muted)]">
             <span>カテゴリ</span>
             <select
               value={selectedCategory}
               onChange={(e) => { setSelectedCategory(e.target.value); setPage(0); }}
-              className="border border-gray-400 rounded px-2 py-1 text-sm bg-white text-black"
+              className="rounded border border-[var(--border-strong)] bg-[var(--surface-bg)] px-2 py-1 text-sm text-[var(--text-primary)]"
             >
               {CATEGORIES.map((cat) => (
                 <option key={cat} value={cat}>{cat}</option>
@@ -61,7 +61,7 @@ export default function NowShowingPage() {
           <button
             onClick={() => setPage((p) => Math.max(0, p - 1))}
             disabled={page === 0}
-            className="w-8 h-8 rounded-full border border-gray-400 flex items-center justify-center text-gray-600 disabled:opacity-30"
+            className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--border-strong)] text-[var(--text-muted)] disabled:opacity-30"
           >
             ‹
           </button>
@@ -72,9 +72,9 @@ export default function NowShowingPage() {
               <div key={movie.id} className="flex flex-col">
 
                 {/* ポスター画像プレースホルダー */}
-                <div className="w-full bg-gray-200 relative" style={{ aspectRatio: "2/3" }}>
+                <div className="relative w-full bg-[var(--surface-muted)]" style={{ aspectRatio: "2/3" }}>
                   <svg
-                    className="absolute inset-0 w-full h-full text-gray-400"
+                    className="absolute inset-0 h-full w-full text-[var(--text-muted)]"
                     viewBox="0 0 100 150"
                     preserveAspectRatio="none"
                   >
@@ -84,15 +84,15 @@ export default function NowShowingPage() {
                 </div>
 
                 {/* テキスト情報 */}
-                <div className="mt-2 text-sm text-black space-y-0.5">
+                <div className="mt-2 space-y-0.5 text-sm">
                   {/* (9) タイトル */}
                   <div className="font-medium">{movie.title}</div>
                   {/* (10) ジャンル */}
-                  <div className="text-gray-600">{movie.genre}</div>
+                  <div className="text-[var(--text-muted)]">{movie.genre}</div>
                   {/* (11) 上映時間 */}
-                  <div className="text-gray-600">{movie.hours}時間 {movie.minutes}分</div>
+                  <div className="text-[var(--text-muted)]">{movie.hours}時間 {movie.minutes}分</div>
                   {/* (12) レーティング */}
-                  <div className="text-gray-600">{movie.rating}</div>
+                  <div className="text-[var(--text-muted)]">{movie.rating}</div>
                 </div>
 
                 {/* 詳細を見るボタン */}
@@ -116,7 +116,7 @@ export default function NowShowingPage() {
           <button
             onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
             disabled={page >= totalPages - 1}
-            className="w-8 h-8 rounded-full border border-gray-400 flex items-center justify-center text-gray-600 disabled:opacity-30"
+            className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--border-strong)] text-[var(--text-muted)] disabled:opacity-30"
           >
             ›
           </button>
