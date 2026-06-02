@@ -71,3 +71,9 @@ PostgreSQL
  -pay_status       :決済状態(成功or失敗)
  -paid_at          :決済日時
  -created_at       :作成日
+
+ -foods
+  -id              :主キー
+  -order_id        :Fk (orders.id)
+  -foods_name      :食べ物名
+  -price           :値段
