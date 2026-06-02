@@ -3,19 +3,7 @@
 import Link from "next/link";
 import MainHeader from "./components/MainHeader";
 
-import { useEffect } from "react";
-import gsap from "gsap";
-
 export default function Home() {
-  useEffect(() => {
-    gsap.to(".login-button", {
-      backgroundColor: "#ff7b7b",
-      duration: 1.5,
-      repeat: -1,
-      yoyo: true,
-    });
-  }, []);
-
   const movies = [
     {
       title: "MOVIE TITLE",
