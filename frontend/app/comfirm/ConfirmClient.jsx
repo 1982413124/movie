@@ -49,7 +49,7 @@ export default function ConfirmClient() {
   }
 
   return (
-    <main className="mx-auto grid w-full max-w-6xl gap-6 px-4 py-8 text-gray-800 md:grid-cols-[minmax(0,1fr)_380px]">
+    <main className="mx-auto grid w-full max-w-6xl gap-6 px-4 py-8 text-[#1C0800] md:grid-cols-[minmax(0,1fr)_380px]">
       <ReservationPanel summary={summary} />
       <PaymentPanel
         error={error}

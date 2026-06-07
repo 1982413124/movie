@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Header from "../components/Header";
+import CampaignHeader from "../components/CampaignHeader";
 
 const quickLinks = [
   { href: "/movie-now", label: "上映中の作品を見る" },
@@ -10,7 +10,7 @@ const quickLinks = [
 export default function SearchPage() {
   return (
     <div className="min-h-screen bg-[var(--page-bg)] text-[var(--text-primary)]">
-      <Header />
+      <CampaignHeader />
 
       <main className="mx-auto max-w-4xl px-6 py-8">
         <h1 className="mb-6 text-2xl font-bold">検索</h1>

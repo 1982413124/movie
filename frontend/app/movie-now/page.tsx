@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import Header from "../components/Header";
+import CampaignHeader from "../components/CampaignHeader";
 
 import gsap from "gsap";
 
@@ -96,7 +96,7 @@ export default function NowShowingPage() {
 
   return (
     <div className="min-h-screen bg-[var(--page-bg)] font-sans text-[var(--text-primary)]">
-      <Header />
+      <CampaignHeader />
 
       <main className="max-w-4xl mx-auto px-6 py-8">
         <div className="mb-6 flex items-center justify-between">
@@ -135,7 +135,7 @@ export default function NowShowingPage() {
             {currentMovies.map((movie) => (
               <div
                 key={movie.id}
-                className="movie-card flex cursor-grab flex-col rounded-xl bg-white p-4 shadow-lg active:cursor-grabbing"
+                className="movie-card flex cursor-grab flex-col border border-[#1C0800]/14 bg-white p-4 shadow-[0_8px_30px_rgba(28,8,0,0.1)] active:cursor-grabbing"
               >
                 <div
                   className="relative w-full rounded-lg bg-[var(--surface-muted)]"
@@ -180,7 +180,7 @@ export default function NowShowingPage() {
 
                 <Link
                   href="/movie-detail"
-                  className="mt-4 block rounded border border-gray-400 py-2 text-center text-sm text-black transition hover:scale-105 hover:bg-gray-100"
+                  className="mt-4 block border border-[#E82020] py-2 text-center text-sm font-bold text-[#E82020] transition hover:scale-105 hover:bg-[#E82020] hover:text-white"
                 >
                   詳細を見る
                 </Link>

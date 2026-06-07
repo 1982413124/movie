@@ -82,8 +82,8 @@ export default function SeatSelectionClient() {
   }
 
   return (
-    <main className="mx-auto grid w-full max-w-6xl gap-6 px-4 py-8 text-gray-800 md:grid-cols-[minmax(0,1fr)_340px]">
-        <section className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-md">
+    <main className="mx-auto grid w-full max-w-6xl gap-6 px-4 py-8 text-[#1C0800] md:grid-cols-[minmax(0,1fr)_340px]">
+        <section className="overflow-hidden border border-[#1C0800]/14 bg-white shadow-[0_18px_60px_rgba(0,0,0,0.08)]">
           <MovieSummary
             availableSeats={availableSeats}
             selectedScreening={selectedScreening}

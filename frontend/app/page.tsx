@@ -382,27 +382,12 @@ export default function Home() {
   return (
     <div
       ref={pageRef}
-      className="cinema-campaign min-h-screen overflow-hidden bg-[#f7f7f3] text-[#080808]"
+      className="cinema-campaign min-h-screen overflow-hidden bg-[#FFF8E1] text-[#1C0800]"
     >
       <OpeningLoader />
       <CampaignMenu isOpen={isMenuOpen} onClose={closeMenu} />
       <CampaignNav isOpen={isMenuOpen} onMenuToggle={toggleMenu} />
 
-      {/* 検索 */}
-      <div className="flex justify-center items-center gap-5 py-6 bg-white border-b-2 border-black font-bold shadow-sm">
-        <input
-          type="text"
-          placeholder="Search in Video"
-          className="w-[500px] rounded-full border-2 border-gray-400 bg-white px-5 py-3 text-black shadow-sm"
-        />
-
-        <Link
-          href="/register"
-          className="rounded-full bg-black px-8 py-3 text-white font-bold shadow-md transition hover:scale-105 hover:bg-gray-800"
-        >
-          新規登録・LOGIN
-        </Link>
-      </div>
       <main>
         <section className="js-hero relative min-h-screen overflow-hidden px-5 pb-8 pt-20 sm:px-8 lg:px-12">
           <div className="hero-fallback absolute inset-0" />
@@ -410,10 +395,10 @@ export default function Home() {
 
           <div className="relative z-10 mx-auto grid min-h-[calc(100vh-7rem)] w-full max-w-7xl items-end gap-10 lg:grid-cols-[minmax(0,1fr)_420px]">
             <div className="js-intro pb-6">
-              <p className="mb-5 text-xs font-semibold uppercase tracking-[0.42em] text-[#555555]">
-                Movie Reservation
+              <p className="mb-5 text-xs font-semibold uppercase tracking-[0.42em] text-[#8C5D2A]">
+                Food × Cinema Experience
               </p>
-              <h1 className="text-[18vw] font-black uppercase leading-[0.78] tracking-normal text-[#080808] sm:text-[15vw] lg:text-[9.6rem]">
+              <h1 className="text-[18vw] font-black uppercase leading-[0.78] tracking-normal text-[#1C0800] sm:text-[15vw] lg:text-[9.6rem]">
                 <span className="block overflow-hidden">
                   <span className="js-hero-word block">HAL</span>
                 </span>
@@ -421,50 +406,76 @@ export default function Home() {
                   <span className="js-hero-word block">CINEMA</span>
                 </span>
               </h1>
+              <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2">
+                {["ポップコーン", "ナチョス", "ドリンク", "映画"].map((item, i, arr) => (
+                  <span key={item} className="flex items-center gap-4">
+                    <span className="font-mono text-xs font-black uppercase tracking-[0.28em] text-[#C8860A]">
+                      {item}
+                    </span>
+                    {i < arr.length - 1 && (
+                      <span className="h-px w-5 bg-[#C8860A]/40" />
+                    )}
+                  </span>
+                ))}
+              </div>
+              <p className="mt-3 text-sm leading-7 text-[#5C3010]">
+                映画と一緒に最高のグルメ体験を。<br className="hidden sm:block" />
+                お気に入りの映画に、こだわりのフードをセットで。
+              </p>
               <div className="js-hero-cta mt-8 flex flex-col gap-3 sm:flex-row">
                 <Link
                   href="/movie-detail"
-                  className="inline-flex min-h-12 items-center justify-center rounded-full bg-[#080808] px-7 text-sm font-black uppercase tracking-[0.16em] text-white transition hover:bg-[#2b2b2b] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#080808]"
+                  className="inline-flex min-h-12 items-center justify-center rounded-full bg-[#E82020] px-7 text-sm font-black uppercase tracking-[0.16em] text-white transition hover:bg-[#C01818] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#E82020]"
                 >
                   上映時間を見る
                 </Link>
                 <Link
                   href="/register"
-                  className="inline-flex min-h-12 items-center justify-center rounded-full border border-[#080808]/22 px-7 text-sm font-bold uppercase tracking-[0.16em] text-[#080808] transition hover:border-[#080808] hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#080808]"
+                  className="inline-flex min-h-12 items-center justify-center rounded-full border border-[#1C0800]/22 px-7 text-sm font-bold uppercase tracking-[0.16em] text-[#1C0800] transition hover:border-[#1C0800] hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#E82020]"
                 >
-                  Login
+                  フードメニュー
                 </Link>
               </div>
             </div>
 
-            <div className="js-hero-visual relative hidden min-h-[620px] overflow-hidden border border-[#080808]/14 bg-white p-3 shadow-[0_35px_120px_rgba(0,0,0,0.16)] lg:block">
+            <div className="js-hero-visual relative hidden min-h-[620px] overflow-hidden border border-[#1C0800]/14 bg-white p-3 shadow-[0_35px_120px_rgba(0,0,0,0.16)] lg:block">
               <div className="poster-fallback absolute inset-3 [--movie-accent:#d6d6d6]" />
               <CampaignImage
                 imageSrc={heroImage.imageSrc}
                 imageAlt={heroImage.imageAlt}
                 className="js-card-media relative h-full w-full object-cover opacity-80 mix-blend-screen"
               />
-              <div className="absolute left-6 top-6 bg-[#080808] px-3 py-2 text-[11px] font-black uppercase tracking-[0.28em] text-white">
-                Screen 01
+              <div className="absolute left-6 top-6 flex flex-col gap-2">
+                <div className="bg-[#E82020] px-3 py-2 text-[11px] font-black uppercase tracking-[0.28em] text-white">
+                  Screen 01
+                </div>
+                <div className="bg-[#1C0800] px-3 py-2 text-[11px] font-black uppercase tracking-[0.28em] text-white">
+                  Food Set
+                </div>
               </div>
               <div className="absolute bottom-6 left-6 right-6 flex items-end justify-between border-t border-white/20 pt-5 text-white">
-                <span className="text-4xl font-black uppercase leading-none">
-                  21:10
-                </span>
-                <span className="rounded-full bg-white px-4 py-2 text-xs font-black uppercase tracking-[0.14em] text-[#080808]">
+                <div>
+                  <span className="block text-4xl font-black uppercase leading-none">
+                    21:10
+                  </span>
+                  <span className="mt-1 block font-mono text-[10px] font-black uppercase tracking-[0.22em] text-[#C8860A]">
+                    Popcorn · Nachos · Drinks
+                  </span>
+                </div>
+                <span className="rounded-full bg-white px-4 py-2 text-xs font-black uppercase tracking-[0.14em] text-[#1C0800]">
                   Select
                 </span>
               </div>
             </div>
           </div>
 
-          <div className="js-booking-rail relative z-10 mx-auto grid max-w-7xl border-y border-[#080808]/14 py-4 text-xs font-bold uppercase tracking-[0.12em] text-[#343434] sm:grid-cols-3">
+          <div className="js-booking-rail relative z-10 mx-auto grid max-w-7xl border-y border-[#1C0800]/14 py-4 text-xs font-bold uppercase tracking-[0.12em] text-[#5C3010] sm:grid-cols-3">
             {bookingSteps.map((step) => (
               <div
                 key={step.label}
-                className="flex min-h-12 items-center justify-between gap-3 border-[#080808]/10 py-2 sm:border-r sm:px-5 sm:first:pl-0 sm:last:border-r-0 sm:last:pr-0"
+                className="flex min-h-12 items-center justify-between gap-3 border-[#1C0800]/10 py-2 sm:border-r sm:px-5 sm:first:pl-0 sm:last:border-r-0 sm:last:pr-0"
               >
-                <span className="font-mono text-[#080808]">{step.label}</span>
+                <span className="font-mono text-[#1C0800]">{step.label}</span>
                 <span>{step.title}</span>
               </div>
             ))}
@@ -472,7 +483,7 @@ export default function Home() {
         </section>
 
         <section className="relative z-10 px-5 pb-20 sm:px-8 lg:px-12">
-          <div className="mx-auto grid max-w-7xl gap-3 border border-[#080808]/14 bg-white/90 p-3 shadow-[0_18px_60px_rgba(0,0,0,0.08)] backdrop-blur md:grid-cols-[1fr_auto_auto]">
+          <div className="mx-auto grid max-w-7xl gap-3 border border-[#1C0800]/14 bg-white/90 p-3 shadow-[0_18px_60px_rgba(0,0,0,0.08)] backdrop-blur md:grid-cols-[1fr_auto_auto]">
             <label className="sr-only" htmlFor="movie-search">
               映画を検索
             </label>
@@ -480,17 +491,17 @@ export default function Home() {
               id="movie-search"
               type="text"
               placeholder="Title / Genre"
-              className="min-h-12 w-full bg-[#f7f7f3] px-5 text-sm text-[#080808] outline-none ring-1 ring-[#080808]/12 transition placeholder:text-[#7c7c7c] focus:ring-[#080808]"
+              className="min-h-12 w-full bg-[#FFF8E1] px-5 text-sm text-[#1C0800] outline-none ring-1 ring-[#E82020]/12 transition placeholder:text-[#A0703A] focus:ring-[#E82020]"
             />
             <Link
               href="/search"
-              className="inline-flex min-h-12 items-center justify-center px-6 text-sm font-bold uppercase tracking-[0.14em] text-[#080808] ring-1 ring-[#080808]/18 transition hover:bg-[#080808] hover:text-white hover:ring-[#080808]"
+              className="inline-flex min-h-12 items-center justify-center px-6 text-sm font-bold uppercase tracking-[0.14em] text-[#1C0800] ring-1 ring-[#E82020]/18 transition hover:bg-[#E82020] hover:text-white hover:ring-[#E82020]"
             >
               Search
             </Link>
             <Link
               href="/movie-detail"
-              className="inline-flex min-h-12 items-center justify-center bg-[#080808] px-6 text-sm font-black uppercase tracking-[0.14em] text-white transition hover:bg-[#2b2b2b] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#080808]"
+              className="inline-flex min-h-12 items-center justify-center bg-[#E82020] px-6 text-sm font-black uppercase tracking-[0.14em] text-white transition hover:bg-[#C01818] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#E82020]"
             >
               予約へ
             </Link>
@@ -501,8 +512,8 @@ export default function Home() {
           id="featured"
           className="js-showcase relative px-5 py-20 sm:px-8 lg:px-12 lg:py-28"
         >
-          <div className="js-marquee-line pointer-events-none absolute left-4 top-10 whitespace-nowrap text-[18vw] font-black uppercase leading-none tracking-normal text-[#080808]/[0.04]">
-            Now Showing
+          <div className="js-marquee-line pointer-events-none absolute left-4 top-10 whitespace-nowrap text-[18vw] font-black uppercase leading-none tracking-normal text-[#E82020]/[0.07]">
+            Popcorn × Cinema &mdash; Food × Movie &mdash;&nbsp;
           </div>
 
           <div className="relative mx-auto max-w-7xl">
@@ -516,9 +527,56 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="relative border-t border-[#080808]/10 px-5 py-20 sm:px-8 lg:px-12">
+        <section className="relative border-t border-[#1C0800]/10 bg-[#1C0800] px-5 py-20 sm:px-8 lg:px-12">
           <div className="relative mx-auto max-w-7xl">
-            <SectionHeader eyebrow="Schedule" title="BOOK A SEAT" />
+            <div className="js-reveal flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.42em] text-[#C8860A]">
+                  Concession
+                </p>
+                <h2 className="mt-3 text-5xl font-black uppercase leading-none text-[#FFF8E1] sm:text-6xl lg:text-8xl">
+                  FOOD MENU
+                </h2>
+              </div>
+              <p className="max-w-xs text-sm leading-relaxed text-[#8C5D2A]">
+                映画チケットと同時に注文。<br />
+                受け取りはスクリーン入場前のカウンターで。
+              </p>
+            </div>
+
+            <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {[
+                { name: "ポップコーン", sub: "バター / キャラメル", price: "¥500", tag: "CLASSIC" },
+                { name: "ナチョス", sub: "チーズ / サルサ", price: "¥650", tag: "POPULAR" },
+                { name: "ドリンク", sub: "S / M / L サイズ", price: "¥350~", tag: "COLD" },
+                { name: "シネマセット", sub: "ポップコーン + ドリンク", price: "¥800", tag: "BEST VALUE" },
+              ].map((item) => (
+                <div
+                  key={item.name}
+                  className="js-reveal group border border-[#FFF8E1]/10 p-6 transition hover:bg-[#FFF8E1]/06"
+                >
+                  <span className="text-[10px] font-black uppercase tracking-[0.32em] text-[#E82020]">
+                    {item.tag}
+                  </span>
+                  <h3 className="mt-4 text-3xl font-black uppercase leading-none text-[#FFF8E1]">
+                    {item.name}
+                  </h3>
+                  <p className="mt-2 text-sm text-[#C8860A]">{item.sub}</p>
+                  <div className="mt-6 flex items-end justify-between border-t border-[#FFF8E1]/10 pt-4">
+                    <span className="font-mono text-xl font-black text-[#FFF8E1]">{item.price}</span>
+                    <span className="text-[10px] font-black uppercase tracking-[0.22em] text-[#8C5D2A] transition group-hover:text-[#C8860A]">
+                      Add to order
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="relative border-t border-[#1C0800]/10 px-5 py-20 sm:px-8 lg:px-12">
+          <div className="relative mx-auto max-w-7xl">
+            <SectionHeader eyebrow="Schedule + Food" title="BOOK A SEAT" />
 
             <div className="mt-10 grid gap-4 lg:grid-cols-4">
               {nowShowing.map((movie, index) => (
@@ -534,17 +592,20 @@ export default function Home() {
 
 function OpeningLoader() {
   return (
-    <div className="js-loader fixed inset-0 z-[80] flex bg-[#f7f7f3] text-[#080808]">
+    <div className="js-loader fixed inset-0 z-[80] flex bg-[#FFF8E1] text-[#1C0800]">
       <div className="m-auto w-[min(520px,78vw)]">
         <div className="js-loader-mark text-center text-4xl font-black uppercase leading-none tracking-[0.12em] sm:text-6xl">
           HAL
           <br />
           CINEMA
+          <span className="mt-5 block text-sm font-black uppercase tracking-[0.44em] text-[#E82020]">
+            Food × Movie
+          </span>
         </div>
-        <div className="mt-10 h-px overflow-hidden bg-[#080808]/14">
-          <div className="js-loader-line h-full w-full bg-[#080808]" />
+        <div className="mt-10 h-px overflow-hidden bg-[#E82020]/14">
+          <div className="js-loader-line h-full w-full bg-[#E82020]" />
         </div>
-        <div className="mt-4 text-center font-mono text-sm text-[#555555]">
+        <div className="mt-4 text-center font-mono text-sm text-[#8C5D2A]">
           <span className="js-loader-progress">0</span>%
         </div>
       </div>
@@ -590,11 +651,11 @@ function CampaignNav({
   onMenuToggle: () => void;
 }) {
   return (
-    <header className="fixed inset-x-0 top-0 z-50 border-b border-[#080808]/14 bg-[#f7f7f3]/92 text-[#080808] backdrop-blur-xl">
+    <header className="fixed inset-x-0 top-0 z-50 border-b border-[#1C0800]/14 bg-[#FFF8E1]/92 text-[#1C0800] backdrop-blur-xl">
       <nav className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)_128px] items-stretch lg:grid-cols-[132px_repeat(4,minmax(0,1fr))_148px]">
         <Link
           href="/"
-          className="flex min-h-[76px] items-center border-r border-[#080808]/14 px-5 text-sm font-black uppercase leading-none tracking-[0.22em] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#080808]"
+          className="flex min-h-[76px] items-center border-r border-[#1C0800]/14 px-5 text-sm font-black uppercase leading-none tracking-[0.22em] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#E82020]"
         >
           HAL
           <br />
@@ -605,9 +666,9 @@ function CampaignNav({
           <Link
             key={item.label}
             href={item.href}
-            className="hidden min-h-[76px] flex-col justify-center border-r border-[#080808]/14 px-5 transition hover:bg-white lg:flex"
+            className="hidden min-h-[76px] flex-col justify-center border-r border-[#1C0800]/14 px-5 transition hover:bg-white lg:flex"
           >
-            <span className="text-[10px] font-black uppercase tracking-[0.26em] text-[#777777]">
+            <span className="text-[10px] font-black uppercase tracking-[0.26em] text-[#A0703A]">
               {item.meta}
             </span>
             <span className="mt-2 text-sm font-bold">{item.label}</span>
@@ -619,15 +680,15 @@ function CampaignNav({
           aria-controls="campaign-menu"
           aria-expanded={isOpen}
           onClick={onMenuToggle}
-          className="group flex min-h-[76px] w-full items-center justify-between gap-4 border-l border-[#080808]/14 px-5 text-left transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#080808]"
+          className="group flex min-h-[76px] w-full items-center justify-between gap-4 border-l border-[#1C0800]/14 px-5 text-left transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#E82020]"
         >
-          <span className="hidden text-[10px] font-black uppercase tracking-[0.26em] text-[#777777] sm:block">
+          <span className="hidden text-[10px] font-black uppercase tracking-[0.26em] text-[#A0703A] sm:block">
             Menu
           </span>
           <span className="relative block h-5 w-12">
-            <span className="js-menu-line js-menu-line-top absolute left-0 top-0 h-0.5 w-12 bg-[#080808]" />
-            <span className="js-menu-line js-menu-line-middle absolute left-0 top-[9px] h-0.5 w-12 bg-[#080808]" />
-            <span className="js-menu-line js-menu-line-bottom absolute bottom-0 left-0 h-0.5 w-12 bg-[#080808]" />
+            <span className="js-menu-line js-menu-line-top absolute left-0 top-0 h-0.5 w-12 bg-[#E82020]" />
+            <span className="js-menu-line js-menu-line-middle absolute left-0 top-[9px] h-0.5 w-12 bg-[#E82020]" />
+            <span className="js-menu-line js-menu-line-bottom absolute bottom-0 left-0 h-0.5 w-12 bg-[#E82020]" />
           </span>
         </button>
       </nav>
@@ -646,14 +707,14 @@ function CampaignMenu({
     <div
       id="campaign-menu"
       aria-hidden={!isOpen}
-      className="js-menu-panel invisible fixed inset-0 z-40 overflow-hidden bg-[#f7f7f3] text-[#080808]"
+      className="js-menu-panel invisible fixed inset-0 z-40 overflow-hidden bg-[#FFF8E1] text-[#1C0800]"
     >
-      <div className="js-menu-word pointer-events-none absolute -bottom-8 left-4 text-[22vw] font-black uppercase leading-none tracking-normal text-[#080808]">
+      <div className="js-menu-word pointer-events-none absolute -bottom-8 left-4 text-[22vw] font-black uppercase leading-none tracking-normal text-[#1C0800]">
         Menu
       </div>
       <div className="mx-auto grid min-h-screen max-w-7xl content-end gap-10 px-5 pb-12 pt-28 sm:px-8 lg:grid-cols-[0.72fr_1fr] lg:px-12">
-        <div className="hidden border-t border-[#080808]/14 pt-5 text-sm font-semibold leading-relaxed text-[#555555] lg:block">
-          <span className="mb-4 block text-[10px] font-black uppercase tracking-[0.32em] text-[#080808]">
+        <div className="hidden border-t border-[#1C0800]/14 pt-5 text-sm font-semibold leading-relaxed text-[#8C5D2A] lg:block">
+          <span className="mb-4 block text-[10px] font-black uppercase tracking-[0.32em] text-[#1C0800]">
             HAL CINEMA
           </span>
           SCREEN 01
@@ -662,21 +723,21 @@ function CampaignMenu({
           <br />
           2026
         </div>
-        <div className="grid border-t border-[#080808]/14">
+        <div className="grid border-t border-[#1C0800]/14">
           {menuItems.map((item, index) => (
             <Link
               key={item.label}
               href={item.href}
               onClick={onClose}
-              className="js-menu-link group grid gap-3 border-b border-[#080808]/14 py-6 outline-none transition hover:bg-white focus-visible:bg-white sm:grid-cols-[72px_1fr_auto] sm:items-center sm:px-4"
+              className="js-menu-link group grid gap-3 border-b border-[#1C0800]/14 py-6 outline-none transition hover:bg-white focus-visible:bg-white sm:grid-cols-[72px_1fr_auto] sm:items-center sm:px-4"
             >
-              <span className="font-mono text-sm text-[#777777]">
+              <span className="font-mono text-sm text-[#A0703A]">
                 0{index + 1}
               </span>
               <span className="menu-label text-[clamp(2.15rem,3.7vw,3.5rem)] font-black leading-[0.96] tracking-normal">
                 {item.label}
               </span>
-              <span className="text-[10px] font-black uppercase tracking-[0.28em] text-[#777777] transition group-hover:text-[#080808]">
+              <span className="text-[10px] font-black uppercase tracking-[0.28em] text-[#A0703A] transition group-hover:text-[#1C0800]">
                 {item.meta}
               </span>
             </Link>
@@ -691,16 +752,16 @@ function SectionHeader({ eyebrow, title }: { eyebrow: string; title: string }) {
   return (
     <div className="js-reveal flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.42em] text-[#555555]">
+        <p className="text-xs font-semibold uppercase tracking-[0.42em] text-[#8C5D2A]">
           {eyebrow}
         </p>
-        <h2 className="mt-3 text-5xl font-black uppercase leading-none tracking-normal text-[#080808] sm:text-6xl lg:text-8xl">
+        <h2 className="mt-3 text-5xl font-black uppercase leading-none tracking-normal text-[#1C0800] sm:text-6xl lg:text-8xl">
           {title}
         </h2>
       </div>
       <Link
         href="/movie-detail"
-        className="inline-flex min-h-11 items-center justify-center rounded-full border border-[#080808]/22 px-5 text-xs font-bold uppercase tracking-[0.16em] text-[#080808] transition hover:border-[#080808] hover:bg-white"
+        className="inline-flex min-h-11 items-center justify-center rounded-full border border-[#1C0800]/22 px-5 text-xs font-bold uppercase tracking-[0.16em] text-[#1C0800] transition hover:border-[#1C0800] hover:bg-white"
       >
         Reserve
       </Link>
@@ -714,19 +775,19 @@ function MovieCard({ movie, index }: { movie: MovieCardData; index: number }) {
   return (
     <Link
       href="/movie-detail"
-      className="js-card group relative min-h-[500px] overflow-hidden border border-[#080808]/14 bg-white/82 p-3 text-[#080808] shadow-[0_18px_70px_rgba(0,0,0,0.08)] outline-none transition-colors hover:border-[#080808] focus-visible:border-[#080808] focus-visible:ring-2 focus-visible:ring-[#080808]"
+      className="js-card group relative min-h-[500px] overflow-hidden border border-[#1C0800]/14 bg-white/82 p-3 text-[#1C0800] shadow-[0_18px_70px_rgba(0,0,0,0.08)] outline-none transition-colors hover:border-[#1C0800] focus-visible:border-[#1C0800] focus-visible:ring-2 focus-visible:ring-[#E82020]"
       style={style}
     >
-      <span className="js-card-glow pointer-events-none absolute -left-1/2 top-0 h-full w-1/2 bg-[linear-gradient(90deg,transparent,rgba(8,8,8,0.28),transparent)] opacity-0 blur-2xl" />
+      <span className="js-card-glow pointer-events-none absolute -left-1/2 top-0 h-full w-1/2 bg-[linear-gradient(90deg,transparent,rgba(232,32,32,0.22),transparent)] opacity-0 blur-2xl" />
       <div className="relative flex h-full flex-col">
-        <div className="relative aspect-[3/4] overflow-hidden bg-[#090909]">
+        <div className="relative aspect-[3/4] overflow-hidden bg-[#1C0800]">
           <div className="poster-fallback absolute inset-0" style={style} />
           <CampaignImage
             imageSrc={movie.imageSrc}
             imageAlt={movie.imageAlt}
             className="js-card-media absolute inset-0 h-full w-full object-cover opacity-86 transition-opacity duration-300 group-hover:opacity-95"
           />
-          <div className="absolute left-3 top-3 bg-[#080808]/88 px-3 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-white backdrop-blur">
+          <div className="absolute left-3 top-3 bg-[#E82020]/88 px-3 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-white backdrop-blur">
             {movie.screen}
           </div>
           <div className="absolute bottom-3 right-3 font-mono text-5xl font-black text-white/18">
@@ -735,18 +796,18 @@ function MovieCard({ movie, index }: { movie: MovieCardData; index: number }) {
         </div>
 
         <div className="flex flex-1 flex-col pt-5">
-          <div className="flex items-center justify-between gap-3 text-xs uppercase tracking-[0.18em] text-[#555555]">
+          <div className="flex items-center justify-between gap-3 text-xs uppercase tracking-[0.18em] text-[#8C5D2A]">
             <span>{movie.genre}</span>
             <span>{movie.runtime}</span>
           </div>
-          <h3 className="mt-4 text-3xl font-black uppercase leading-none tracking-normal text-[#080808]">
+          <h3 className="mt-4 text-3xl font-black uppercase leading-none tracking-normal text-[#1C0800]">
             {movie.title}
           </h3>
-          <div className="mt-auto flex items-center justify-between gap-4 border-t border-[#080808]/12 pt-5">
-            <span className="text-sm font-bold text-[#343434]">
+          <div className="mt-auto flex items-center justify-between gap-4 border-t border-[#1C0800]/12 pt-5">
+            <span className="text-sm font-bold text-[#5C3010]">
               {movie.schedule}
             </span>
-            <span className="shrink-0 rounded-full bg-[#080808] px-4 py-2 text-xs font-black uppercase tracking-[0.14em] text-white">
+            <span className="shrink-0 rounded-full bg-[#E82020] px-4 py-2 text-xs font-black uppercase tracking-[0.14em] text-white">
               予約
             </span>
           </div>
@@ -768,10 +829,10 @@ function CompactMovieCard({
   return (
     <Link
       href="/movie-detail"
-      className="js-reveal group grid grid-cols-[84px_1fr] gap-4 border border-[#080808]/12 bg-white/82 p-3 text-[#080808] outline-none transition hover:border-[#080808] focus-visible:border-[#080808] focus-visible:ring-2 focus-visible:ring-[#080808]"
+      className="js-reveal group grid grid-cols-[84px_1fr] gap-4 border border-[#1C0800]/12 bg-white/82 p-3 text-[#1C0800] outline-none transition hover:border-[#1C0800] focus-visible:border-[#1C0800] focus-visible:ring-2 focus-visible:ring-[#E82020]"
       style={style}
     >
-      <div className="relative aspect-[2/3] overflow-hidden bg-[#090909]">
+      <div className="relative aspect-[2/3] overflow-hidden bg-[#1C0800]">
         <div className="poster-fallback absolute inset-0" style={style} />
         <CampaignImage
           imageSrc={movie.imageSrc}
@@ -780,14 +841,14 @@ function CompactMovieCard({
         />
       </div>
       <div className="min-w-0 py-1">
-        <div className="flex items-center justify-between gap-2 text-[11px] uppercase tracking-[0.16em] text-[#777777]">
+        <div className="flex items-center justify-between gap-2 text-[11px] uppercase tracking-[0.16em] text-[#A0703A]">
           <span>0{index + 1}</span>
           <span>{movie.rating}</span>
         </div>
-        <h3 className="mt-3 text-lg font-black uppercase leading-tight text-[#080808]">
+        <h3 className="mt-3 text-lg font-black uppercase leading-tight text-[#1C0800]">
           {movie.title}
         </h3>
-        <p className="mt-4 text-xs font-semibold text-[#343434]">
+        <p className="mt-4 text-xs font-semibold text-[#5C3010]">
           {movie.schedule}
         </p>
       </div>
