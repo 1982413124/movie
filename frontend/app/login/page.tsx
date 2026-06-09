@@ -36,15 +36,15 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-white px-6">
+    <main className="flex min-h-screen items-center justify-center bg-[#FFF8E1] px-6">
       <div className="w-full max-w-[520px]">
-        <h1 className="mb-12 text-center text-3xl font-bold text-black">
+        <h1 className="mb-12 text-center text-3xl font-black uppercase tracking-[0.08em] text-[#1C0800]">
           アカウントにログイン
         </h1>
 
         <form className="space-y-6" onSubmit={handleSubmit}>
           <div>
-            <label className="mb-2 block text-sm font-bold text-black">
+            <label className="mb-2 block text-[10px] font-black uppercase tracking-[0.28em] text-[#8C5D2A]">
               メールアドレス
             </label>
             <input
@@ -53,12 +53,12 @@ export default function LoginPage() {
               value={form.email}
               onChange={handleChange}
               placeholder="Enter your email"
-              className="h-12 w-full rounded-md border border-gray-300 px-4 text-sm text-black outline-none focus:border-green-700"
+              className="h-12 w-full border border-[#1C0800]/22 bg-white px-4 text-sm text-[#1C0800] outline-none placeholder:text-[#A0703A] focus:border-[#E82020]"
             />
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-bold text-black">
+            <label className="mb-2 block text-[10px] font-black uppercase tracking-[0.28em] text-[#8C5D2A]">
               パスワード
             </label>
             <input
@@ -67,35 +67,35 @@ export default function LoginPage() {
               value={form.password}
               onChange={handleChange}
               placeholder="********"
-              className="h-12 w-full rounded-md border border-gray-300 px-4 text-sm text-black outline-none focus:border-green-700"
+              className="h-12 w-full border border-[#1C0800]/22 bg-white px-4 text-sm text-[#1C0800] outline-none placeholder:text-[#A0703A] focus:border-[#E82020]"
             />
           </div>
 
           {errorMessage ? (
-            <p className="text-sm font-medium text-red-600">{errorMessage}</p>
+            <p className="text-sm font-medium text-[#C01818]">{errorMessage}</p>
           ) : null}
 
           <button
             type="submit"
-            className="mt-10 h-12 w-full rounded-md bg-[#356522] text-sm font-bold text-white hover:bg-[#284f19]"
+            className="mt-10 h-12 w-full bg-[#E82020] text-sm font-black uppercase tracking-[0.16em] text-white transition hover:bg-[#C01818]"
           >
             ログイン
           </button>
         </form>
 
         <div className="my-10 flex items-center gap-4">
-          <div className="h-px flex-1 bg-gray-200" />
-          <span className="text-sm text-black">Or</span>
-          <div className="h-px flex-1 bg-gray-200" />
+          <div className="h-px flex-1 bg-[#C8860A]/30" />
+          <span className="text-sm text-[#8C5D2A]">Or</span>
+          <div className="h-px flex-1 bg-[#C8860A]/30" />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <button className="flex h-11 items-center justify-center gap-2 rounded-md border border-gray-300 bg-white text-sm text-black">
-            <span className="font-bold text-blue-500">G</span>
+          <button className="flex h-11 items-center justify-center gap-2 border border-[#1C0800]/18 bg-white text-sm text-[#1C0800] transition hover:bg-[#FFF8E1]">
+            <span className="font-bold text-[#E82020]">G</span>
             Sign in with Google
           </button>
 
-          <button className="flex h-11 items-center justify-center gap-2 rounded-md border border-gray-300 bg-white text-sm text-black">
+          <button className="flex h-11 items-center justify-center gap-2 border border-[#1C0800]/18 bg-white text-sm text-[#1C0800] transition hover:bg-[#FFF8E1]">
             <span className="text-base">●</span>
             Sign in with Apple
           </button>

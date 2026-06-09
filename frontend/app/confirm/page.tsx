@@ -1,10 +1,10 @@
-import Header from "../components/Header";
+import CampaignHeader from "../components/CampaignHeader";
 import ConfirmClient from "../comfirm/ConfirmClient";
 
 export default function ConfirmPage() {
   return (
-    <div className="min-h-screen bg-gray-100 font-sans">
-      <Header />
+    <div className="min-h-screen bg-[#FFF8E1]">
+      <CampaignHeader />
       <ConfirmClient />
     </div>
   );

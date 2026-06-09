@@ -14,7 +14,7 @@ export default function OrderPanel({
 
   return (
     <aside className="md:sticky md:top-8 md:h-fit">
-      <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-md">
+      <div className="border border-[#1C0800]/14 bg-white p-6 shadow-[0_18px_60px_rgba(28,8,0,0.08)]">
         <PanelTitle selectedScreening={selectedScreening} />
         <ScreeningList
           screeningId={screeningId}
@@ -29,7 +29,7 @@ export default function OrderPanel({
         <p
           aria-live="polite"
           className={`mt-4 min-h-5 text-sm ${
-            error ? "text-red-600" : "text-gray-500"
+            error ? "text-[#1C0800]" : "text-[#8C5D2A]"
           }`}
         >
           {error || "座席を選ぶと購入手続きへ進めます。"}
@@ -38,7 +38,7 @@ export default function OrderPanel({
         <button
           type="button"
           onClick={onProceed}
-          className="mt-4 w-full rounded-lg bg-gray-700 px-5 py-4 text-sm font-bold text-white transition-colors hover:bg-gray-800"
+          className="mt-4 w-full bg-[#E82020] px-5 py-4 text-sm font-black uppercase tracking-[0.16em] text-white transition-colors hover:bg-[#C01818] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E82020]"
         >
           購入へ進む
         </button>
@@ -51,12 +51,14 @@ function PanelTitle({ selectedScreening }) {
   return (
     <div className="flex items-start justify-between gap-4">
       <div>
-        <p className="text-sm font-semibold text-gray-500">
+        <p className="text-[10px] font-black uppercase tracking-[0.32em] text-[#8C5D2A]">
           予約内容
         </p>
-        <h2 className="mt-2 text-2xl font-bold text-gray-800">チケット情報</h2>
+        <h2 className="mt-2 text-2xl font-black uppercase text-[#1C0800]">
+          チケット情報
+        </h2>
       </div>
-      <span className="rounded border border-gray-300 px-3 py-1 font-mono text-xs text-gray-600">
+      <span className="border border-[#C8860A]/40 px-3 py-1 font-mono text-xs text-[#8C5D2A]">
         {selectedScreening.dateLabel}
       </span>
     </div>
@@ -85,19 +87,19 @@ function ScreeningButton({ isActive, onClick, screening }) {
       aria-pressed={isActive}
       onClick={onClick}
       className={[
-        "grid w-full grid-cols-[1fr_auto] items-center gap-3 rounded-lg border p-4 text-left transition-colors",
+        "grid w-full grid-cols-[1fr_auto] items-center gap-3 border p-4 text-left transition-colors",
         isActive
-          ? "border-[var(--selection-border)] bg-[var(--selection-bg)] text-[var(--selection-text)]"
-          : "border-gray-200 bg-white hover:bg-gray-50",
+          ? "border-[#1C0800] bg-[#1C0800] text-white"
+          : "border-[#1C0800]/14 bg-white hover:bg-[#FFF8E1]",
       ].join(" ")}
     >
       <span>
-        <span className="block font-mono text-xl font-semibold">
+        <span className="block font-mono text-xl font-black">
           {screening.label}
         </span>
         <span
-          className={`mt-1 block text-xs ${
-            isActive ? "text-[var(--selection-text)]" : "text-gray-500"
+          className={`mt-1 block text-xs uppercase tracking-[0.16em] ${
+            isActive ? "text-white" : "text-[#8C5D2A]"
           }`}
         >
           {screening.screenName}
@@ -105,7 +107,7 @@ function ScreeningButton({ isActive, onClick, screening }) {
       </span>
       <span
         className={`font-mono text-sm ${
-          isActive ? "text-[var(--selection-text)]" : "text-gray-700"
+          isActive ? "text-white" : "text-[#5C3010]"
         }`}
       >
         {countAvailableSeats(screening.id)}席
@@ -116,7 +118,7 @@ function ScreeningButton({ isActive, onClick, screening }) {
 
 function OrderDetails({ selectedSeatIds, ticketCount, totalPrice }) {
   return (
-    <div className="mt-6 divide-y divide-gray-200 border-y border-gray-200">
+    <div className="mt-6 divide-y divide-[#1C0800]/10 border-y border-[#1C0800]/14">
       <DetailRow
         label="選択座席"
         value={selectedSeatIds.length > 0 ? selectedSeatIds.join(", ") : "--"}
@@ -130,10 +132,10 @@ function OrderDetails({ selectedSeatIds, ticketCount, totalPrice }) {
 function DetailRow({ label, value, large = false }) {
   return (
     <div className="flex items-center justify-between gap-4 py-4">
-      <span className="text-sm text-gray-600">{label}</span>
+      <span className="text-sm text-[#8C5D2A]">{label}</span>
       <span
-        className={`text-right font-semibold text-gray-800 ${
-          large ? "font-mono text-xl" : "font-mono text-lg"
+        className={`text-right font-mono font-semibold text-[#1C0800] ${
+          large ? "text-xl font-black" : "text-lg"
         }`}
       >
         {value}
