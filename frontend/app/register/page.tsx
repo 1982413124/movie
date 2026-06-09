@@ -77,9 +77,11 @@ export default function SigninPage() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-white px-6 text-black">
+    <main className="flex min-h-screen items-center justify-center bg-[#FFF8E1] px-6 text-[#1C0800]">
       <div className="w-full max-w-[520px]">
-        <h1 className="mb-10 text-center text-3xl font-bold">新規登録</h1>
+        <h1 className="mb-10 text-center text-3xl font-black uppercase tracking-[0.08em]">
+          新規登録
+        </h1>
 
         <form
           className="space-y-5"
@@ -88,19 +90,21 @@ export default function SigninPage() {
           action={`${apiBaseUrl}/api/register`}
         >
           <div>
-            <label className="mb-2 block text-sm font-bold">名前</label>
+            <label className="mb-2 block text-[10px] font-black uppercase tracking-[0.28em] text-[#8C5D2A]">
+              名前
+            </label>
             <input
               type="text"
               name="name"
               value={form.name}
               onChange={handleChange}
               placeholder="Enter your name"
-              className="h-11 w-full rounded-md border border-black px-4 text-sm outline-none focus:border-blue-600"
+              className="h-11 w-full border border-[#1C0800]/22 bg-white px-4 text-sm outline-none placeholder:text-[#A0703A] focus:border-[#E82020]"
             />
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-bold">
+            <label className="mb-2 block text-[10px] font-black uppercase tracking-[0.28em] text-[#8C5D2A]">
               メールアドレス
             </label>
             <input
@@ -109,12 +113,12 @@ export default function SigninPage() {
               value={form.email}
               onChange={handleChange}
               placeholder="Enter your email"
-              className="h-11 w-full rounded-md border border-black px-4 text-sm outline-none focus:border-blue-600"
+              className="h-11 w-full border border-[#1C0800]/22 bg-white px-4 text-sm outline-none placeholder:text-[#A0703A] focus:border-[#E82020]"
             />
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-bold">
+            <label className="mb-2 block text-[10px] font-black uppercase tracking-[0.28em] text-[#8C5D2A]">
               電話番号
               <span className="ml-2 text-xs font-normal text-gray-500">
                 任意
@@ -126,24 +130,26 @@ export default function SigninPage() {
               value={form.phone}
               onChange={handleChange}
               placeholder="Enter your Mobile Number"
-              className="h-11 w-full rounded-md border border-black px-4 text-sm outline-none focus:border-blue-600"
+              className="h-11 w-full border border-[#1C0800]/22 bg-white px-4 text-sm outline-none placeholder:text-[#A0703A] focus:border-[#E82020]"
             />
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-bold">パスワード</label>
+            <label className="mb-2 block text-[10px] font-black uppercase tracking-[0.28em] text-[#8C5D2A]">
+              パスワード
+            </label>
             <input
               type="password"
               name="password"
               value={form.password}
               onChange={handleChange}
               placeholder="Enter Password"
-              className="h-11 w-full rounded-md border border-black px-4 text-sm outline-none focus:border-blue-600"
+              className="h-11 w-full border border-[#1C0800]/22 bg-white px-4 text-sm outline-none placeholder:text-[#A0703A] focus:border-[#E82020]"
             />
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-bold">
+            <label className="mb-2 block text-[10px] font-black uppercase tracking-[0.28em] text-[#8C5D2A]">
               パスワード（確認）
             </label>
             <input
@@ -152,12 +158,12 @@ export default function SigninPage() {
               value={form.passwordConfirm}
               onChange={handleChange}
               placeholder="Enter your Password"
-              className="h-11 w-full rounded-md border border-black px-4 text-sm outline-none focus:border-blue-600"
+              className="h-11 w-full border border-[#1C0800]/22 bg-white px-4 text-sm outline-none placeholder:text-[#A0703A] focus:border-[#E82020]"
             />
           </div>
 
           {errorMessage ? (
-            <p className="text-sm font-medium text-red-600">{errorMessage}</p>
+            <p className="text-sm font-medium text-[#C01818]">{errorMessage}</p>
           ) : null}
 
           {isSubmitting ? (
@@ -181,11 +187,11 @@ export default function SigninPage() {
           </button>
         </form>
 
-        <div className="mt-10 border-t border-gray-500 pt-4">
-          <div className="flex items-center justify-center gap-5 text-sm text-gray-400">
+        <div className="mt-10 border-t border-[#C8860A]/30 pt-4">
+          <div className="flex items-center justify-center gap-5 text-sm text-[#8C5D2A]">
             <span>アカウントをお持ちの方はこちら</span>
-            <span className="text-blue-600">→</span>
-            <Link href="/login" className="font-medium text-blue-600">
+            <span className="text-[#E82020]">→</span>
+            <Link href="/login" className="font-bold text-[#E82020]">
               ログイン
             </Link>
           </div>
