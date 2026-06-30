@@ -539,7 +539,7 @@ function OpeningLoader() {
 
 const primaryNavItems = [
   { href: "/", label: "ホーム", meta: "Home" },
-  { href: "/detail", label: "上映中の作品", meta: "Films" },
+  { href: "#featured", label: "上映中の作品", meta: "Films" },
   { href: "/search", label: "検索", meta: "Search" },
   { href: "/mypage", label: "マイページ", meta: "My Page" },
 ];
@@ -551,8 +551,9 @@ const menuItems = [
     meta: "Schedule",
   },
   {
-    href: "/detail",
+    href: "#featured",
     label: "映画一覧",
+
     meta: "Lineup",
   },
   {

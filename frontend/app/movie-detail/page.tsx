@@ -168,7 +168,7 @@ function MovieDetailContent() {
         </div>
 
         <Link
-          href={`/seats?id=${movie.id}`}
+          href="/food"
           className="mt-auto flex min-h-14 items-center justify-center bg-[#1C0800] text-sm font-black uppercase tracking-[0.2em] text-white transition hover:bg-[#2b2b2b]"
         >
           座席を選択する
