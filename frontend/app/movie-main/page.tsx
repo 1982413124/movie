@@ -551,7 +551,7 @@ const menuItems = [
     meta: "Schedule",
   },
   {
-    href: "#featured",
+    href: "/detail",
     label: "映画一覧",
     meta: "Lineup",
   },
