@@ -67,6 +67,10 @@ export default function SeatSelectionClient() {
       return;
     }
 
+    const rawFoodOrder = window.sessionStorage.getItem("foodOrder");
+    const foodOrder = rawFoodOrder ? JSON.parse(rawFoodOrder) : { items: [], totalPrice: 0 };
+    const ticketPrice = selectedScreening.price * selectedSeatIds.length;
+
     const draft = {
       movieId: movieDetail.id,
       screeningId: selectedScreening.id,
@@ -74,7 +78,11 @@ export default function SeatSelectionClient() {
       screenName: selectedScreening.screenName,
       seatIds: selectedSeatIds,
       ticketCount: selectedSeatIds.length,
-      totalPrice: selectedScreening.price * selectedSeatIds.length,
+      foodItems: foodOrder.items,
+      foodTotalPrice: foodOrder.totalPrice,
+      totalPrice: ticketPrice + foodOrder.totalPrice,
+      posterSrc: movieDetail.imageSrc,
+      posterAlt: movieDetail.imageAlt,
     };
 
     window.sessionStorage.setItem("movieReservationDraft", JSON.stringify(draft));

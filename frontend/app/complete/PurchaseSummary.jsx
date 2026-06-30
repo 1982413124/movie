@@ -4,7 +4,7 @@ export default function PurchaseSummary({ details }) {
   return (
     <section className="overflow-hidden border border-[#1C0800]/14 bg-white shadow-[0_18px_60px_rgba(28,8,0,0.08)]">
       <div className="grid gap-5 border-b border-[#1C0800]/14 p-6 md:grid-cols-[150px_minmax(0,1fr)]">
-        <Poster title={details.posterLabel} />
+        <Poster src={details.posterSrc} alt={details.posterAlt} title={details.posterLabel} />
         <div className="flex flex-col justify-between gap-6">
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.32em] text-[#8C5D2A]">
@@ -37,16 +37,22 @@ export default function PurchaseSummary({ details }) {
   );
 }
 
-function Poster({ title }) {
+function Poster({ src, alt, title }) {
+  if (src) {
+    return (
+      <div className="aspect-[3/4] overflow-hidden border border-[#1C0800]/18">
+        <img src={src} alt={alt || title} className="h-full w-full object-cover" />
+      </div>
+    );
+  }
+
   return (
     <div
       aria-label="ポスター画像"
       className="aspect-[3/4] border border-[#1C0800]/18 bg-[#FFE9A0] p-4 text-[#5C3010]"
     >
       <div className="flex h-full flex-col justify-end">
-        <p className="text-[11px] font-semibold text-[#8C5D2A]">
-          MOVIE
-        </p>
+        <p className="text-[11px] font-semibold text-[#8C5D2A]">MOVIE</p>
         <p className="mt-2 text-xl font-semibold leading-tight text-[#1C0800]">{title}</p>
       </div>
     </div>

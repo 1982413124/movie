@@ -1,207 +1,137 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import CampaignHeader from "../components/CampaignHeader";
+import { MOVIES, type Movie } from "../../lib/movieData";
 
-import gsap from "gsap";
-
-const MOVIES = [
-  {
-    id: 1,
-    title: "映画タイトル A",
-    genre: "アクション",
-    hours: 2,
-    minutes: 13,
-    rating: "13+",
-    category: "アクション",
-  },
-  {
-    id: 2,
-    title: "映画タイトル B",
-    genre: "ドラマ",
-    hours: 1,
-    minutes: 55,
-    rating: "G",
-    category: "ドラマ",
-  },
-  {
-    id: 3,
-    title: "映画タイトル C",
-    genre: "ホラー",
-    hours: 2,
-    minutes: 5,
-    rating: "18+",
-    category: "ホラー",
-  },
-  {
-    id: 4,
-    title: "映画タイトル D",
-    genre: "コメディ",
-    hours: 1,
-    minutes: 45,
-    rating: "G",
-    category: "コメディ",
-  },
-  {
-    id: 5,
-    title: "映画タイトル E",
-    genre: "SF",
-    hours: 2,
-    minutes: 30,
-    rating: "PG12",
-    category: "SF",
-  },
-  {
-    id: 6,
-    title: "映画タイトル F",
-    genre: "アクション",
-    hours: 1,
-    minutes: 50,
-    rating: "PG12",
-    category: "アクション",
-  },
+const CATEGORIES = [
+  "ALL",
+  "アクション",
+  "SF",
+  "ファンタジー",
+  "ホラー",
+  "ドラマ",
+  "アニメ",
+  "スリラー",
+  "ミュージカル",
+  "モンスター",
 ];
 
-const CATEGORIES = ["---", "アクション", "ドラマ", "ホラー", "コメディ", "SF"];
-
-const ITEMS_PER_PAGE = 3;
-
 export default function NowShowingPage() {
-  const [selectedCategory, setSelectedCategory] = useState("---");
-  const [page, setPage] = useState(0);
-
-  useEffect(() => {
-    gsap.from(".movie-card", {
-      opacity: 0,
-      y: 50,
-      scale: 0.9,
-      duration: 0.8,
-      stagger: 0.15,
-      ease: "power2.out",
-    });
-  }, []);
+  const [selectedCategory, setSelectedCategory] = useState("ALL");
 
   const filtered =
-    selectedCategory === "---"
+    selectedCategory === "ALL"
       ? MOVIES
-      : MOVIES.filter((m) => m.category === selectedCategory);
-
-  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
-
-  const currentMovies = filtered.slice(
-    page * ITEMS_PER_PAGE,
-    page * ITEMS_PER_PAGE + ITEMS_PER_PAGE,
-  );
+      : MOVIES.filter((m) => m.genre === selectedCategory);
 
   return (
-    <div className="min-h-screen bg-[var(--page-bg)] font-sans text-[var(--text-primary)]">
+    <div className="min-h-screen bg-[#FFF8E1] text-[#1C0800]">
       <CampaignHeader />
 
-      <main className="max-w-4xl mx-auto px-6 py-8">
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-xl font-bold">上映中</h1>
+      <main className="mx-auto max-w-7xl px-5 py-12 sm:px-8 lg:px-12">
+        {/* ページヘッダー */}
+        <div className="mb-8 border-b border-[#1C0800]/14 pb-6">
+          <p className="text-xs font-black uppercase tracking-[0.38em] text-[#8C5D2A]">
+            Movie Reservation
+          </p>
+          <h1 className="mt-3 text-5xl font-black uppercase leading-none sm:text-7xl">
+            NOW SHOWING
+          </h1>
+        </div>
 
-          <div className="flex items-center gap-2 text-sm text-[var(--text-muted)]">
-            <span>カテゴリ</span>
-
-            <select
-              value={selectedCategory}
-              onChange={(e) => {
-                setSelectedCategory(e.target.value);
-                setPage(0);
-              }}
-              className="rounded border border-[var(--border-strong)] bg-[var(--surface-bg)] px-2 py-1 text-sm text-[var(--text-primary)]"
+        {/* カテゴリフィルター */}
+        <div className="mb-8 flex flex-wrap gap-2">
+          {CATEGORIES.map((cat) => (
+            <button
+              key={cat}
+              type="button"
+              onClick={() => setSelectedCategory(cat)}
+              className={`min-h-10 border px-5 text-xs font-black uppercase tracking-[0.18em] transition ${
+                selectedCategory === cat
+                  ? "border-[#E82020] bg-[#E82020] text-white"
+                  : "border-[#1C0800]/20 bg-white text-[#1C0800] hover:border-[#1C0800]"
+              }`}
             >
-              {CATEGORIES.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
-          </div>
+              {cat}
+            </button>
+          ))}
         </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setPage((p) => Math.max(0, p - 1))}
-            disabled={page === 0}
-            className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--border-strong)] text-[var(--text-muted)] transition hover:scale-110 disabled:opacity-30"
-          >
-            ‹
-          </button>
+        {/* 件数表示 */}
+        <p className="mb-6 text-xs font-bold uppercase tracking-[0.22em] text-[#8C5D2A]">
+          {filtered.length} FILMS
+        </p>
 
-          <div className="grid flex-1 grid-cols-3 gap-4">
-            {currentMovies.map((movie) => (
-              <div
-                key={movie.id}
-                className="movie-card flex cursor-grab flex-col border border-[#1C0800]/14 bg-white p-4 shadow-[0_8px_30px_rgba(28,8,0,0.1)] active:cursor-grabbing"
-              >
-                <div
-                  className="relative w-full rounded-lg bg-[var(--surface-muted)]"
-                  style={{ aspectRatio: "2/3" }}
-                >
-                  <svg
-                    className="absolute inset-0 h-full w-full text-[var(--text-muted)]"
-                    viewBox="0 0 100 150"
-                    preserveAspectRatio="none"
-                  >
-                    <line
-                      x1="0"
-                      y1="0"
-                      x2="100"
-                      y2="150"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                    />
-
-                    <line
-                      x1="100"
-                      y1="0"
-                      x2="0"
-                      y2="150"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                    />
-                  </svg>
-                </div>
-
-                <div className="mt-3 space-y-1 text-sm">
-                  <div className="font-bold">{movie.title}</div>
-
-                  <div className="text-[var(--text-muted)]">{movie.genre}</div>
-
-                  <div className="text-[var(--text-muted)]">
-                    {movie.hours}時間 {movie.minutes}分
-                  </div>
-
-                  <div className="text-[var(--text-muted)]">{movie.rating}</div>
-                </div>
-
-                <Link
-                  href="/movie-detail"
-                  className="mt-4 block border border-[#E82020] py-2 text-center text-sm font-bold text-[#E82020] transition hover:scale-105 hover:bg-[#E82020] hover:text-white"
-                >
-                  詳細を見る
-                </Link>
-              </div>
-            ))}
-
-            {currentMovies.length < ITEMS_PER_PAGE &&
-              Array.from({
-                length: ITEMS_PER_PAGE - currentMovies.length,
-              }).map((_, i) => <div key={`empty-${i}`} />)}
-          </div>
-
-          <button
-            onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-            disabled={page >= totalPages - 1}
-            className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--border-strong)] text-[var(--text-muted)] transition hover:scale-110 disabled:opacity-30"
-          >
-            ›
-          </button>
+        {/* 4列グリッド */}
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          {filtered.map((movie, index) => (
+            <MovieCard key={movie.id} movie={movie} index={index} />
+          ))}
         </div>
+
+        {filtered.length === 0 && (
+          <div className="py-24 text-center">
+            <p className="text-sm font-bold text-[#A0703A]">
+              該当する作品はありません
+            </p>
+          </div>
+        )}
       </main>
+    </div>
+  );
+}
+
+function MovieCard({ movie, index }: { movie: Movie; index: number }) {
+  return (
+    <div className="group flex flex-col border border-[#1C0800]/14 bg-white shadow-[0_8px_32px_rgba(28,8,0,0.08)] transition hover:border-[#1C0800]/40 hover:shadow-[0_16px_48px_rgba(28,8,0,0.13)]">
+      {/* ポスター画像 */}
+      <div className="relative overflow-hidden" style={{ aspectRatio: "2/3" }}>
+        <img
+          src={movie.imageSrc}
+          alt={movie.imageAlt}
+          className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+        />
+        <div className="absolute left-3 top-3 bg-[#E82020]/90 px-2 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-white backdrop-blur">
+          {movie.screen}
+        </div>
+        <div className="absolute bottom-3 right-3 font-mono text-4xl font-black text-white/20">
+          {String(index + 1).padStart(2, "0")}
+        </div>
+      </div>
+
+      {/* 情報 */}
+      <div className="flex flex-1 flex-col p-4">
+        <div className="flex items-center justify-between gap-2 text-[10px] uppercase tracking-[0.18em] text-[#A0703A]">
+          <span>{movie.genre}</span>
+          <span className="border border-[#1C0800]/20 px-2 py-0.5">
+            {movie.rating}
+          </span>
+        </div>
+
+        <h2 className="mt-2 line-clamp-2 text-sm font-black leading-snug text-[#1C0800]">
+          {movie.titleEn}
+        </h2>
+
+        <p className="mt-1 line-clamp-2 text-xs text-[#5C3010]">
+          {movie.title}
+        </p>
+
+        <div className="mt-3 flex items-center justify-between text-xs text-[#8C5D2A]">
+          <span className="font-bold">{movie.schedule}</span>
+          <span>
+            {movie.hours}h {movie.minutes}m
+          </span>
+        </div>
+
+        <Link
+          href={`/movie-detail?id=${movie.id}`}
+          className="mt-4 flex min-h-10 items-center justify-center border border-[#E82020] text-xs font-black uppercase tracking-[0.14em] text-[#E82020] transition hover:bg-[#E82020] hover:text-white"
+        >
+          予約する
+        </Link>
+      </div>
     </div>
   );
 }
