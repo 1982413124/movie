@@ -4,35 +4,124 @@ import { useRouter } from "next/navigation";
 import type { ChangeEvent, FormEvent } from "react";
 import { useState } from "react";
 
-import { loginAccount } from "../../lib/authStorage.mjs";
+type StoredAccount = {
+  email: string;
+  name: string;
+  password: string;
+  phone: string;
+  nickname: string;
+};
 
 export default function LoginPage() {
   const router = useRouter();
+  const apiBaseUrl =
+    process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:5000";
+
   const [form, setForm] = useState({
     email: "",
     password: "",
   });
   const [errorMessage, setErrorMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
     setForm((currentForm) => ({ ...currentForm, [name]: value }));
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    const result = loginAccount(window.localStorage, form) as
-      | { ok: true }
-      | { ok: false; message: string };
-
-    if (!result.ok) {
-      setErrorMessage(result.message);
+    if (isSubmitting) {
       return;
     }
 
+    setIsSubmitting(true);
     setErrorMessage("");
-    router.push("/mypage");
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: form.email,
+          password: form.password,
+        }),
+      });
+
+      const payload = (await response.json()) as {
+        status?: string;
+        message?: string;
+        user?: {
+          id: number;
+          name: string;
+          email: string;
+          created_at?: string | null;
+        };
+      };
+
+      if (!response.ok || !payload.user) {
+        setErrorMessage(
+          payload.message ??
+            "ログインに失敗しました。しばらくしてから再度お試しください。",
+        );
+        setIsSubmitting(false);
+        return;
+      }
+
+      const currentEmail = payload.user.email;
+      const currentName = payload.user.name ?? "";
+
+      const accountsRaw = window.localStorage.getItem("movieAccounts");
+      let accounts: StoredAccount[] = [];
+
+      if (accountsRaw) {
+        try {
+          const parsed = JSON.parse(accountsRaw);
+          if (Array.isArray(parsed)) {
+            accounts = parsed as StoredAccount[];
+          }
+        } catch {
+          accounts = [];
+        }
+      }
+
+      const accountIndex = accounts.findIndex(
+        (account) =>
+          String(account.email ?? "")
+            .trim()
+            .toLowerCase() === currentEmail.trim().toLowerCase(),
+      );
+
+      const nextAccount: StoredAccount = {
+        email: currentEmail,
+        name: currentName,
+        password: "",
+        phone: "",
+        nickname: "",
+      };
+
+      if (accountIndex >= 0) {
+        accounts[accountIndex] = {
+          ...accounts[accountIndex],
+          email: currentEmail,
+          name: currentName,
+        };
+      } else {
+        accounts.push(nextAccount);
+      }
+
+      window.localStorage.setItem("movieAccounts", JSON.stringify(accounts));
+      window.localStorage.setItem("movieCurrentUserEmail", currentEmail);
+
+      router.push("/mypage");
+    } catch {
+      setErrorMessage("通信エラーが発生しました。");
+      setIsSubmitting(false);
+      return;
+    }
   };
 
   return (
@@ -75,11 +164,18 @@ export default function LoginPage() {
             <p className="text-sm font-medium text-[#C01818]">{errorMessage}</p>
           ) : null}
 
+          {isSubmitting ? (
+            <p className="text-sm text-[#8C5D2A]" aria-live="polite">
+              ログイン中です...
+            </p>
+          ) : null}
+
           <button
             type="submit"
-            className="mt-10 h-12 w-full bg-[#E82020] text-sm font-black uppercase tracking-[0.16em] text-white transition hover:bg-[#C01818]"
+            disabled={isSubmitting}
+            className="mt-10 h-12 w-full bg-[#E82020] text-sm font-black uppercase tracking-[0.16em] text-white transition hover:bg-[#C01818] disabled:opacity-70"
           >
-            ログイン
+            {isSubmitting ? "送信中..." : "ログイン"}
           </button>
         </form>
 

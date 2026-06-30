@@ -1,7 +1,7 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from database.db import db_conn
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
 
 
 # Flaskアプリ
@@ -134,6 +134,64 @@ def register():
 
     except Exception as exc:
         return jsonify({"status": "error", "message": str(exc)}), 500
+    
+
+@app.post("/api/login")
+def login():
+    """
+    ログインAPI
+    """
+    payload = request.get_json(silent=True) or request.form.to_dict() or {}
+
+    email = str(payload.get("email", "")).strip().lower()
+    password = str(payload.get("password", ""))
+
+    if not email or not password:
+        return (
+            jsonify({"status": "error", "message": "メールアドレスとパスワードは必須です"}),
+            400,
+        )
+    try:
+        with db_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT id, name, email, password, created_at
+                    FROM users
+                    WHERE email = %s;
+                    """,
+                    (email,),
+                )
+                row = cur.fetchone()
+            
+        if not row:
+            return (
+                jsonify({"status": "error", "message": "メールアドレスまたはパスワードが違います"}),
+                401,
+            )
+        
+        stored_password_hash = row[3]
+        if not check_password_hash(stored_password_hash, password):
+            return (
+                jsonify({"status": "error", "message": "メールアドレスまたはパスワードが違います"}),
+                401,
+            )
+        
+        return jsonify(
+            {
+                "status": "ok",
+                "user": {
+                    "id": row[0],
+                    "name": row[1],
+                    "email": row[2],
+                    "created_at": row[4].isoformat() if row[4] else None,
+                },
+            }
+        ), 200
+    
+    except Exception as exc:
+        return jsonify({"status": "error", "message": str(exc)}), 500
+
 
 # このファイルを直接実行したときだけ起動する
 if __name__ == "__main__":
