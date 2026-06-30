@@ -54,10 +54,10 @@ export default function PaymentPanel({
       </button>
 
       <Link
-        href="/seats"
+        href="/food"
         className="mt-3 block w-full border border-[#1C0800]/18 px-5 py-4 text-center text-sm font-semibold text-[#5C3010] transition-colors hover:bg-[#FFF8E1]"
       >
-        座席選択へ戻る
+        フード選択へ戻る
       </Link>
     </aside>
   );

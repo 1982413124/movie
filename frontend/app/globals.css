@@ -252,3 +252,39 @@ html {
 [data-theme="dark"] .hover\:bg-gray-100:hover {
   background-color: var(--surface-muted);
 }
+@keyframes foodButtonBump {
+  0% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes foodSummaryPulse {
+  0% {
+    color: #1C0800;
+    transform: scale(1);
+  }
+  45% {
+    color: #E82020;
+    transform: scale(1.06);
+  }
+  100% {
+    color: #1C0800;
+    transform: scale(1);
+  }
+}
+
+.is-bumping {
+  animation: foodButtonBump 260ms ease-out;
+}
+
+.food-summary-pulse {
+  animation: foodSummaryPulse 420ms ease-out;
+  display: inline-block;
+  transform-origin: right center;
+}

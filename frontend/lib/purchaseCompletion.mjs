@@ -7,7 +7,11 @@ export function buildPurchaseCompletion(draft, options = {}) {
   const screening = findScreening(draft?.screeningId) ?? screenings[0];
   const seatIds = Array.isArray(draft?.seatIds) ? draft.seatIds : [];
   const ticketNum = draft?.ticketCount ?? seatIds.length;
-  const totalPrice = draft?.totalPrice ?? screening.price * ticketNum;
+  const ticketTotalPrice = draft?.ticketTotalPrice ?? draft?.totalPrice ?? screening.price * ticketNum;
+  const foodItems = normalizeFoodItems(draft?.foodItems);
+  const foodTotalPrice =
+    draft?.foodTotalPrice ?? foodItems.reduce((total, item) => total + item.lineTotal, 0);
+  const totalPrice = draft?.totalPrice ?? ticketTotalPrice + foodTotalPrice;
 
   return {
     completeTitle: "ご購入が完了しました",
@@ -22,6 +26,9 @@ export function buildPurchaseCompletion(draft, options = {}) {
     theaterName: screening.theaterName,
     seatNum: formatSeatNumbers(seatIds),
     ticketNum,
+    ticketTotalPrice,
+    foodItems,
+    foodTotalPrice,
     totalPrice,
     payMethod: options.payMethod ?? defaultPaymentMethod,
     payNum: options.payNum ?? createPaymentNum(now, seatIds),
@@ -30,6 +37,22 @@ export function buildPurchaseCompletion(draft, options = {}) {
 
 export function formatSeatNumbers(seatIds) {
   return seatIds.length > 0 ? seatIds.join(", ") : "-";
+}
+
+function normalizeFoodItems(foodItems) {
+  if (!Array.isArray(foodItems)) {
+    return [];
+  }
+
+  return foodItems
+    .filter((item) => item && item.quantity > 0)
+    .map((item) => ({
+      id: item.id,
+      name: item.name,
+      price: item.price,
+      quantity: item.quantity,
+      lineTotal: item.lineTotal,
+    }));
 }
 
 function formatPurchaseDatetime(date) {

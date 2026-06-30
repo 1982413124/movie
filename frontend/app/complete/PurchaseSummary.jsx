@@ -1,6 +1,8 @@
 import { formatPrice } from "../seats/formatters";
 
 export default function PurchaseSummary({ details }) {
+  const hasFood = details.foodItems?.length > 0;
+
   return (
     <section className="overflow-hidden border border-[#1C0800]/14 bg-white shadow-[0_18px_60px_rgba(28,8,0,0.08)]">
       <div className="grid gap-5 border-b border-[#1C0800]/14 p-6 md:grid-cols-[150px_minmax(0,1fr)]">
@@ -29,11 +31,34 @@ export default function PurchaseSummary({ details }) {
       <dl className="grid gap-x-8 px-6 py-2 md:grid-cols-2">
         <DetailRow label="上映館" value={details.theaterName} />
         <DetailRow label="枚数" value={`${details.ticketNum}枚`} />
+        {hasFood ? (
+          <>
+            <DetailRow label="チケット小計" value={`${formatPrice(details.ticketTotalPrice)}（税込）`} />
+            <DetailRow label="フード小計" value={`${formatPrice(details.foodTotalPrice)}（税込）`} />
+            <FoodDetailRow items={details.foodItems} />
+          </>
+        ) : null}
         <DetailRow label="合計金額" value={`${formatPrice(details.totalPrice)}（税込）`} />
         <DetailRow label="支払い方法" value={details.payMethod} />
         <DetailRow label="決済番号" value={details.payNum} wide />
       </dl>
     </section>
+  );
+}
+
+function FoodDetailRow({ items }) {
+  return (
+    <div className="border-t border-[#1C0800]/10 py-4 md:col-span-2">
+      <dt className="text-sm text-[#8C5D2A]">フード明細</dt>
+      <dd className="mt-3 grid gap-2">
+        {items.map((item) => (
+          <div key={item.id} className="flex justify-between gap-4 text-sm">
+            <span className="text-[#5C3010]">{item.name} x {item.quantity}</span>
+            <span className="font-semibold text-[#1C0800]">{formatPrice(item.lineTotal)}</span>
+          </div>
+        ))}
+      </dd>
+    </div>
   );
 }
 

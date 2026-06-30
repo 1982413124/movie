@@ -32,7 +32,7 @@ export default function OrderPanel({
             error ? "text-[#1C0800]" : "text-[#8C5D2A]"
           }`}
         >
-          {error || "座席を選ぶと購入手続きへ進めます。"}
+          {error || "座席を選ぶとフード選択へ進めます。"}
         </p>
 
         <button
@@ -40,7 +40,7 @@ export default function OrderPanel({
           onClick={onProceed}
           className="mt-4 w-full bg-[#E82020] px-5 py-4 text-sm font-black uppercase tracking-[0.16em] text-white transition-colors hover:bg-[#C01818] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E82020]"
         >
-          購入へ進む
+          フード選択へ進む
         </button>
       </div>
     </aside>

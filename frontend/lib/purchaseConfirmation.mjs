@@ -38,6 +38,10 @@ export function buildPurchaseConfirmation(draft) {
   const screening = findScreening(draft?.screeningId) ?? screenings[0];
   const seatIds = Array.isArray(draft?.seatIds) ? draft.seatIds : [];
   const ticketNum = draft?.ticketCount ?? seatIds.length;
+  const ticketTotalPrice = draft?.ticketTotalPrice ?? draft?.totalPrice ?? screening.price * ticketNum;
+  const foodItems = normalizeFoodItems(draft?.foodItems);
+  const foodTotalPrice =
+    draft?.foodTotalPrice ?? foodItems.reduce((total, item) => total + item.lineTotal, 0);
 
   return {
     movieTitle: movieDetail.title,
@@ -47,7 +51,10 @@ export function buildPurchaseConfirmation(draft) {
     screenName: draft?.screenName ?? screening.screenName,
     seatNum: formatSeatNumbers(seatIds),
     ticketNum,
-    totalPrice: draft?.totalPrice ?? screening.price * ticketNum,
+    ticketTotalPrice,
+    foodItems,
+    foodTotalPrice,
+    totalPrice: draft?.totalPrice ?? ticketTotalPrice + foodTotalPrice,
   };
 }
 
@@ -73,4 +80,20 @@ export function validatePaymentMethod(paymentMethodId) {
 
 export function findPaymentMethod(paymentMethodId) {
   return paymentMethods.find((method) => method.id === paymentMethodId);
+}
+
+function normalizeFoodItems(foodItems) {
+  if (!Array.isArray(foodItems)) {
+    return [];
+  }
+
+  return foodItems
+    .filter((item) => item && item.quantity > 0)
+    .map((item) => ({
+      id: item.id,
+      name: item.name,
+      price: item.price,
+      quantity: item.quantity,
+      lineTotal: item.lineTotal,
+    }));
 }

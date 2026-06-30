@@ -74,11 +74,14 @@ export default function SeatSelectionClient() {
       screenName: selectedScreening.screenName,
       seatIds: selectedSeatIds,
       ticketCount: selectedSeatIds.length,
+      ticketTotalPrice: selectedScreening.price * selectedSeatIds.length,
+      foodItems: [],
+      foodTotalPrice: 0,
       totalPrice: selectedScreening.price * selectedSeatIds.length,
     };
 
     window.sessionStorage.setItem("movieReservationDraft", JSON.stringify(draft));
-    router.push("/confirm");
+    router.push("/food");
   }
 
   return (

@@ -1,4 +1,5 @@
-import { assert, test } from "vitest";
+import assert from "node:assert/strict";
+import { test } from "node:test";
 import {
   buildPurchaseConfirmation,
   validatePaymentMethod,
@@ -21,6 +22,39 @@ test("builds a confirmation summary from the seat reservation draft", () => {
   assert.equal(summary.seatNum, "C-4, C-5");
   assert.equal(summary.ticketNum, 2);
   assert.equal(summary.totalPrice, 3600);
+});
+
+test("adds optional food details to the confirmation summary", () => {
+  const summary = buildPurchaseConfirmation({
+    screeningId: "scr-1820",
+    seatIds: ["C-4", "C-5"],
+    ticketCount: 2,
+    ticketTotalPrice: 3600,
+    foodItems: [
+      {
+        id: "set-a",
+        name: "シネマセットA",
+        price: 980,
+        quantity: 1,
+        lineTotal: 980,
+      },
+    ],
+    foodTotalPrice: 980,
+    totalPrice: 4580,
+  });
+
+  assert.deepEqual(summary.foodItems, [
+    {
+      id: "set-a",
+      name: "シネマセットA",
+      price: 980,
+      quantity: 1,
+      lineTotal: 980,
+    },
+  ]);
+  assert.equal(summary.ticketTotalPrice, 3600);
+  assert.equal(summary.foodTotalPrice, 980);
+  assert.equal(summary.totalPrice, 4580);
 });
 
 test("payment method validation requires an available method", () => {

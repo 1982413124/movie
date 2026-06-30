@@ -17,3 +17,10 @@ test("now showing detail links point to the public movie-detail route", () => {
   );
   assert.doesNotMatch(movieNowSource, /href=\{`\/movies\/\$\{movie\.id\}`\}/);
 });
+
+test("seat selection proceeds to the optional food route before payment", () => {
+  const seatSelectionSource = readFileSync(resolve(appDir, "seats/SeatSelectionClient.jsx"), "utf8");
+
+  assert.match(seatSelectionSource, /router\.push\("\/food"\)/);
+  assert.doesNotMatch(seatSelectionSource, /router\.push\("\/confirm"\)/);
+});

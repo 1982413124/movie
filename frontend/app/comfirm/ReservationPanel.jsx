@@ -15,6 +15,8 @@ export default function ReservationPanel({ summary }) {
         </dl>
       </div>
 
+      <FoodSummary summary={summary} />
+
       <div className="mt-6 flex items-end justify-between gap-4">
         <div>
           <p className="text-sm font-semibold text-[#1C0800]">合計金額</p>
@@ -25,6 +27,42 @@ export default function ReservationPanel({ summary }) {
         </p>
       </div>
     </section>
+  );
+}
+
+function FoodSummary({ summary }) {
+  if (!summary.foodItems?.length) {
+    return null;
+  }
+
+  return (
+    <div className="mt-6 border-b border-[#1C0800]/14 pb-6">
+      <div className="mb-4 flex items-end justify-between gap-4">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[#8C5D2A]">
+            Food
+          </p>
+          <h2 className="mt-1 text-lg font-black text-[#1C0800]">
+            追加フード
+          </h2>
+        </div>
+        <p className="font-mono text-lg font-black text-[#1C0800]">
+          {formatPrice(summary.foodTotalPrice)}
+        </p>
+      </div>
+
+      <div className="divide-y divide-[#1C0800]/10 border-y border-[#1C0800]/10">
+        <DetailRow label="チケット小計" value={formatPrice(summary.ticketTotalPrice)} alignRight />
+        {summary.foodItems.map((item) => (
+          <DetailRow
+            key={item.id}
+            label={`${item.name} x ${item.quantity}`}
+            value={formatPrice(item.lineTotal)}
+            alignRight
+          />
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -44,11 +82,11 @@ function Poster({ title }) {
   );
 }
 
-function DetailRow({ label, value }) {
+function DetailRow({ label, value, alignRight = false }) {
   return (
     <div className="grid grid-cols-[90px_minmax(0,1fr)] gap-4 border-b border-[#1C0800]/10 pb-3 last:border-b-0">
       <dt className="text-sm font-semibold text-[#5C3010]">{label}</dt>
-      <dd className="min-w-0 text-sm text-[#1C0800]">{value}</dd>
+      <dd className={`min-w-0 text-sm text-[#1C0800] ${alignRight ? "text-right" : ""}`}>{value}</dd>
     </div>
   );
 }
