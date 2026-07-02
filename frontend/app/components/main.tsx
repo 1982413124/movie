@@ -52,8 +52,8 @@ function App() {
         <aside className="sideMenu">
           <p>上映スケジュール</p>
           <p>映画一覧</p>
-          <p>購入情報確認</p>
-          <p>予約状況確認</p>
+          <p>劇場案内</p>
+          <p>ご利用ガイド</p>
           <p>キャンペーン情報</p>
         </aside>
 

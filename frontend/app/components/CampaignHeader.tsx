@@ -15,10 +15,10 @@ const primaryNavItems = [
 ];
 
 const menuItems = [
-  { href: "/movie-detail", label: "上映スケジュール", meta: "Schedule" },
-  { href: "/movie-now", label: "映画一覧", meta: "Lineup" },
-  { href: "/confirm", label: "購入情報確認", meta: "Confirm" },
-  { href: "/mypage", label: "予約状況確認", meta: "My Tickets" },
+  { href: "/movie-main#schedule", label: "上映スケジュール", meta: "SCHEDULE" },
+  { href: "/movie-main#lineup", label: "映画一覧", meta: "LINEUP" },
+  { href: "/theater", label: "劇場案内", meta: "THEATER" },
+  { href: "/guide", label: "ご利用ガイド", meta: "GUIDE" },
 ];
 
 export default function CampaignHeader() {

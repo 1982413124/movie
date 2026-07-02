@@ -36,8 +36,8 @@ export default function MovieSummary({ selectedScreening, availableSeats }) {
         </div>
 
         <div className="grid gap-3 sm:grid-cols-3">
-          <SummaryItem label="上映時間" value={selectedScreening.label} mono />
-          <SummaryItem label="スクリーン" value={selectedScreening.screenName} />
+          <SummaryItem label="上映時間" value={`${selectedScreening.dateLabel} ${selectedScreening.label}`} mono />
+          <SummaryItem label="スクリーン" value={`${selectedScreening.screenName}（${selectedScreening.capacity}席）`} />
           <div className="border-t border-[#1C0800]/14 pt-3">
             <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[#8C5D2A]">
               残席
@@ -45,7 +45,7 @@ export default function MovieSummary({ selectedScreening, availableSeats }) {
             <p className="mt-1 font-mono text-lg font-black text-[#1C0800]">
               {availableSeats}
               <span className="ml-1 text-xs font-normal text-[#8C5D2A]">
-                / 56
+                / {selectedScreening.capacity}
               </span>
             </p>
           </div>

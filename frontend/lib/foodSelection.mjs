@@ -15,6 +15,11 @@ export const foodItems = [
     description: "ポップコーンとドリンクの定番セット",
     badge: "人気",
     imageSrc: "/images/food/set-a.jpg",
+    visual: {
+      label: "Set",
+      surface: "#F2EFE8",
+      accent: "#3E332A",
+    },
   },
   {
     id: "popcorn-salt",
@@ -24,6 +29,11 @@ export const foodItems = [
     description: "映画館らしい軽い塩味",
     badge: "定番",
     imageSrc: "/images/food/popcorn-salt.jpg",
+    visual: {
+      label: "Popcorn",
+      surface: "#F6F1E8",
+      accent: "#5A4B3D",
+    },
   },
   {
     id: "drink-cola",
@@ -33,6 +43,11 @@ export const foodItems = [
     description: "氷入りのすっきり炭酸",
     badge: "冷たい",
     imageSrc: "/images/food/drink-cola.jpg",
+    visual: {
+      label: "Drink",
+      surface: "#E9EEF0",
+      accent: "#233947",
+    },
   },
   {
     id: "churros",
@@ -42,6 +57,11 @@ export const foodItems = [
     description: "シナモン香るサクサク食感",
     badge: "甘い",
     imageSrc: "/images/food/churros.jpg",
+    visual: {
+      label: "Sweets",
+      surface: "#F1E9E1",
+      accent: "#563C32",
+    },
   },
   {
     id: "popcorn-caramel",
@@ -51,6 +71,11 @@ export const foodItems = [
     description: "香ばしいキャラメルコート",
     badge: "甘口",
     imageSrc: "/images/food/popcorn-caramel.jpg",
+    visual: {
+      label: "Caramel",
+      surface: "#EFE8DC",
+      accent: "#604B32",
+    },
   },
   {
     id: "popcorn-butter-soy",
@@ -60,6 +85,11 @@ export const foodItems = [
     description: "濃いめの香りで満足感あり",
     badge: "限定",
     imageSrc: "/images/food/popcorn-butter-soy.jpg",
+    visual: {
+      label: "Butter Soy",
+      surface: "#ECE8DD",
+      accent: "#514733",
+    },
   },
   {
     id: "drink-melon-soda",
@@ -69,6 +99,11 @@ export const foodItems = [
     description: "鮮やかなグリーンの炭酸",
     badge: "爽快",
     imageSrc: "/images/food/drink-melon-soda.jpg",
+    visual: {
+      label: "Soda",
+      surface: "#E7EFE8",
+      accent: "#1F4C3E",
+    },
   },
   {
     id: "drink-iced-tea",
@@ -78,6 +113,11 @@ export const foodItems = [
     description: "すっきり飲める無糖ティー",
     badge: "無糖",
     imageSrc: "/images/food/drink-iced-tea.jpg",
+    visual: {
+      label: "Tea",
+      surface: "#E8ECE7",
+      accent: "#2F4635",
+    },
   },
   {
     id: "hot-dog",
@@ -87,6 +127,11 @@ export const foodItems = [
     description: "片手で食べやすい軽食",
     badge: "軽食",
     imageSrc: "/images/food/hot-dog.jpg",
+    visual: {
+      label: "Hot Snack",
+      surface: "#EEE9E0",
+      accent: "#4E3D35",
+    },
   },
   {
     id: "fries",
@@ -96,6 +141,11 @@ export const foodItems = [
     description: "シェアしやすい細切りポテト",
     badge: "シェア",
     imageSrc: "/images/food/fries.jpg",
+    visual: {
+      label: "Fries",
+      surface: "#EFECE3",
+      accent: "#464032",
+    },
   },
   {
     id: "ice-cream",
@@ -105,6 +155,11 @@ export const foodItems = [
     description: "上映前に楽しむカップアイス",
     badge: "ひんやり",
     imageSrc: "/images/food/ice-cream.jpg",
+    visual: {
+      label: "Ice Cream",
+      surface: "#ECEAF1",
+      accent: "#3F3B57",
+    },
   },
   {
     id: "chocolate",
@@ -114,45 +169,49 @@ export const foodItems = [
     description: "バッグに入れやすいミニサイズ",
     badge: "ミニ",
     imageSrc: "/images/food/chocolate.jpg",
+    visual: {
+      label: "Chocolate",
+      surface: "#EAE4DE",
+      accent: "#3C2D2A",
+    },
   },
 ];
+
+const popcornAdvertisementImageSrc = "/images/advertisement/Popcorn-b3ad4ecb.png";
 
 export const foodHeroSlides = [
   {
     id: "popcorn-party",
-    title: "上映前のワクワクを追加",
-    promoLabel: "人気No.1",
+    title: "上映前の定番",
+    promoLabel: "Food Pre-Order",
     productName: "シネマセットA",
-    priceLabel: "セットで980円",
-    offer: "期間限定 ドリンクM付き",
-    visualLabel: "Popcorn + Drink",
-    subtitle: "ポップコーンとドリンクを先に選んで、当日は受け取りだけ。",
-    imageSrc: "/images/advertisement/Popcorn.png",
-    colors: ["#FFCF33", "#FF7A2F 52%", "#F43F5E"],
+    priceLabel: "980円",
+    offer: "座席予約と一緒に",
+    visualLabel: "01",
+    subtitle: "受け取りは劇場カウンターで。",
+    imageSrc: popcornAdvertisementImageSrc,
   },
   {
     id: "drink-refresh",
-    title: "ドリンクもまとめて予約",
-    promoLabel: "本日おすすめ",
+    title: "静かなドリンク時間",
+    promoLabel: "Drink",
     productName: "メロンソーダ",
-    priceLabel: "単品390円",
-    offer: "映画前のリフレッシュに",
-    visualLabel: "Cold Soda",
-    subtitle: "炭酸、ティー、甘いスイーツまで気分で選べます。",
-    imageSrc: "/images/advertisement/Popcorn.png",
-    colors: ["#54D6C7", "#3B82F6 52%", "#7C3AED"],
+    priceLabel: "390円",
+    offer: "上映前に受け取り",
+    visualLabel: "02",
+    subtitle: "氷入りドリンクも事前に選べます。",
+    imageSrc: popcornAdvertisementImageSrc,
   },
   {
     id: "snack-night",
-    title: "小腹にちょうどいい軽食",
-    promoLabel: "期間限定",
+    title: "長編にも合う軽食",
+    promoLabel: "Snack",
     productName: "ホットドッグセット",
-    priceLabel: "軽食620円から",
-    offer: "長めの作品にもぴったり",
-    visualLabel: "Hot Snack",
-    subtitle: "ホットスナックを追加して、長めの作品も快適に。",
-    imageSrc: "/images/advertisement/Popcorn.png",
-    colors: ["#FB923C", "#EF4444 52%", "#7F1D1D"],
+    priceLabel: "620円",
+    offer: "軽く食べたい時に",
+    visualLabel: "03",
+    subtitle: "席に入る前に、手早く受け取れます。",
+    imageSrc: popcornAdvertisementImageSrc,
   },
 ];
 

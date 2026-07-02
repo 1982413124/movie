@@ -26,7 +26,7 @@ test("formats multiple selected seats into purchase completion details", () => {
   assert.equal(details.movieTitle, "映画のタイトル");
   assert.equal(details.screeningDatetime, "本日 18:20");
   assert.equal(details.screenName, "スクリーン 3");
-  assert.equal(details.theaterName, "CINEMA XX");
+  assert.equal(details.theaterName, "HAL CINEMA 名古屋栄");
   assert.equal(details.seatNum, "C-4, C-5");
   assert.equal(details.ticketNum, 2);
   assert.equal(details.totalPrice, 3600);

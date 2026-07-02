@@ -18,12 +18,14 @@ test("food promo carousel is placed above the two-column content area", () => {
   assert.doesNotMatch(foodClientSource, /<HeroSlide/);
 });
 
-test("food promo background spans the page while its contents stay aligned inside", () => {
+test("food promo returns to a restrained split banner", () => {
   assert.match(foodClientSource, /function FoodPromoCarousel/);
-  assert.match(foodClientSource, /w-full pb-8/);
+  assert.match(foodClientSource, /w-full pb-10/);
   assert.match(foodClientSource, /promo-banner-shell/);
   assert.match(foodClientSource, /promo-banner-inner/);
-  assert.match(foodClientSource, /mx-auto w-full max-w-\[1500px\]/);
+  assert.match(foodClientSource, /max-w-\[1500px\]/);
+  assert.match(foodClientSource, /bg-\[#15110D\]/);
+  assert.match(foodClientSource, /linear-gradient\(90deg/);
   assert.ok(
     foodClientSource.indexOf("promo-banner-shell") <
       foodClientSource.indexOf("promo-banner-inner"),
@@ -37,16 +39,19 @@ test("food promo carousel fades every four seconds and pauses on hover", () => {
   assert.match(foodClientSource, /opacity-100/);
   assert.match(foodClientSource, /opacity-0/);
   assert.match(foodClientSource, /translate-y-0/);
-  assert.match(foodClientSource, /translate-y-4/);
+  assert.match(foodClientSource, /translate-y-3/);
   assert.match(foodClientSource, /promo-dot/);
 });
 
-test("food promo shows the uploaded image without cropping", () => {
+test("food promo keeps the uploaded image on the right side", () => {
   assert.match(foodClientSource, /promo-banner-fill/);
   assert.match(foodClientSource, /src=\{slide\.imageSrc\}/);
-  assert.match(foodClientSource, /object-contain/);
+  assert.match(foodClientSource, /loading=\{index === 0/);
+  assert.match(foodClientSource, /"eager" : "lazy"/);
+  assert.match(foodClientSource, /lg:w-\[70%\]/);
+  assert.match(foodClientSource, /object-contain object-center/);
+  assert.match(foodClientSource, /lg:object-right/);
   assert.doesNotMatch(foodClientSource, /url\("\$\{slide\.imageSrc\}"\)/);
-  assert.doesNotMatch(foodClientSource, /absolute inset-0 bg-cover bg-center/);
 });
 
 test("food rails use scroll snap and item cards expose dynamic selection affordances", () => {
@@ -64,4 +69,10 @@ test("order summary animates when the cart total changes", () => {
   assert.match(foodClientSource, /key=\{`total-\$\{summaryPulseKey\}`\}/);
 });
 
-
+test("food item cards use subdued media panels instead of orange gradients", () => {
+  assert.match(foodClientSource, /food-card-media/);
+  assert.match(foodClientSource, /--food-surface/);
+  assert.match(foodClientSource, /--food-accent/);
+  assert.doesNotMatch(foodClientSource, /linear-gradient\(135deg/);
+  assert.doesNotMatch(foodClientSource, /#FF7A2F|#FFE9A0|#D58A14/);
+});

@@ -483,7 +483,7 @@ export default function Home() {
         </section>
 
         <section
-          id="featured"
+          id="lineup"
           className="js-showcase relative px-5 py-20 sm:px-8 lg:px-12 lg:py-28"
         >
           <div className="js-marquee-line pointer-events-none absolute left-4 top-10 whitespace-nowrap text-[18vw] font-black uppercase leading-none tracking-normal text-[#E82020]/[0.07]">
@@ -501,7 +501,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="relative border-t border-[#1C0800]/10 px-5 py-20 sm:px-8 lg:px-12">
+        <section id="schedule" className="relative border-t border-[#1C0800]/10 px-5 py-20 sm:px-8 lg:px-12">
           <div className="relative mx-auto max-w-7xl">
             <SectionHeader eyebrow="Schedule" title="BOOK A SEAT" />
 
@@ -539,31 +539,31 @@ function OpeningLoader() {
 
 const primaryNavItems = [
   { href: "/", label: "ホーム", meta: "Home" },
-  { href: "#featured", label: "上映中の作品", meta: "Films" },
+  { href: "#lineup", label: "上映中の作品", meta: "Films" },
   { href: "/search", label: "検索", meta: "Search" },
   { href: "/mypage", label: "マイページ", meta: "My Page" },
 ];
 
 const menuItems = [
   {
-    href: "/movie-detail",
+    href: "#schedule",
     label: "上映スケジュール",
-    meta: "Schedule",
+    meta: "SCHEDULE",
   },
   {
-    href: "#featured",
+    href: "#lineup",
     label: "映画一覧",
-    meta: "Lineup",
+    meta: "LINEUP",
   },
   {
-    href: "/confirm",
-    label: "購入情報確認",
-    meta: "Confirm",
+    href: "/theater",
+    label: "劇場案内",
+    meta: "THEATER",
   },
   {
-    href: "/mypage",
-    label: "予約状況確認",
-    meta: "My Tickets",
+    href: "/guide",
+    label: "ご利用ガイド",
+    meta: "GUIDE",
   },
 ];
 

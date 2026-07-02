@@ -27,7 +27,7 @@ PostgreSQL
  -screening_date   :上映日
  -start_time       :開始時間
  -end_time         :終了時間
- -screen_name      :スクリーン名 
+ -screen_name      :スクリーン名
  -total_seats      :総座席数
  -remaining_seats  :残席数
  -created_at       :作成日
@@ -71,3 +71,30 @@ PostgreSQL
  -pay_status       :決済状態(成功or失敗)
  -paid_at          :決済日時
  -created_at       :作成日
+
+-reservations :予約テーブル
+ -id               :主キー
+ -user_id          :FK (users.id / NULL可)
+ -user_email       :予約したユーザーのメールアドレス
+ -movie_id         :映画ID
+ -screening_id     :上映回ID
+ -screen_name      :スクリーン名
+ -screening_time   :上映時間
+ -ticket_count     :チケット枚数
+ -ticket_total_price :チケット合計金額
+ -food_total_price :フード合計金額
+ -total_price      :予約合計金額
+ -status           :予約状態 (reserved)
+ -created_at       :作成日
+
+-reservation_seats :座席予約テーブル
+ -id               :主キー
+ -reservation_id   :FK (reservations.id)
+ -screening_id     :上映回ID
+ -seat_label       :座席名 (例: A-1)
+ -created_at       :作成日
+ -UNIQUE制約       :(screening_id, seat_label)
+
+index
+ -idx_reservations_screening_id       :reservations(screening_id)
+ -idx_reservation_seats_screening_id  :reservation_seats(screening_id)

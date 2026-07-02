@@ -1,11 +1,12 @@
-const columns = [1, 2, 3, 4, 5, 6, 7];
-
 export default function SeatMap({
   seatRows,
   selectedSeatIds,
   selectedScreening,
   onSeatClick,
 }) {
+  const columns = seatRows[0]?.seats.map((seat) => seat.column) ?? [];
+  const gridTemplateColumns = `34px repeat(${columns.length}, minmax(28px, 1fr))`;
+
   return (
     <div className="p-6">
       <SeatMapHeader selectedScreening={selectedScreening} />
@@ -16,21 +17,25 @@ export default function SeatMap({
         </div>
 
         <div className="overflow-x-auto pb-2">
-          <div className="mx-auto min-w-[620px] max-w-4xl">
-            <div className="mb-3 grid grid-cols-[34px_repeat(7,minmax(48px,1fr))] gap-x-7 text-center font-mono text-[11px] text-[#8C5D2A]">
+          <div className="mx-auto min-w-[720px] max-w-6xl">
+            <div
+              className="mb-3 grid gap-x-2 text-center font-mono text-[11px] text-[#8C5D2A]"
+              style={{ gridTemplateColumns }}
+            >
               <span />
               {columns.map((column) => (
                 <span key={column}>{column}</span>
               ))}
             </div>
 
-            <div className="grid gap-y-3">
+            <div className="grid gap-y-2">
               {seatRows.map((row) => (
                 <SeatRow
                   key={row.row}
                   row={row}
                   selectedSeatIds={selectedSeatIds}
                   onSeatClick={onSeatClick}
+                  gridTemplateColumns={gridTemplateColumns}
                 />
               ))}
             </div>
@@ -58,7 +63,7 @@ function SeatMapHeader({ selectedScreening }) {
         <LegendChip label="予約済み" className="bg-[#1C0800]/30" />
         <LegendChip
           label="選択中"
-          className="bg-[#1C0800] ring-1 ring-[#1C0800]"
+          className="bg-[var(--selection-bg)] ring-1 ring-[var(--selection-border)]"
         />
       </div>
     </div>
@@ -74,9 +79,12 @@ function LegendChip({ label, className }) {
   );
 }
 
-function SeatRow({ row, selectedSeatIds, onSeatClick }) {
+function SeatRow({ row, selectedSeatIds, onSeatClick, gridTemplateColumns }) {
   return (
-    <div className="grid grid-cols-[34px_repeat(7,minmax(48px,1fr))] items-center gap-x-7">
+    <div
+      className="grid items-center gap-x-2"
+      style={{ gridTemplateColumns }}
+    >
       <span className="font-mono text-[11px] font-semibold text-[#8C5D2A]">
         {row.row}
       </span>
@@ -105,12 +113,12 @@ function SeatButton({ seat, isSelected, onSeatClick }) {
       }`}
       onClick={() => onSeatClick(seat)}
       className={[
-        "h-8 rounded-sm border text-[0px] transition duration-200",
+        "h-7 rounded-sm border text-[0px] transition duration-200",
         "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1C0800]",
         isReserved
           ? "cursor-not-allowed border-[#1C0800]/20 bg-[#1C0800]/20 opacity-70"
           : isSelected
-            ? "border-[#1C0800] bg-[#1C0800] shadow-sm"
+            ? "border-[var(--selection-border)] bg-[var(--selection-bg)] shadow-sm"
             : "border-[#1C0800]/22 bg-white hover:-translate-y-[1px] hover:bg-[#FFF0C0] active:translate-y-[1px]",
       ].join(" ")}
     >

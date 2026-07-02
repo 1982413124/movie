@@ -1,6 +1,7 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from database.db import db_conn
+from psycopg import errors
 from werkzeug.security import generate_password_hash, check_password_hash
 
 
@@ -75,6 +76,279 @@ def get_movies():
     except Exception as exc:
         return jsonify({"status": "error", "message": str(exc)}), 500
     
+
+def normalize_seat_ids(value):
+    """
+    API入力のseat_idsを、空白を除いた文字列配列に正規化する。
+    """
+    if not isinstance(value, list):
+        return []
+
+    normalized = []
+    for seat_id in value:
+        seat_label = str(seat_id or "").strip()
+        if seat_label:
+            normalized.append(seat_label)
+
+    return normalized
+
+
+def find_user_id_by_email(cursor, email):
+    """
+    既存ログインを壊さないため、emailがある時だけusers.idを紐付ける。
+    """
+    if not email:
+        return None
+
+    cursor.execute("SELECT id FROM users WHERE email = %s;", (email,))
+    row = cursor.fetchone()
+    return row[0] if row else None
+
+
+@app.get("/api/screenings/<screening_id>/reserved-seats")
+def get_reserved_seats(screening_id):
+    """
+    上映回ごとの予約済み座席を返すAPI。
+    """
+    normalized_screening_id = str(screening_id or "").strip()
+
+    if not normalized_screening_id:
+        return jsonify({"status": "error", "message": "screening_id is required"}), 400
+
+    try:
+        with db_conn() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT seat_label
+                    FROM reservation_seats
+                    WHERE screening_id = %s
+                    ORDER BY seat_label;
+                    """,
+                    (normalized_screening_id,),
+                )
+                rows = cursor.fetchall()
+
+        return jsonify(
+            {
+                "status": "ok",
+                "screening_id": normalized_screening_id,
+                "reserved_seats": [row[0] for row in rows],
+            }
+        )
+
+    except Exception as exc:
+        return jsonify({"status": "error", "message": str(exc)}), 500
+
+
+
+@app.get("/api/reservations")
+def get_reservations():
+    """
+    ログインユーザーの予約・購入履歴を返すAPI。
+    現在のフロント認証はemailを保持しているため、user_emailで絞り込む。
+    """
+    user_email = str(request.args.get("user_email", "")).strip().lower()
+
+    if not user_email:
+        return jsonify({"status": "error", "message": "user_email is required"}), 400
+
+    try:
+        with db_conn() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT
+                        id,
+                        user_email,
+                        movie_id,
+                        screening_id,
+                        screen_name,
+                        screening_time,
+                        ticket_count,
+                        ticket_total_price,
+                        food_total_price,
+                        total_price,
+                        status,
+                        created_at
+                    FROM reservations
+                    WHERE user_email = %s
+                    ORDER BY created_at DESC, id DESC;
+                    """,
+                    (user_email,),
+                )
+                rows = cursor.fetchall()
+                reservation_ids = [row[0] for row in rows]
+                seats_by_reservation = {reservation_id: [] for reservation_id in reservation_ids}
+
+                if reservation_ids:
+                    cursor.execute(
+                        """
+                        SELECT reservation_id, seat_label
+                        FROM reservation_seats
+                        WHERE reservation_id = ANY(%s)
+                        ORDER BY reservation_id, seat_label;
+                        """,
+                        (reservation_ids,),
+                    )
+                    for reservation_id, seat_label in cursor.fetchall():
+                        seats_by_reservation.setdefault(reservation_id, []).append(seat_label)
+
+        return jsonify(
+            {
+                "status": "ok",
+                "reservations": [
+                    {
+                        "id": row[0],
+                        "user_email": row[1],
+                        "movie_id": row[2],
+                        "screening_id": row[3],
+                        "screen_name": row[4],
+                        "screening_time": row[5],
+                        "ticket_count": row[6],
+                        "ticket_total_price": row[7],
+                        "food_total_price": row[8],
+                        "total_price": row[9],
+                        "reservation_status": row[10],
+                        "created_at": row[11].isoformat() if row[11] else None,
+                        "seats": seats_by_reservation.get(row[0], []),
+                    }
+                    for row in rows
+                ],
+            }
+        )
+
+    except Exception as exc:
+        return jsonify({"status": "error", "message": str(exc)}), 500
+
+@app.post("/api/reservations")
+def create_reservation():
+    """
+    座席予約を確定するAPI。
+    同じ上映回の同じ座席はDBのUNIQUE制約と事前チェックで二重予約を防ぐ。
+    """
+    payload = request.get_json(silent=True) or {}
+    screening_id = str(payload.get("screening_id", "")).strip()
+    movie_id = str(payload.get("movie_id", "")).strip()
+    seat_ids = normalize_seat_ids(payload.get("seat_ids"))
+    user_email = str(payload.get("user_email", "")).strip().lower() or None
+    screen_name = str(payload.get("screen_name", "")).strip() or None
+    screening_time = str(payload.get("screening_time", "")).strip() or None
+    ticket_count = int(payload.get("ticket_count") or len(seat_ids))
+    ticket_total_price = int(payload.get("ticket_total_price") or 0)
+    food_total_price = int(payload.get("food_total_price") or 0)
+    total_price = int(payload.get("total_price") or ticket_total_price + food_total_price)
+
+    if not screening_id or not movie_id or not seat_ids:
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "message": "movie_id, screening_id, seat_ids are required",
+                }
+            ),
+            400,
+        )
+
+    try:
+        with db_conn() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT seat_label
+                    FROM reservation_seats
+                    WHERE screening_id = %s
+                      AND seat_label = ANY(%s);
+                    """,
+                    (screening_id, seat_ids),
+                )
+                conflict_rows = cursor.fetchall()
+                conflict_seats = [row[0] for row in conflict_rows]
+
+                if conflict_seats:
+                    return (
+                        jsonify(
+                            {
+                                "status": "error",
+                                "message": "選択した座席はすでに予約されています。",
+                                "conflict_seats": conflict_seats,
+                            }
+                        ),
+                        409,
+                    )
+
+                user_id = find_user_id_by_email(cursor, user_email)
+                cursor.execute(
+                    """
+                    INSERT INTO reservations (
+                        user_id,
+                        user_email,
+                        movie_id,
+                        screening_id,
+                        screen_name,
+                        screening_time,
+                        ticket_count,
+                        ticket_total_price,
+                        food_total_price,
+                        total_price,
+                        status
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'reserved')
+                    RETURNING id, created_at;
+                    """,
+                    (
+                        user_id,
+                        user_email,
+                        movie_id,
+                        screening_id,
+                        screen_name,
+                        screening_time,
+                        ticket_count,
+                        ticket_total_price,
+                        food_total_price,
+                        total_price,
+                    ),
+                )
+                reservation_row = cursor.fetchone()
+                reservation_id = reservation_row[0]
+                created_at = reservation_row[1]
+
+                for seat_label in seat_ids:
+                    cursor.execute(
+                        """
+                        INSERT INTO reservation_seats (reservation_id, screening_id, seat_label)
+                        VALUES (%s, %s, %s);
+                        """,
+                        (reservation_id, screening_id, seat_label),
+                    )
+
+        return (
+            jsonify(
+                {
+                    "status": "ok",
+                    "reservation_id": reservation_id,
+                    "screening_id": screening_id,
+                    "reserved_seats": seat_ids,
+                    "created_at": created_at.isoformat() if created_at else None,
+                }
+            ),
+            201,
+        )
+
+    except errors.UniqueViolation:
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "message": "選択した座席はすでに予約されています。",
+                    "conflict_seats": seat_ids,
+                }
+            ),
+            409,
+        )
+    except Exception as exc:
+        return jsonify({"status": "error", "message": str(exc)}), 500
+
 @app.post("/api/register")
 def register():
     """

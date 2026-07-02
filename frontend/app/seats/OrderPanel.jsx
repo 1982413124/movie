@@ -1,4 +1,4 @@
-import { countAvailableSeats, screenings } from "@/lib/seatSelection.mjs";
+import { countAvailableSeats, getScreeningsForDateAndScreen } from "@/lib/seatSelection.mjs";
 import { formatPrice } from "./formatters";
 
 export default function OrderPanel({
@@ -18,6 +18,7 @@ export default function OrderPanel({
         <PanelTitle selectedScreening={selectedScreening} />
         <ScreeningList
           screeningId={screeningId}
+          selectedScreening={selectedScreening}
           onScreeningChange={onScreeningChange}
         />
         <OrderDetails
@@ -38,7 +39,7 @@ export default function OrderPanel({
         <button
           type="button"
           onClick={onProceed}
-          className="mt-4 w-full bg-[#E82020] px-5 py-4 text-sm font-black uppercase tracking-[0.16em] text-white transition-colors hover:bg-[#C01818] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E82020]"
+          className="mt-4 w-full bg-[var(--button-bg)] px-5 py-4 text-sm font-black uppercase tracking-[0.16em] text-[var(--button-text)] transition-colors hover:bg-[var(--button-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--selection-border)]"
         >
           フード選択へ進む
         </button>
@@ -65,10 +66,15 @@ function PanelTitle({ selectedScreening }) {
   );
 }
 
-function ScreeningList({ screeningId, onScreeningChange }) {
+function ScreeningList({ screeningId, selectedScreening, onScreeningChange }) {
+  const visibleScreenings = getScreeningsForDateAndScreen(
+    selectedScreening.dateId,
+    selectedScreening.screenId,
+  );
+
   return (
     <div className="mt-6 space-y-2">
-      {screenings.map((screening) => (
+      {visibleScreenings.map((screening) => (
         <ScreeningButton
           key={screening.id}
           isActive={screening.id === screeningId}
@@ -89,7 +95,7 @@ function ScreeningButton({ isActive, onClick, screening }) {
       className={[
         "grid w-full grid-cols-[1fr_auto] items-center gap-3 border p-4 text-left transition-colors",
         isActive
-          ? "border-[#1C0800] bg-[#1C0800] text-white"
+          ? "border-[var(--selection-border)] bg-[var(--selection-bg)] text-[var(--selection-text)]"
           : "border-[#1C0800]/14 bg-white hover:bg-[#FFF8E1]",
       ].join(" ")}
     >
@@ -99,7 +105,7 @@ function ScreeningButton({ isActive, onClick, screening }) {
         </span>
         <span
           className={`mt-1 block text-xs uppercase tracking-[0.16em] ${
-            isActive ? "text-white" : "text-[#8C5D2A]"
+            isActive ? "text-[var(--selection-text)]" : "text-[#8C5D2A]"
           }`}
         >
           {screening.screenName}
@@ -107,7 +113,7 @@ function ScreeningButton({ isActive, onClick, screening }) {
       </span>
       <span
         className={`font-mono text-sm ${
-          isActive ? "text-white" : "text-[#5C3010]"
+          isActive ? "text-[var(--selection-text)]" : "text-[#5C3010]"
         }`}
       >
         {countAvailableSeats(screening.id)}席

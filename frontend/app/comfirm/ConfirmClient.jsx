@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
+import { getCurrentAccount } from "@/lib/authStorage.mjs";
 import { buildPurchaseCompletion } from "@/lib/purchaseCompletion.mjs";
 import {
   buildPurchaseConfirmation,
@@ -9,6 +10,7 @@ import {
   paymentMethods,
   validatePaymentMethod,
 } from "@/lib/purchaseConfirmation.mjs";
+import { createReservation } from "@/lib/reservationApi.mjs";
 import EmptyConfirm from "./EmptyConfirm";
 import PaymentPanel from "./PaymentPanel";
 import ReservationPanel from "./ReservationPanel";
@@ -26,8 +28,9 @@ export default function ConfirmClient() {
   );
   const [paymentMethodId, setPaymentMethodId] = useState("");
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function handleConfirm() {
+  async function handleConfirm() {
     const validation = validatePaymentMethod(paymentMethodId);
 
     if (!validation.ok) {
@@ -35,13 +38,44 @@ export default function ConfirmClient() {
       return;
     }
 
-    const paymentMethod = findPaymentMethod(paymentMethodId);
-    const details = buildPurchaseCompletion(draft, {
-      payMethod: paymentMethod?.label,
-    });
+    if (isSubmitting) {
+      return;
+    }
 
-    window.sessionStorage.setItem(completedStorageKey, JSON.stringify(details));
-    router.push("/complete");
+    setIsSubmitting(true);
+    setError("");
+
+    try {
+      const account = getCurrentAccount(window.localStorage);
+      const response = await createReservation(draft, {
+        userEmail: account?.email ?? "",
+      });
+
+      if (!response.ok) {
+        if (response.conflict) {
+          const seats = response.conflictSeats.length > 0
+            ? `: ${response.conflictSeats.join(", ")}`
+            : "";
+          setError(`選択した座席はすでに予約されています${seats}`);
+          return;
+        }
+
+        setError("予約の確定に失敗しました。時間をおいて再度お試しください。");
+        return;
+      }
+
+      const paymentMethod = findPaymentMethod(paymentMethodId);
+      const details = buildPurchaseCompletion(draft, {
+        payMethod: paymentMethod?.label,
+      });
+
+      window.sessionStorage.setItem(completedStorageKey, JSON.stringify(details));
+      router.push("/complete");
+    } catch {
+      setError("予約の確定に失敗しました。時間をおいて再度お試しください。");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   if (!summary || !draft) {
@@ -53,6 +87,7 @@ export default function ConfirmClient() {
       <ReservationPanel summary={summary} />
       <PaymentPanel
         error={error}
+        isSubmitting={isSubmitting}
         methods={paymentMethods}
         onConfirm={handleConfirm}
         onSelect={(methodId) => {

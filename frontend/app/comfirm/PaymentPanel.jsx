@@ -3,6 +3,7 @@ import { formatPrice } from "../seats/formatters";
 
 export default function PaymentPanel({
   error,
+  isSubmitting = false,
   methods,
   onConfirm,
   onSelect,
@@ -47,10 +48,11 @@ export default function PaymentPanel({
 
       <button
         type="button"
+        disabled={isSubmitting}
         onClick={onConfirm}
-        className="mt-4 w-full bg-[#1C0800] px-5 py-4 text-sm font-black uppercase tracking-[0.16em] text-white transition-colors hover:bg-[#2b2b2b]"
+        className="mt-4 w-full bg-[var(--button-bg)] px-5 py-4 text-sm font-black uppercase tracking-[0.16em] text-[var(--button-text)] transition-colors hover:bg-[var(--button-hover)] disabled:cursor-wait disabled:opacity-60"
       >
-        確認
+        {isSubmitting ? "確定中..." : "確認"}
       </button>
 
       <Link
@@ -72,20 +74,20 @@ function PaymentMethodButton({ isSelected, method, onSelect }) {
       className={[
         "min-h-24 border p-4 text-left transition-colors",
         isSelected
-          ? "border-[#1C0800] bg-[#1C0800] text-white"
+          ? "border-[var(--selection-border)] bg-[var(--selection-bg)] text-[var(--selection-text)]"
           : "border-[#1C0800]/14 bg-white hover:bg-[#FFF8E1]",
       ].join(" ")}
     >
       <span
         className={`block text-sm font-semibold ${
-          isSelected ? "text-white" : "text-[#1C0800]"
+          isSelected ? "text-[var(--selection-text)]" : "text-[#1C0800]"
         }`}
       >
         {method.label}
       </span>
       <span
         className={`mt-2 block text-xs leading-5 ${
-          isSelected ? "text-white" : "text-[#8C5D2A]"
+          isSelected ? "text-[var(--selection-text)]" : "text-[#8C5D2A]"
         }`}
       >
         {method.description}

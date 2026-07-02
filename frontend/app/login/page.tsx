@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ChangeEvent, FormEvent } from "react";
 import { useState } from "react";
@@ -125,78 +126,88 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#FFF8E1] px-6">
-      <div className="w-full max-w-[520px]">
-        <h1 className="mb-12 text-center text-3xl font-black uppercase tracking-[0.08em] text-[#1C0800]">
-          アカウントにログイン
-        </h1>
+    <main className="min-h-screen bg-[#F7F5F0] text-[#17130F]">
+      <header className="flex h-16 items-center border-b border-[#DDD8CF] px-5 sm:px-8">
+        <Link href="/" className="text-2xl font-black uppercase tracking-[0.18em]">
+          HAL CINEMA
+        </Link>
+      </header>
 
-        <form className="space-y-6" onSubmit={handleSubmit}>
-          <div>
-            <label className="mb-2 block text-[10px] font-black uppercase tracking-[0.28em] text-[#8C5D2A]">
-              メールアドレス
-            </label>
-            <input
-              type="email"
-              name="email"
-              value={form.email}
-              onChange={handleChange}
-              placeholder="Enter your email"
-              className="h-12 w-full border border-[#1C0800]/22 bg-white px-4 text-sm text-[#1C0800] outline-none placeholder:text-[#A0703A] focus:border-[#E82020]"
-            />
+      <section className="flex min-h-[calc(100vh-64px)] items-center justify-center px-5 py-12">
+        <div className="w-full max-w-[368px]">
+          <p className="mb-5 text-center text-xl font-bold">ログイン</p>
+
+          <div className="overflow-hidden rounded-[6px] border border-[#D6D2CA] bg-white">
+            <div className="border-b border-[#E4E0D8] px-7 py-8 text-center">
+              <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-[#8B8073]">
+                HAL CINEMA MEMBER
+              </p>
+              <p className="mt-3 text-sm leading-6 text-[#5F574F]">
+                登録済みのメールアドレスでマイページへ進みます。
+              </p>
+            </div>
+
+            <form className="px-7 py-7" onSubmit={handleSubmit}>
+              <div>
+                <label className="mb-2 block text-sm font-bold text-[#17130F]">
+                  メールアドレス
+                </label>
+                <input
+                  type="email"
+                  name="email"
+                  value={form.email}
+                  onChange={handleChange}
+                  placeholder="mail@example.com"
+                  className="h-11 w-full rounded-[4px] border border-[#D8D4CC] bg-white px-3 text-sm text-[#17130F] outline-none transition placeholder:text-[#A09A92] focus:border-[#17130F]"
+                />
+              </div>
+
+              <div className="mt-5">
+                <label className="mb-2 block text-sm font-bold text-[#17130F]">
+                  パスワード
+                </label>
+                <input
+                  type="password"
+                  name="password"
+                  value={form.password}
+                  onChange={handleChange}
+                  placeholder="password"
+                  className="h-11 w-full rounded-[4px] border border-[#D8D4CC] bg-white px-3 text-sm text-[#17130F] outline-none transition placeholder:text-[#A09A92] focus:border-[#17130F]"
+                />
+              </div>
+
+              {errorMessage ? (
+                <p className="mt-4 text-sm font-medium leading-6 text-[#9A3A24]">
+                  {errorMessage}
+                </p>
+              ) : null}
+
+              {isSubmitting ? (
+                <p className="mt-4 text-sm text-[#6E665D]" aria-live="polite">
+                  ログイン中です...
+                </p>
+              ) : null}
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="mt-7 h-11 w-full rounded-[4px] bg-[#25201B] text-sm font-bold text-white transition hover:bg-[#46382F] disabled:bg-[#CCC8C1] disabled:text-[#756D63]"
+              >
+                {isSubmitting ? "送信中..." : "ログイン"}
+              </button>
+            </form>
+
+            <div className="border-t border-[#E4E0D8] px-7 py-5 text-center">
+              <Link
+                href="/register"
+                className="text-sm font-bold text-[#6A625A] underline underline-offset-4 transition hover:text-[#17130F]"
+              >
+                会員登録はこちら
+              </Link>
+            </div>
           </div>
-
-          <div>
-            <label className="mb-2 block text-[10px] font-black uppercase tracking-[0.28em] text-[#8C5D2A]">
-              パスワード
-            </label>
-            <input
-              type="password"
-              name="password"
-              value={form.password}
-              onChange={handleChange}
-              placeholder="********"
-              className="h-12 w-full border border-[#1C0800]/22 bg-white px-4 text-sm text-[#1C0800] outline-none placeholder:text-[#A0703A] focus:border-[#E82020]"
-            />
-          </div>
-
-          {errorMessage ? (
-            <p className="text-sm font-medium text-[#C01818]">{errorMessage}</p>
-          ) : null}
-
-          {isSubmitting ? (
-            <p className="text-sm text-[#8C5D2A]" aria-live="polite">
-              ログイン中です...
-            </p>
-          ) : null}
-
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="mt-10 h-12 w-full bg-[#E82020] text-sm font-black uppercase tracking-[0.16em] text-white transition hover:bg-[#C01818] disabled:opacity-70"
-          >
-            {isSubmitting ? "送信中..." : "ログイン"}
-          </button>
-        </form>
-
-        <div className="my-10 flex items-center gap-4">
-          <div className="h-px flex-1 bg-[#C8860A]/30" />
-          <span className="text-sm text-[#8C5D2A]">Or</span>
-          <div className="h-px flex-1 bg-[#C8860A]/30" />
         </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <button className="flex h-11 items-center justify-center gap-2 border border-[#1C0800]/18 bg-white text-sm text-[#1C0800] transition hover:bg-[#FFF8E1]">
-            <span className="font-bold text-[#E82020]">G</span>
-            Sign in with Google
-          </button>
-
-          <button className="flex h-11 items-center justify-center gap-2 border border-[#1C0800]/18 bg-white text-sm text-[#1C0800] transition hover:bg-[#FFF8E1]">
-            <span className="text-base">●</span>
-            Sign in with Apple
-          </button>
-        </div>
-      </div>
+      </section>
     </main>
   );
 }

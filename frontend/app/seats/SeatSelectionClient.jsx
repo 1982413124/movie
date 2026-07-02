@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
+import { fetchReservedSeats } from "@/lib/reservationApi.mjs";
 import {
   countAvailableSeats,
   createInitialSeatSelection,
@@ -27,17 +28,48 @@ export default function SeatSelectionClient() {
     [draft],
   );
   const [selectionOverride, setSelectionOverride] = useState(null);
+  const [apiReservedSeatIds, setApiReservedSeatIds] = useState([]);
   const [error, setError] = useState("");
   const screeningId =
     selectionOverride?.screeningId ?? restoredSelection.screeningId;
   const selectedSeatIds =
     selectionOverride?.selectedSeatIds ?? restoredSelection.selectedSeatIds;
 
-  const seatRows = useMemo(() => createSeatMap(screeningId), [screeningId]);
+  useEffect(() => {
+    let isActive = true;
+
+    fetchReservedSeats(screeningId)
+      .then((reservedSeats) => {
+        if (isActive) {
+          setApiReservedSeatIds(reservedSeats);
+        }
+      })
+      .catch(() => {
+        if (isActive) {
+          setApiReservedSeatIds([]);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [screeningId]);
+
+  const filteredSelectedSeatIds = useMemo(
+    () =>
+      selectedSeatIds.filter(
+        (seatId) => !apiReservedSeatIds.includes(seatId),
+      ),
+    [apiReservedSeatIds, selectedSeatIds],
+  );
+  const seatRows = useMemo(
+    () => createSeatMap(screeningId, apiReservedSeatIds),
+    [apiReservedSeatIds, screeningId],
+  );
   const selectedScreening = findScreening(screeningId) ?? screenings[0];
   const availableSeats = useMemo(
-    () => countAvailableSeats(screeningId),
-    [screeningId],
+    () => countAvailableSeats(screeningId, apiReservedSeatIds),
+    [apiReservedSeatIds, screeningId],
   );
 
   function handleScreeningChange(nextScreeningId) {
@@ -49,7 +81,7 @@ export default function SeatSelectionClient() {
   }
 
   function handleSeatClick(seat) {
-    const nextSeatIds = toggleSeatSelection(selectedSeatIds, seat);
+    const nextSeatIds = toggleSeatSelection(filteredSelectedSeatIds, seat);
     setSelectionOverride({
       screeningId,
       selectedSeatIds: nextSeatIds,
@@ -60,7 +92,7 @@ export default function SeatSelectionClient() {
   }
 
   function handleProceed() {
-    const validation = validateSeatSelection(selectedSeatIds);
+    const validation = validateSeatSelection(filteredSelectedSeatIds);
 
     if (!validation.ok) {
       setError(validation.message);
@@ -72,12 +104,12 @@ export default function SeatSelectionClient() {
       screeningId: selectedScreening.id,
       screeningTime: selectedScreening.label,
       screenName: selectedScreening.screenName,
-      seatIds: selectedSeatIds,
-      ticketCount: selectedSeatIds.length,
-      ticketTotalPrice: selectedScreening.price * selectedSeatIds.length,
+      seatIds: filteredSelectedSeatIds,
+      ticketCount: filteredSelectedSeatIds.length,
+      ticketTotalPrice: selectedScreening.price * filteredSelectedSeatIds.length,
       foodItems: [],
       foodTotalPrice: 0,
-      totalPrice: selectedScreening.price * selectedSeatIds.length,
+      totalPrice: selectedScreening.price * filteredSelectedSeatIds.length,
     };
 
     window.sessionStorage.setItem("movieReservationDraft", JSON.stringify(draft));
@@ -86,27 +118,27 @@ export default function SeatSelectionClient() {
 
   return (
     <main className="mx-auto grid w-full max-w-6xl gap-6 px-4 py-8 text-[#1C0800] md:grid-cols-[minmax(0,1fr)_340px]">
-        <section className="overflow-hidden border border-[#1C0800]/14 bg-white shadow-[0_18px_60px_rgba(0,0,0,0.08)]">
-          <MovieSummary
-            availableSeats={availableSeats}
-            selectedScreening={selectedScreening}
-          />
-          <SeatMap
-            onSeatClick={handleSeatClick}
-            seatRows={seatRows}
-            selectedSeatIds={selectedSeatIds}
-            selectedScreening={selectedScreening}
-          />
-        </section>
-
-        <OrderPanel
-          error={error}
-          onProceed={handleProceed}
-          onScreeningChange={handleScreeningChange}
-          screeningId={screeningId}
+      <section className="overflow-hidden border border-[#1C0800]/14 bg-white shadow-[0_18px_60px_rgba(0,0,0,0.08)]">
+        <MovieSummary
+          availableSeats={availableSeats}
           selectedScreening={selectedScreening}
-          selectedSeatIds={selectedSeatIds}
         />
+        <SeatMap
+          onSeatClick={handleSeatClick}
+          seatRows={seatRows}
+          selectedSeatIds={filteredSelectedSeatIds}
+          selectedScreening={selectedScreening}
+        />
+      </section>
+
+      <OrderPanel
+        error={error}
+        onProceed={handleProceed}
+        onScreeningChange={handleScreeningChange}
+        screeningId={screeningId}
+        selectedScreening={selectedScreening}
+        selectedSeatIds={filteredSelectedSeatIds}
+      />
     </main>
   );
 }

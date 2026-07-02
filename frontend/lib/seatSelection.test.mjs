@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  countAvailableSeats,
+  createSeatMap,
   createInitialSeatSelection,
   toggleSeatSelection,
   validateSeatSelection,
@@ -46,4 +48,14 @@ test("initial seat selection falls back when a reservation draft is missing", ()
     screeningId: "scr-1820",
     selectedSeatIds: [],
   });
+});
+test("seat map treats API reserved seats as unavailable for the same screening", () => {
+  const seatMap = createSeatMap("scr-1820", ["C-4"]);
+  const seat = seatMap.flatMap((row) => row.seats).find((item) => item.id === "C-4");
+
+  assert.equal(seat.status, "reserved");
+  assert.equal(
+    countAvailableSeats("scr-1820", ["C-4"]),
+    countAvailableSeats("scr-1820") - 1,
+  );
 });

@@ -77,126 +77,139 @@ export default function SigninPage() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#FFF8E1] px-6 text-[#1C0800]">
-      <div className="w-full max-w-[520px]">
-        <h1 className="mb-10 text-center text-3xl font-black uppercase tracking-[0.08em]">
-          新規登録
-        </h1>
+    <main className="min-h-screen bg-[#F7F5F0] text-[#17130F]">
+      <header className="flex h-16 items-center border-b border-[#DDD8CF] px-5 sm:px-8">
+        <Link href="/" className="text-2xl font-black uppercase tracking-[0.18em]">
+          HAL CINEMA
+        </Link>
+      </header>
 
-        <form
-          className="space-y-5"
-          onSubmit={handleSubmit}
-          method="post"
-          action={`${apiBaseUrl}/api/register`}
-        >
-          <div>
-            <label className="mb-2 block text-[10px] font-black uppercase tracking-[0.28em] text-[#8C5D2A]">
-              名前
-            </label>
-            <input
-              type="text"
-              name="name"
-              value={form.name}
-              onChange={handleChange}
-              placeholder="Enter your name"
-              className="h-11 w-full border border-[#1C0800]/22 bg-white px-4 text-sm outline-none placeholder:text-[#A0703A] focus:border-[#E82020]"
-            />
-          </div>
+      <section className="flex min-h-[calc(100vh-64px)] items-center justify-center px-5 py-12">
+        <div className="w-full max-w-[432px]">
+          <p className="mb-5 text-center text-xl font-bold">新規登録</p>
 
-          <div>
-            <label className="mb-2 block text-[10px] font-black uppercase tracking-[0.28em] text-[#8C5D2A]">
-              メールアドレス
-            </label>
-            <input
-              type="email"
-              name="email"
-              value={form.email}
-              onChange={handleChange}
-              placeholder="Enter your email"
-              className="h-11 w-full border border-[#1C0800]/22 bg-white px-4 text-sm outline-none placeholder:text-[#A0703A] focus:border-[#E82020]"
-            />
-          </div>
+          <div className="overflow-hidden rounded-[6px] border border-[#D6D2CA] bg-white">
+            <div className="border-b border-[#E4E0D8] px-7 py-7 text-center">
+              <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-[#8B8073]">
+                HAL CINEMA MEMBER
+              </p>
+              <p className="mt-3 text-sm leading-6 text-[#5F574F]">
+                映画予約に使う会員情報を登録します。
+              </p>
+            </div>
 
-          <div>
-            <label className="mb-2 block text-[10px] font-black uppercase tracking-[0.28em] text-[#8C5D2A]">
-              電話番号
-              <span className="ml-2 text-xs font-normal text-gray-500">
-                任意
-              </span>
-            </label>
-            <input
-              type="tel"
-              name="phone"
-              value={form.phone}
-              onChange={handleChange}
-              placeholder="Enter your Mobile Number"
-              className="h-11 w-full border border-[#1C0800]/22 bg-white px-4 text-sm outline-none placeholder:text-[#A0703A] focus:border-[#E82020]"
-            />
-          </div>
+            <form
+              className="px-7 py-7"
+              onSubmit={handleSubmit}
+              method="post"
+              action={`${apiBaseUrl}/api/register`}
+            >
+              <div>
+                <label className="mb-2 block text-sm font-bold text-[#17130F]">
+                  名前
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  value={form.name}
+                  onChange={handleChange}
+                  placeholder="HAL Taro"
+                  className="h-11 w-full rounded-[4px] border border-[#D8D4CC] bg-white px-3 text-sm outline-none transition placeholder:text-[#A09A92] focus:border-[#17130F]"
+                />
+              </div>
 
-          <div>
-            <label className="mb-2 block text-[10px] font-black uppercase tracking-[0.28em] text-[#8C5D2A]">
-              パスワード
-            </label>
-            <input
-              type="password"
-              name="password"
-              value={form.password}
-              onChange={handleChange}
-              placeholder="Enter Password"
-              className="h-11 w-full border border-[#1C0800]/22 bg-white px-4 text-sm outline-none placeholder:text-[#A0703A] focus:border-[#E82020]"
-            />
-          </div>
+              <div className="mt-5">
+                <label className="mb-2 block text-sm font-bold text-[#17130F]">
+                  メールアドレス
+                </label>
+                <input
+                  type="email"
+                  name="email"
+                  value={form.email}
+                  onChange={handleChange}
+                  placeholder="mail@example.com"
+                  className="h-11 w-full rounded-[4px] border border-[#D8D4CC] bg-white px-3 text-sm outline-none transition placeholder:text-[#A09A92] focus:border-[#17130F]"
+                />
+              </div>
 
-          <div>
-            <label className="mb-2 block text-[10px] font-black uppercase tracking-[0.28em] text-[#8C5D2A]">
-              パスワード（確認）
-            </label>
-            <input
-              type="password"
-              name="passwordConfirm"
-              value={form.passwordConfirm}
-              onChange={handleChange}
-              placeholder="Enter your Password"
-              className="h-11 w-full border border-[#1C0800]/22 bg-white px-4 text-sm outline-none placeholder:text-[#A0703A] focus:border-[#E82020]"
-            />
-          </div>
+              <div className="mt-5">
+                <label className="mb-2 block text-sm font-bold text-[#17130F]">
+                  電話番号
+                  <span className="ml-2 text-xs font-normal text-[#837B72]">
+                    任意
+                  </span>
+                </label>
+                <input
+                  type="tel"
+                  name="phone"
+                  value={form.phone}
+                  onChange={handleChange}
+                  placeholder="09012345678"
+                  className="h-11 w-full rounded-[4px] border border-[#D8D4CC] bg-white px-3 text-sm outline-none transition placeholder:text-[#A09A92] focus:border-[#17130F]"
+                />
+              </div>
 
-          {errorMessage ? (
-            <p className="text-sm font-medium text-[#C01818]">{errorMessage}</p>
-          ) : null}
+              <div className="mt-5">
+                <label className="mb-2 block text-sm font-bold text-[#17130F]">
+                  パスワード
+                </label>
+                <input
+                  type="password"
+                  name="password"
+                  value={form.password}
+                  onChange={handleChange}
+                  placeholder="password"
+                  className="h-11 w-full rounded-[4px] border border-[#D8D4CC] bg-white px-3 text-sm outline-none transition placeholder:text-[#A09A92] focus:border-[#17130F]"
+                />
+              </div>
 
-          {isSubmitting ? (
-            <p className="text-sm text-gray-600" aria-live="polite">
-              登録を送信中です...
-            </p>
-          ) : null}
+              <div className="mt-5">
+                <label className="mb-2 block text-sm font-bold text-[#17130F]">
+                  パスワード（確認）
+                </label>
+                <input
+                  type="password"
+                  name="passwordConfirm"
+                  value={form.passwordConfirm}
+                  onChange={handleChange}
+                  placeholder="password"
+                  className="h-11 w-full rounded-[4px] border border-[#D8D4CC] bg-white px-3 text-sm outline-none transition placeholder:text-[#A09A92] focus:border-[#17130F]"
+                />
+              </div>
 
-          {process.env.NODE_ENV !== "production" ? (
-            <p className="text-xs text-gray-500">
-              送信先: {`${apiBaseUrl}/api/register`}
-            </p>
-          ) : null}
+              {errorMessage ? (
+                <p className="mt-4 text-sm font-medium leading-6 text-[#9A3A24]">
+                  {errorMessage}
+                </p>
+              ) : null}
 
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="rounded-full bg-black px-8 py-3 text-white font-bold shadow-md transition hover:scale-105 hover:bg-gray-800"
-          >
-            {isSubmitting ? "送信中..." : "登録"}
-          </button>
-        </form>
+              {isSubmitting ? (
+                <p className="mt-4 text-sm text-[#6E665D]" aria-live="polite">
+                  登録を送信中です...
+                </p>
+              ) : null}
 
-        <div className="mt-10 border-t border-[#C8860A]/30 pt-4">
-          <div className="flex items-center justify-center gap-5 text-sm text-[#8C5D2A]">
-            <span>アカウントをお持ちの方はこちら</span>
-            <span className="text-[#E82020]">→</span>
-            <Link href="/login" className="font-bold text-[#E82020]">
-              ログイン
-            </Link>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="mt-7 h-11 w-full rounded-[4px] bg-[#25201B] text-sm font-bold text-white transition hover:bg-[#46382F] disabled:bg-[#CCC8C1] disabled:text-[#756D63]"
+              >
+                {isSubmitting ? "送信中..." : "登録"}
+              </button>
+            </form>
+
+            <div className="border-t border-[#E4E0D8] px-7 py-5 text-center">
+              <span className="mr-3 text-sm text-[#837B72]">登録済みの方</span>
+              <Link
+                href="/login"
+                className="text-sm font-bold text-[#6A625A] underline underline-offset-4 transition hover:text-[#17130F]"
+              >
+                ログイン
+              </Link>
+            </div>
           </div>
         </div>
-      </div>
+      </section>
     </main>
   );
 }

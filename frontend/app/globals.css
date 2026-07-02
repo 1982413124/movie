@@ -270,8 +270,8 @@ html {
     transform: scale(1);
   }
   45% {
-    color: #E82020;
-    transform: scale(1.06);
+    color: #5A4033;
+    transform: scale(1.04);
   }
   100% {
     color: #1C0800;
@@ -287,4 +287,42 @@ html {
   animation: foodSummaryPulse 420ms ease-out;
   display: inline-block;
   transform-origin: right center;
+}
+
+.food-card-media {
+  background-color: var(--food-surface, #F4F0E8);
+  background-position: center;
+  background-size: cover;
+  isolation: isolate;
+}
+
+.food-card-media::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: color-mix(in srgb, var(--food-surface, #F4F0E8) 84%, rgba(255, 255, 255, 0.78));
+  backdrop-filter: saturate(0.72);
+}
+
+.food-card-media::after {
+  content: "";
+  position: absolute;
+  inset: 14px;
+  z-index: 0;
+  border: 1px solid rgba(28, 8, 0, 0.12);
+  pointer-events: none;
+}
+
+.food-card-mark {
+  color: var(--food-accent, #332D27);
+}
+
+.food-card-mark::before {
+  content: "";
+  display: block;
+  width: 38px;
+  margin-bottom: 12px;
+  border-top: 2px solid currentColor;
+  opacity: 0.62;
 }

@@ -54,20 +54,22 @@ test("builds selected food order lines and total price", () => {
   assert.equal(order.totalPrice, 1740);
 });
 
-test("promo slides include ad-style copy for a food banner", () => {
+test("promo slides keep billboard copy concise", () => {
   const firstSlide = foodHeroSlides[0];
 
-  assert.equal(firstSlide.promoLabel, "人気No.1");
+  assert.equal(firstSlide.promoLabel, "Food Pre-Order");
   assert.equal(firstSlide.productName, "シネマセットA");
-  assert.equal(firstSlide.priceLabel, "セットで980円");
-  assert.ok(firstSlide.offer.includes("期間限定"));
-  assert.ok(firstSlide.visualLabel);
+  assert.equal(firstSlide.priceLabel, "980円");
+  assert.equal(firstSlide.offer, "座席予約と一緒に");
+  assert.equal(firstSlide.visualLabel, "01");
+  assert.equal(firstSlide.subtitle, "受け取りは劇場カウンターで。");
+  assert.equal("colors" in firstSlide, false);
 });
 
-test("promo slides use the uploaded advertisement image", () => {
+test("promo slides use the versioned uploaded advertisement image", () => {
   assert.ok(
     foodHeroSlides.every((slide) => (
-      slide.imageSrc === "/images/advertisement/Popcorn.png"
+      slide.imageSrc === "/images/advertisement/Popcorn-b3ad4ecb.png"
     )),
   );
 });
