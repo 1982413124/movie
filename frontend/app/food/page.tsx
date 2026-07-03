@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactElement, type SVGProps } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import CampaignHeader from "../components/CampaignHeader";
@@ -107,6 +107,64 @@ const foodItems: FoodItem[] = [
 const categories = ["ALL", "POPCORN", "DRINK", "SNACK", "COMBO"] as const;
 type Category = (typeof categories)[number];
 
+function IconAll(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <rect x="4" y="4" width="7" height="7" rx="1.2" />
+      <rect x="13" y="4" width="7" height="7" rx="1.2" />
+      <rect x="4" y="13" width="7" height="7" rx="1.2" />
+      <rect x="13" y="13" width="7" height="7" rx="1.2" />
+    </svg>
+  );
+}
+
+function IconPopcorn(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M7 9h10l-1.3 11.3a1 1 0 0 1-1 .9H9.3a1 1 0 0 1-1-.9L7 9Z" />
+      <path d="M9.5 9 8.7 21.2M14.5 9l.8 12.2" />
+      <path d="M6.7 9c.4-1.7 2-2.9 3.8-2.6.4-1.5 2.1-2.3 3.4-1.4 1.6-.4 3 .8 3 2.4 0 .6-.1 1.1-.4 1.6" />
+    </svg>
+  );
+}
+
+function IconDrink(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M7.2 9h9.6l-1 10.4a1 1 0 0 1-1 .9H9.2a1 1 0 0 1-1-.9L7.2 9Z" />
+      <path d="M6.4 9h11.2l.3-1.8H6.1l.3 1.8Z" />
+      <path d="M13.5 3.5 12.3 7.2" />
+    </svg>
+  );
+}
+
+function IconSnack(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M5 19 12 5l7 14Z" />
+      <path d="M10.3 15.2h.01M13.6 16.6h.01M12 12.4h.01" />
+    </svg>
+  );
+}
+
+function IconCombo(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <rect x="4" y="8.5" width="16" height="10.5" rx="1.4" />
+      <path d="M4 13h16M12 8.5v10.5" />
+      <path d="M9.2 8.5C8 8.5 7 7.6 7 6.5S8 4.5 9.2 4.5c1.6 0 3.3 1.8 3.3 4M14.8 8.5c1.2 0 2.2-.9 2.2-2s-1-2-2.2-2c-1.6 0-3.3 1.8-3.3 4" />
+    </svg>
+  );
+}
+
+const categoryIcons: Record<Category, (props: SVGProps<SVGSVGElement>) => ReactElement> = {
+  ALL: IconAll,
+  POPCORN: IconPopcorn,
+  DRINK: IconDrink,
+  SNACK: IconSnack,
+  COMBO: IconCombo,
+};
+
 export default function FoodPage() {
   const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState<Category>("ALL");
@@ -158,8 +216,9 @@ export default function FoodPage() {
           <p className="text-xs font-black uppercase tracking-[0.38em] text-[#8C5D2A]">
             Movie Reservation
           </p>
-          <h1 className="mt-3 text-5xl font-black uppercase leading-none sm:text-7xl">
-            FOOD & DRINK
+          <h1 className="mt-3 flex items-center gap-3 text-5xl font-black uppercase leading-none sm:text-7xl">
+            <IconPopcorn className="h-9 w-9 shrink-0 sm:h-12 sm:w-12" aria-hidden="true" />
+            FOOD &amp; DRINK
           </h1>
         </div>
 
@@ -168,29 +227,32 @@ export default function FoodPage() {
           <div>
             {/* カテゴリフィルター */}
             <div className="mb-8 flex flex-wrap gap-2">
-              {categories.map((cat) => (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => setSelectedCategory(cat)}
-                  className={`min-h-10 border px-5 text-xs font-black uppercase tracking-[0.18em] transition ${
-                    selectedCategory === cat
-                      ? "border-[#E82020] bg-[#E82020] text-white"
-                      : "border-[#1C0800]/20 bg-white text-[#1C0800] hover:border-[#1C0800]"
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
+              {categories.map((cat) => {
+                const Icon = categoryIcons[cat];
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setSelectedCategory(cat)}
+                    className={`flex min-h-10 items-center gap-1.5 rounded-full border px-5 text-xs font-black uppercase tracking-[0.18em] transition ${
+                      selectedCategory === cat
+                        ? "border-[#E82020] bg-[#E82020] text-white"
+                        : "border-[#1C0800]/20 bg-white text-[#1C0800] hover:border-[#1C0800]"
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" aria-hidden="true" />
+                    {cat}
+                  </button>
+                );
+              })}
             </div>
 
             {/* 商品グリッド */}
             <div className="grid gap-4 sm:grid-cols-2">
-              {filteredItems.map((item, index) => (
+              {filteredItems.map((item) => (
                 <FoodCard
                   key={item.id}
                   item={item}
-                  index={index}
                   quantity={quantities[item.id] ?? 0}
                   onAdd={() => updateQuantity(item.id, 1)}
                   onRemove={() => updateQuantity(item.id, -1)}
@@ -201,7 +263,7 @@ export default function FoodPage() {
 
           {/* 右カラム：注文サマリー */}
           <div className="lg:sticky lg:top-[96px] lg:self-start">
-            <div className="border border-[#1C0800]/14 bg-white p-6 shadow-[0_18px_60px_rgba(0,0,0,0.08)]">
+            <div className="rounded-3xl border border-[#1C0800]/14 bg-white p-6 shadow-[0_18px_60px_rgba(0,0,0,0.08)]">
               <p className="text-xs font-black uppercase tracking-[0.32em] text-[#8C5D2A]">
                 Order
               </p>
@@ -218,24 +280,30 @@ export default function FoodPage() {
                   <ul className="divide-y divide-[#1C0800]/10">
                     {foodItems
                       .filter((item) => (quantities[item.id] ?? 0) > 0)
-                      .map((item) => (
-                        <li
-                          key={item.id}
-                          className="flex items-center justify-between gap-3 py-4"
-                        >
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-bold">
-                              {item.name}
-                            </p>
-                            <p className="text-xs text-[#8C5D2A]">
-                              ¥{item.price.toLocaleString()} × {quantities[item.id]}
-                            </p>
-                          </div>
-                          <span className="shrink-0 text-sm font-black">
-                            ¥{(item.price * (quantities[item.id] ?? 0)).toLocaleString()}
-                          </span>
-                        </li>
-                      ))}
+                      .map((item) => {
+                        const Icon = categoryIcons[item.category as Category];
+                        return (
+                          <li
+                            key={item.id}
+                            className="flex items-center justify-between gap-3 py-4"
+                          >
+                            <div className="flex min-w-0 items-center gap-2">
+                              <Icon className="h-4 w-4 shrink-0 text-[#8C5D2A]" aria-hidden="true" />
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-bold">
+                                  {item.name}
+                                </p>
+                                <p className="text-xs text-[#8C5D2A]">
+                                  ¥{item.price.toLocaleString()} × {quantities[item.id]}
+                                </p>
+                              </div>
+                            </div>
+                            <span className="shrink-0 text-sm font-black">
+                              ¥{(item.price * (quantities[item.id] ?? 0)).toLocaleString()}
+                            </span>
+                          </li>
+                        );
+                      })}
                   </ul>
                 )}
               </div>
@@ -258,7 +326,7 @@ export default function FoodPage() {
                 type="button"
                 onClick={handleProceed}
                 disabled={totalItems === 0}
-                className={`mt-6 flex min-h-14 w-full items-center justify-center text-sm font-black uppercase tracking-[0.2em] transition ${
+                className={`mt-6 flex min-h-14 w-full items-center justify-center rounded-full text-sm font-black uppercase tracking-[0.2em] transition ${
                   totalItems > 0
                     ? "bg-[#1C0800] text-white hover:bg-[#2b2b2b]"
                     : "cursor-not-allowed bg-[#1C0800]/20 text-[#1C0800]/40"
@@ -269,7 +337,7 @@ export default function FoodPage() {
 
               <Link
                 href="/seats"
-                className="mt-3 flex min-h-12 items-center justify-center border border-[#1C0800]/22 text-xs font-bold uppercase tracking-[0.16em] text-[#1C0800] transition hover:border-[#1C0800] hover:bg-white"
+                className="mt-3 flex min-h-12 items-center justify-center rounded-full border border-[#1C0800]/22 text-xs font-bold uppercase tracking-[0.16em] text-[#1C0800] transition hover:border-[#1C0800] hover:bg-white"
               >
                 スキップして進む
               </Link>
@@ -283,28 +351,31 @@ export default function FoodPage() {
 
 function FoodCard({
   item,
-  index,
   quantity,
   onAdd,
   onRemove,
 }: {
   item: FoodItem;
-  index: number;
   quantity: number;
   onAdd: () => void;
   onRemove: () => void;
 }) {
+  const Icon = categoryIcons[item.category as Category];
+
   return (
-    <div className="group relative border border-[#1C0800]/14 bg-white p-5 shadow-[0_8px_32px_rgba(0,0,0,0.06)] transition hover:border-[#1C0800]/30">
+    <div className="group relative rounded-2xl border border-[#1C0800]/14 bg-white p-5 shadow-[0_8px_32px_rgba(0,0,0,0.06)] transition hover:border-[#1C0800]/30">
       {item.badge && (
-        <span className="absolute right-4 top-4 bg-[#E82020] px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-white">
+        <span className="absolute right-4 top-4 rounded-full bg-[#E82020] px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-white">
           {item.badge}
         </span>
       )}
 
       <div className="mb-4 flex items-start gap-3">
-        <span className="font-mono text-sm text-[#A0703A]">
-          0{index + 1}
+        <span
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#FFF0C0] text-[#1C0800]"
+          aria-hidden="true"
+        >
+          <Icon className="h-5 w-5" />
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[#A0703A]">
@@ -334,7 +405,7 @@ function FoodCard({
               <button
                 type="button"
                 onClick={onRemove}
-                className="flex h-9 w-9 items-center justify-center border border-[#1C0800]/20 text-lg font-black transition hover:border-[#1C0800] hover:bg-[#FFF0C0]"
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-[#1C0800]/20 text-lg font-black transition hover:border-[#1C0800] hover:bg-[#FFF0C0]"
                 aria-label={`${item.name}を減らす`}
               >
                 −
@@ -347,7 +418,7 @@ function FoodCard({
           <button
             type="button"
             onClick={onAdd}
-            className="flex h-9 w-9 items-center justify-center bg-[#1C0800] text-lg font-black text-white transition hover:bg-[#E82020]"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-[#1C0800] text-lg font-black text-white transition hover:bg-[#E82020]"
             aria-label={`${item.name}を追加`}
           >
             ＋

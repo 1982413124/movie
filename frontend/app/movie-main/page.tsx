@@ -408,7 +408,7 @@ export default function Home() {
               </h1>
               <div className="js-hero-cta mt-8 flex flex-col gap-3 sm:flex-row">
                 <Link
-                  href="/movie-detail"
+                  href={`/movie-detail?id=${featuredMovies[0].movieId}`}
                   className="inline-flex min-h-12 items-center justify-center rounded-full bg-[#E82020] px-7 text-sm font-black uppercase tracking-[0.16em] text-white transition hover:bg-[#C01818] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#E82020]"
                 >
                   上映時間を見る
@@ -474,7 +474,7 @@ export default function Home() {
               Search
             </Link>
             <Link
-              href="/movie-detail"
+              href={`/movie-detail?id=${featuredMovies[0].movieId}`}
               className="inline-flex min-h-12 items-center justify-center bg-[#E82020] px-6 text-sm font-black uppercase tracking-[0.14em] text-white transition hover:bg-[#C01818] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#E82020]"
             >
               予約へ
@@ -546,7 +546,7 @@ const primaryNavItems = [
 
 const menuItems = [
   {
-    href: "/movie-detail",
+    href: `/movie-detail?id=${featuredMovies[0].movieId}`,
     label: "上映スケジュール",
     meta: "Schedule",
   },
@@ -685,7 +685,7 @@ function SectionHeader({ eyebrow, title }: { eyebrow: string; title: string }) {
         </h2>
       </div>
       <Link
-        href="/movie-detail"
+        href={`/movie-detail?id=${featuredMovies[0].movieId}`}
         className="inline-flex min-h-11 items-center justify-center rounded-full border border-[#1C0800]/22 px-5 text-xs font-bold uppercase tracking-[0.16em] text-[#1C0800] transition hover:border-[#1C0800] hover:bg-white"
       >
         Reserve
@@ -699,7 +699,7 @@ function MovieCard({ movie, index }: { movie: MovieCardData; index: number }) {
 
   return (
     <Link
-      href="/movie-detail"
+      href={`/movie-detail?id=${movie.movieId}`}
       className="js-card group relative min-h-[500px] overflow-hidden border border-[#1C0800]/14 bg-white/82 p-3 text-[#1C0800] shadow-[0_18px_70px_rgba(0,0,0,0.08)] outline-none transition-colors hover:border-[#1C0800] focus-visible:border-[#1C0800] focus-visible:ring-2 focus-visible:ring-[#E82020]"
       style={style}
     >
@@ -753,7 +753,7 @@ function CompactMovieCard({
 
   return (
     <Link
-      href="/movie-detail"
+      href={`/movie-detail?id=${movie.movieId}`}
       className="js-reveal group grid grid-cols-[84px_1fr] gap-4 border border-[#1C0800]/12 bg-white/82 p-3 text-[#1C0800] outline-none transition hover:border-[#1C0800] focus-visible:border-[#1C0800] focus-visible:ring-2 focus-visible:ring-[#E82020]"
       style={style}
     >
