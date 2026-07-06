@@ -172,7 +172,7 @@ export function toggleSeatSelection(selectedSeatIds, seat) {
   return [...selectedSeatIds, seat.id];
 }
 
-export function validateSeatSelection(selectedSeatIds) {
+export function validateSeatSelection(selectedSeatIds, ticketTotal) {
   if (selectedSeatIds.length === 0) {
     return {
       ok: false,
@@ -180,5 +180,43 @@ export function validateSeatSelection(selectedSeatIds) {
     };
   }
 
+  if (typeof ticketTotal === "number" && selectedSeatIds.length !== ticketTotal) {
+    return {
+      ok: false,
+      message: `選択した人数（${ticketTotal}人）と座席の数（${selectedSeatIds.length}席）が一致しません。`,
+    };
+  }
+
   return { ok: true, message: "" };
+}
+
+export function todayIso() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+export function getUpcomingDates(days = 7, base = new Date()) {
+  return Array.from({ length: days }, (_, index) => {
+    const current = new Date(base);
+    current.setDate(current.getDate() + index);
+    const value = current.toISOString().slice(0, 10);
+
+    return { value, label: formatDateLabel(value) };
+  });
+}
+
+export function formatDateLabel(isoDate) {
+  if (!isoDate) {
+    return "";
+  }
+
+  const date = new Date(`${isoDate}T00:00:00`);
+  if (Number.isNaN(date.getTime())) {
+    return isoDate;
+  }
+
+  return new Intl.DateTimeFormat("ja-JP", {
+    month: "numeric",
+    day: "numeric",
+    weekday: "short",
+  }).format(date);
 }

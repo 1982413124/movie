@@ -11,7 +11,14 @@ export default function ReservationPanel({ summary }) {
           <DetailRow label="上映日時" value={summary.screeningDatetime} />
           <DetailRow label="スクリーン" value={summary.screenName} />
           <DetailRow label="座席" value={summary.seatNum} />
-          <DetailRow label="枚数" value={`${summary.ticketNum}枚`} />
+          <DetailRow
+            label="枚数"
+            value={
+              summary.ticketBreakdownLabel && summary.ticketBreakdownLabel !== "-"
+                ? summary.ticketBreakdownLabel
+                : `${summary.ticketNum}枚`
+            }
+          />
         </dl>
       </div>
 

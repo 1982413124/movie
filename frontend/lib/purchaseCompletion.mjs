@@ -1,4 +1,5 @@
-import { findScreening, movieDetail, screenings } from "./seatSelection.mjs";
+import { findScreening, formatDateLabel, movieDetail, screenings } from "./seatSelection.mjs";
+import { formatTicketBreakdown } from "./ticketPricing.mjs";
 
 const defaultPaymentMethod = "クレジットカード";
 
@@ -7,7 +8,9 @@ export function buildPurchaseCompletion(draft, options = {}) {
   const screening = findScreening(draft?.screeningId) ?? screenings[0];
   const seatIds = Array.isArray(draft?.seatIds) ? draft.seatIds : [];
   const ticketNum = draft?.ticketCount ?? seatIds.length;
+  const ticketBreakdown = Array.isArray(draft?.ticketBreakdown) ? draft.ticketBreakdown : [];
   const totalPrice = draft?.totalPrice ?? screening.price * ticketNum;
+  const dateLabel = draft?.screeningDate ? formatDateLabel(draft.screeningDate) : screening.dateLabel;
 
   return {
     completeTitle: "ご購入が完了しました",
@@ -17,11 +20,12 @@ export function buildPurchaseCompletion(draft, options = {}) {
     purchaseDatetime: formatPurchaseDatetime(now),
     movieTitle: movieDetail.title,
     posterLabel: movieDetail.title,
-    screeningDatetime: `${screening.dateLabel} ${draft?.screeningTime ?? screening.label}`,
+    screeningDatetime: `${dateLabel} ${draft?.screeningTime ?? screening.label}`,
     screenName: draft?.screenName ?? screening.screenName,
     theaterName: screening.theaterName,
     seatNum: formatSeatNumbers(seatIds),
     ticketNum,
+    ticketBreakdownLabel: formatTicketBreakdown(ticketBreakdown),
     totalPrice,
     payMethod: options.payMethod ?? defaultPaymentMethod,
     payNum: options.payNum ?? createPaymentNum(now, seatIds),

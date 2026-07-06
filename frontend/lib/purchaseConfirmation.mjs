@@ -1,5 +1,6 @@
-import { findScreening, movieDetail, screenings } from "./seatSelection.mjs";
+import { findScreening, formatDateLabel, movieDetail, screenings } from "./seatSelection.mjs";
 import { formatSeatNumbers } from "./purchaseCompletion.mjs";
+import { formatTicketBreakdown } from "./ticketPricing.mjs";
 
 export const paymentMethods = [
   {
@@ -38,15 +39,18 @@ export function buildPurchaseConfirmation(draft) {
   const screening = findScreening(draft?.screeningId) ?? screenings[0];
   const seatIds = Array.isArray(draft?.seatIds) ? draft.seatIds : [];
   const ticketNum = draft?.ticketCount ?? seatIds.length;
+  const ticketBreakdown = Array.isArray(draft?.ticketBreakdown) ? draft.ticketBreakdown : [];
+  const dateLabel = draft?.screeningDate ? formatDateLabel(draft.screeningDate) : screening.dateLabel;
 
   return {
     movieTitle: movieDetail.title,
     posterLabel: movieDetail.title,
     theaterName: screening.theaterName,
-    screeningDatetime: `${screening.dateLabel} ${draft?.screeningTime ?? screening.label}`,
+    screeningDatetime: `${dateLabel} ${draft?.screeningTime ?? screening.label}`,
     screenName: draft?.screenName ?? screening.screenName,
     seatNum: formatSeatNumbers(seatIds),
     ticketNum,
+    ticketBreakdownLabel: formatTicketBreakdown(ticketBreakdown),
     totalPrice: draft?.totalPrice ?? screening.price * ticketNum,
   };
 }
@@ -54,8 +58,8 @@ export function buildPurchaseConfirmation(draft) {
 export function validatePaymentMethod(paymentMethodId) {
   if (!paymentMethodId) {
     return {
-      ok: false,
-      message: "支払い方法を選択してください。",
+      ok: true,
+      message: "",
     };
   }
 

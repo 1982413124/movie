@@ -115,6 +115,38 @@ export function loginAccount(storage, input) {
   };
 }
 
+export function setCurrentAccountFromServer(storage, input) {
+  const email = normalizeEmail(input.email);
+
+  if (!email) {
+    return {
+      ok: false,
+      message: "メールアドレスが不正です。",
+    };
+  }
+
+  const accounts = readAccounts(storage);
+  const index = findAccountIndex(accounts, email);
+  const account = buildStoredAccount(
+    { ...input, email },
+    index !== -1 ? accounts[index] : {},
+  );
+
+  if (index !== -1) {
+    accounts[index] = account;
+  } else {
+    accounts.push(account);
+  }
+
+  writeAccounts(storage, accounts);
+  storage.setItem(currentUserStorageKey, account.email);
+
+  return {
+    ok: true,
+    account,
+  };
+}
+
 export function logoutAccount(storage) {
   storage.removeItem(currentUserStorageKey);
 }

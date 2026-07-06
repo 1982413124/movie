@@ -430,10 +430,10 @@ export default function Home() {
                   上映時間を見る
                 </Link>
                 <Link
-                  href="/register"
+                  href="/login"
                   className="inline-flex min-h-12 items-center justify-center rounded-full border border-[#1C0800]/22 px-7 text-sm font-bold uppercase tracking-[0.16em] text-[#1C0800] transition hover:border-[#1C0800] hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#E82020]"
                 >
-                  フードメニュー
+                  LOGIN
                 </Link>
               </div>
             </div>

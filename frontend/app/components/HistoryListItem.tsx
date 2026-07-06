@@ -5,8 +5,17 @@ type Props = {
 };
 
 export default function HistoryListItem({ history }: Props) {
-  const { purchasedAt, movieTitle, showtime, screen, seats, ticketCount, totalPrice, status } =
-    history;
+  const {
+    purchasedAt,
+    movieTitle,
+    showtime,
+    screen,
+    seats,
+    ticketCount,
+    totalPrice,
+    status,
+    foodItems,
+  } = history;
 
   return (
     <div className="grid grid-cols-[88px_144px_1fr_1fr_130px_120px_140px] items-center gap-4 border-b border-[#1C0800]/10 bg-white px-6 py-4 last:border-b-0 transition-colors hover:bg-[#FFF8E1]">
@@ -31,6 +40,14 @@ export default function HistoryListItem({ history }: Props) {
       <div className="space-y-1">
         <p className="text-sm text-[#5C3010]">座席：{seats.join(", ")}</p>
         <p className="text-sm text-[#5C3010]">枚数：{ticketCount}枚</p>
+        {foodItems.length > 0 ? (
+          <p className="text-sm text-[#5C3010]">
+            フード：
+            {foodItems
+              .map((item) => `${item.name}×${item.quantity}`)
+              .join(", ")}
+          </p>
+        ) : null}
       </div>
 
       {/* 合計金額 */}

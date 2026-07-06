@@ -10,7 +10,7 @@ import {
   updateCurrentAccount,
 } from "../../lib/authStorage.mjs";
 
-type MenuKey = "profile" | "ticket" | "wishlist" | "settings" | "logout";
+type MenuKey = "profile" | "history" | "logout";
 type StatusTone = "error" | "success";
 
 type ProfileForm = {
@@ -26,9 +26,7 @@ type Account = ProfileForm & {
 
 const MENU_ITEMS: { key: MenuKey; label: string }[] = [
   { key: "profile", label: "プロフィール" },
-  { key: "ticket", label: "チケット" },
-  { key: "wishlist", label: "ウィッシュリスト" },
-  { key: "settings", label: "設定" },
+  { key: "history", label: "購入履歴" },
   { key: "logout", label: "ログアウト" },
 ];
 
@@ -52,9 +50,11 @@ function toProfileForm(account: Account | null): ProfileForm {
   };
 }
 
+const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:5000";
+
 export default function MyPage() {
   const router = useRouter();
-  const [activeMenu, setActiveMenu] = useState<MenuKey>("settings");
+  const [activeMenu, setActiveMenu] = useState<MenuKey>("profile");
   const [currentAccount, setCurrentAccount] = useState<Account | null | undefined>(undefined);
   const [form, setForm] = useState<ProfileForm>(emptyForm);
   const [statusMessage, setStatusMessage] = useState("");
@@ -66,7 +66,7 @@ export default function MyPage() {
 
       if (!account) {
         setCurrentAccount(null);
-        router.replace("/");
+        router.replace("/login");
         return;
       }
 
@@ -88,7 +88,7 @@ export default function MyPage() {
     setCurrentAccount(null);
     setForm(emptyForm);
     setStatusMessage("");
-    setActiveMenu("settings");
+    setActiveMenu("profile");
     router.replace("/");
   };
 
@@ -98,10 +98,42 @@ export default function MyPage() {
       return;
     }
 
+    if (menuKey === "history") {
+      router.push("/purchase-history");
+      return;
+    }
+
     setActiveMenu(menuKey);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    setStatusMessage("");
+
+    try {
+      const response = await fetch(
+        `${apiBaseUrl}/api/users/${encodeURIComponent(currentAccount?.email ?? "")}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ name: form.name, email: form.email }),
+        },
+      );
+
+      const payload = (await response.json()) as { status?: string; message?: string };
+
+      if (!response.ok || payload.status !== "ok") {
+        setStatusTone("error");
+        setStatusMessage(payload.message ?? "保存に失敗しました。");
+        return;
+      }
+    } catch {
+      setStatusTone("error");
+      setStatusMessage("通信エラーが発生しました。通信状態を確認してください。");
+      return;
+    }
+
     const result = updateCurrentAccount(window.localStorage, form) as
       | { ok: true; account: Account }
       | { ok: false; message: string };
@@ -177,7 +209,7 @@ export default function MyPage() {
         </div>
 
         <div className="flex-1 rounded-lg bg-[var(--surface-bg)] p-6">
-          <h2 className="mb-5 text-base font-bold">アカウント設定</h2>
+          <h2 className="mb-5 text-base font-bold">プロフィール</h2>
 
           <div className="mb-5">
             <label className="mb-2 block text-sm text-[var(--text-muted)]">プロフィール写真</label>

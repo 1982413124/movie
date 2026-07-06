@@ -1,28 +1,34 @@
-import { countAvailableSeats, screenings } from "@/lib/seatSelection.mjs";
+import { countAvailableSeats, formatDateLabel, screenings } from "@/lib/seatSelection.mjs";
+import { TICKET_CATEGORIES } from "@/lib/ticketPricing.mjs";
 import { formatPrice } from "./formatters";
 
 export default function OrderPanel({
   error,
   onProceed,
   onScreeningChange,
+  onTicketCountChange,
+  screeningDate,
   screeningId,
   selectedScreening,
   selectedSeatIds,
+  ticketCounts,
+  ticketTotal,
+  totalPrice,
 }) {
-  const ticketCount = selectedSeatIds.length;
-  const totalPrice = selectedScreening.price * ticketCount;
-
   return (
     <aside className="md:sticky md:top-8 md:h-fit">
       <div className="border border-[#1C0800]/14 bg-white p-6 shadow-[0_18px_60px_rgba(28,8,0,0.08)]">
-        <PanelTitle selectedScreening={selectedScreening} />
+        <PanelTitle screeningDate={screeningDate} />
         <ScreeningList
           screeningId={screeningId}
           onScreeningChange={onScreeningChange}
         />
+
+        <TicketCategoryList ticketCounts={ticketCounts} onTicketCountChange={onTicketCountChange} />
+
         <OrderDetails
           selectedSeatIds={selectedSeatIds}
-          ticketCount={ticketCount}
+          ticketTotal={ticketTotal}
           totalPrice={totalPrice}
         />
 
@@ -32,7 +38,7 @@ export default function OrderPanel({
             error ? "text-[#1C0800]" : "text-[#8C5D2A]"
           }`}
         >
-          {error || "座席を選ぶと購入手続きへ進めます。"}
+          {error || "人数と区分を選んでから、同じ数だけ座席を選んでください。"}
         </p>
 
         <button
@@ -47,7 +53,7 @@ export default function OrderPanel({
   );
 }
 
-function PanelTitle({ selectedScreening }) {
+function PanelTitle({ screeningDate }) {
   return (
     <div className="flex items-start justify-between gap-4">
       <div>
@@ -59,7 +65,7 @@ function PanelTitle({ selectedScreening }) {
         </h2>
       </div>
       <span className="border border-[#C8860A]/40 px-3 py-1 font-mono text-xs text-[#8C5D2A]">
-        {selectedScreening.dateLabel}
+        {formatDateLabel(screeningDate)}
       </span>
     </div>
   );
@@ -116,14 +122,58 @@ function ScreeningButton({ isActive, onClick, screening }) {
   );
 }
 
-function OrderDetails({ selectedSeatIds, ticketCount, totalPrice }) {
+function TicketCategoryList({ ticketCounts, onTicketCountChange }) {
+  return (
+    <div className="mt-6 border-t border-[#1C0800]/14 pt-4">
+      <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[#8C5D2A]">
+        チケット区分
+      </p>
+      <div className="mt-3 space-y-2">
+        {TICKET_CATEGORIES.map((category) => (
+          <div
+            key={category.id}
+            className="flex items-center justify-between gap-3 border border-[#1C0800]/14 px-3 py-2"
+          >
+            <div>
+              <p className="text-sm font-semibold text-[#1C0800]">{category.label}</p>
+              <p className="text-xs text-[#8C5D2A]">{formatPrice(category.price)}</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => onTicketCountChange(category.id, -1)}
+                aria-label={`${category.label}を1人減らす`}
+                className="flex h-8 w-8 items-center justify-center border border-[#1C0800]/22 text-lg font-black transition hover:border-[#1C0800]"
+              >
+                −
+              </button>
+              <span className="w-6 text-center font-mono text-lg font-black">
+                {ticketCounts[category.id] || 0}
+              </span>
+              <button
+                type="button"
+                onClick={() => onTicketCountChange(category.id, 1)}
+                aria-label={`${category.label}を1人増やす`}
+                className="flex h-8 w-8 items-center justify-center border border-[#1C0800]/22 text-lg font-black transition hover:border-[#1C0800]"
+              >
+                ＋
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function OrderDetails({ selectedSeatIds, ticketTotal, totalPrice }) {
   return (
     <div className="mt-6 divide-y divide-[#1C0800]/10 border-y border-[#1C0800]/14">
       <DetailRow
         label="選択座席"
         value={selectedSeatIds.length > 0 ? selectedSeatIds.join(", ") : "--"}
       />
-      <DetailRow label="チケット" value={`一般 ${ticketCount}枚`} />
+      <DetailRow label="人数" value={`${ticketTotal}人`} />
       <DetailRow label="合計" value={formatPrice(totalPrice)} large />
     </div>
   );

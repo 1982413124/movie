@@ -1,46 +1,23 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import CampaignHeader from "../components/CampaignHeader";
+import { getUpcomingDates, screenings } from "@/lib/seatSelection.mjs";
 
-const days = ["11", "12", "13", "14", "15", "16"];
-
-const timeTable: Record<string, { time: string; seats: string }[]> = {
-  "11": [
-    { time: "08:30 - 10:40", seats: "40/70" },
-    { time: "13:45 - 15:50", seats: "70/70" },
-    { time: "18:00 - 20:10", seats: "20/70" },
-  ],
-  "12": [
-    { time: "09:00 - 11:10", seats: "50/70" },
-    { time: "14:00 - 16:10", seats: "60/70" },
-  ],
-  "13": [
-    { time: "10:00 - 12:10", seats: "30/70" },
-    { time: "15:00 - 17:10", seats: "70/70" },
-  ],
-  "14": [
-    { time: "11:00 - 13:10", seats: "20/70" },
-    { time: "16:00 - 18:10", seats: "55/70" },
-  ],
-  "15": [
-    { time: "12:00 - 14:10", seats: "10/70" },
-    { time: "17:00 - 19:10", seats: "70/70" },
-  ],
-  "16": [
-    { time: "13:00 - 15:10", seats: "70/70" },
-    { time: "18:00 - 20:10", seats: "20/70" },
-  ],
-};
+const upcomingDates = getUpcomingDates(7);
 
 export default function MovieDetailPage() {
-  const [selectedDay, setSelectedDay] = useState(days[0]);
-  const [selectedTime, setSelectedTime] = useState(timeTable[days[0]][0].time);
+  const router = useRouter();
+  const [selectedDate, setSelectedDate] = useState(upcomingDates[0].value);
+  const [selectedScreeningId, setSelectedScreeningId] = useState(screenings[0].id);
 
-  const handleDayClick = (day: string) => {
-    setSelectedDay(day);
-    setSelectedTime(timeTable[day][0].time);
+  const handleProceedToSeats = () => {
+    window.sessionStorage.setItem(
+      "movieSelectedScreening",
+      JSON.stringify({ date: selectedDate, screeningId: selectedScreeningId }),
+    );
+    router.push("/seats");
   };
 
   return (
@@ -122,19 +99,19 @@ export default function MovieDetailPage() {
                 Select Date
               </h3>
 
-              <div className="mt-4 grid grid-cols-6 gap-2">
-                {days.map((day) => (
+              <div className="mt-4 grid grid-cols-4 gap-2 sm:grid-cols-7">
+                {upcomingDates.map((day) => (
                   <button
-                    key={day}
+                    key={day.value}
                     type="button"
-                    onClick={() => handleDayClick(day)}
-                    className={`min-h-14 border text-lg font-black transition ${
-                      selectedDay === day
+                    onClick={() => setSelectedDate(day.value)}
+                    className={`min-h-14 border text-sm font-black transition ${
+                      selectedDate === day.value
                         ? "bg-[#1C0800] text-white"
                         : "bg-white text-[#1C0800] hover:bg-[#FFF0C0]"
                     }`}
                   >
-                    {day}
+                    {day.label}
                   </button>
                 ))}
               </div>
@@ -146,25 +123,23 @@ export default function MovieDetailPage() {
               </h3>
 
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                {timeTable[selectedDay].map((slot) => {
-                  const soldOut = slot.seats === "70/70";
-                  const selected = selectedTime === slot.time;
+                {screenings.map((screening) => {
+                  const selected = selectedScreeningId === screening.id;
 
                   return (
                     <button
-                      key={slot.time}
+                      key={screening.id}
                       type="button"
-                      disabled={soldOut}
-                      onClick={() => setSelectedTime(slot.time)}
+                      onClick={() => setSelectedScreeningId(screening.id)}
                       className={`border p-4 text-left transition ${
                         selected
                           ? "border-[#1C0800] bg-[#1C0800] text-white"
                           : "border-[#1C0800]/20 bg-white text-[#1C0800] hover:border-[#1C0800]"
-                      } ${soldOut ? "cursor-not-allowed opacity-35" : ""}`}
+                      }`}
                     >
-                      <div className="text-lg font-black">{slot.time}</div>
+                      <div className="text-lg font-black">{screening.label}</div>
                       <div className="mt-2 text-xs font-bold tracking-[0.14em]">
-                        {soldOut ? "SOLD OUT" : `${slot.seats} 席`}
+                        {screening.screenName}
                       </div>
                     </button>
                   );
@@ -172,12 +147,13 @@ export default function MovieDetailPage() {
               </div>
             </div>
 
-            <Link
-              href="/seats"
+            <button
+              type="button"
+              onClick={handleProceedToSeats}
               className="mt-auto flex min-h-14 items-center justify-center bg-[#1C0800] text-sm font-black uppercase tracking-[0.2em] text-white transition hover:bg-[#2b2b2b]"
             >
               座席を選択する
-            </Link>
+            </button>
           </div>
         </section>
       </main>

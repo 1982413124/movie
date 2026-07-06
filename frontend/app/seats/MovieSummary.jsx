@@ -1,6 +1,6 @@
-import { movieDetail } from "@/lib/seatSelection.mjs";
+import { formatDateLabel, movieDetail } from "@/lib/seatSelection.mjs";
 
-export default function MovieSummary({ selectedScreening, availableSeats }) {
+export default function MovieSummary({ selectedScreening, availableSeats, screeningDate }) {
   return (
     <div className="grid gap-5 border-b border-[#1C0800]/14 p-6 md:grid-cols-[170px_minmax(0,1fr)]">
       <div className="aspect-[3/4] border border-[#1C0800]/14 bg-[#FFF8E1] p-4 text-[#1C0800]">
@@ -35,7 +35,8 @@ export default function MovieSummary({ selectedScreening, availableSeats }) {
           </p>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <SummaryItem label="上映日" value={formatDateLabel(screeningDate)} />
           <SummaryItem label="上映時間" value={selectedScreening.label} mono />
           <SummaryItem label="スクリーン" value={selectedScreening.screenName} />
           <div className="border-t border-[#1C0800]/14 pt-3">

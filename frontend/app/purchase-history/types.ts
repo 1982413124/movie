@@ -1,3 +1,10 @@
+export type FoodOrderItem = {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+};
+
 export type TicketHistory = {
   id: string;
   purchasedAt: string;
@@ -9,4 +16,5 @@ export type TicketHistory = {
   totalPrice: number;
   status: string;
   posterUrl: string;
+  foodItems: FoodOrderItem[];
 };

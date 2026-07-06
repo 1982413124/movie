@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import type { ChangeEvent, FormEvent } from "react";
 import { useState } from "react";
 
+import { setCurrentAccountFromServer } from "../../lib/authStorage.mjs";
+
 export default function SigninPage() {
   const router = useRouter();
   const apiBaseUrl =
@@ -57,13 +59,26 @@ export default function SigninPage() {
       const payload = (await response.json()) as {
         status?: string;
         message?: string;
+        user?: { id: number; name: string; email: string };
       };
 
-      if (!response.ok) {
+      if (!response.ok || !payload.user) {
         setErrorMessage(
           payload.message ??
             "新規登録に失敗しました。しばらくしてから再度お試しください。",
         );
+        setIsSubmitting(false);
+        return;
+      }
+
+      const result = setCurrentAccountFromServer(window.localStorage, {
+        email: payload.user.email,
+        name: payload.user.name,
+        phone: form.phone,
+      });
+
+      if (!result.ok) {
+        setErrorMessage(result.message ?? "アカウント情報の保存に失敗しました。");
         setIsSubmitting(false);
         return;
       }

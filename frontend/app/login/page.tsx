@@ -4,13 +4,7 @@ import { useRouter } from "next/navigation";
 import type { ChangeEvent, FormEvent } from "react";
 import { useState } from "react";
 
-type StoredAccount = {
-  email: string;
-  name: string;
-  password: string;
-  phone: string;
-  nickname: string;
-};
+import { setCurrentAccountFromServer } from "../../lib/authStorage.mjs";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -71,50 +65,16 @@ export default function LoginPage() {
         return;
       }
 
-      const currentEmail = payload.user.email;
-      const currentName = payload.user.name ?? "";
+      const result = setCurrentAccountFromServer(window.localStorage, {
+        email: payload.user.email,
+        name: payload.user.name ?? "",
+      });
 
-      const accountsRaw = window.localStorage.getItem("movieAccounts");
-      let accounts: StoredAccount[] = [];
-
-      if (accountsRaw) {
-        try {
-          const parsed = JSON.parse(accountsRaw);
-          if (Array.isArray(parsed)) {
-            accounts = parsed as StoredAccount[];
-          }
-        } catch {
-          accounts = [];
-        }
+      if (!result.ok) {
+        setErrorMessage(result.message ?? "ログイン処理に失敗しました。");
+        setIsSubmitting(false);
+        return;
       }
-
-      const accountIndex = accounts.findIndex(
-        (account) =>
-          String(account.email ?? "")
-            .trim()
-            .toLowerCase() === currentEmail.trim().toLowerCase(),
-      );
-
-      const nextAccount: StoredAccount = {
-        email: currentEmail,
-        name: currentName,
-        password: "",
-        phone: "",
-        nickname: "",
-      };
-
-      if (accountIndex >= 0) {
-        accounts[accountIndex] = {
-          ...accounts[accountIndex],
-          email: currentEmail,
-          name: currentName,
-        };
-      } else {
-        accounts.push(nextAccount);
-      }
-
-      window.localStorage.setItem("movieAccounts", JSON.stringify(accounts));
-      window.localStorage.setItem("movieCurrentUserEmail", currentEmail);
 
       router.push("/mypage");
     } catch {

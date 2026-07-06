@@ -54,6 +54,7 @@ CREATE TABLE orders (
     order_num VARCHAR(100) UNIQUE NOT NULL,
     pay_datetime TIMESTAMP,
     total_price INTEGER NOT NULL,
+    food_items JSONB,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT fk_orders_user
@@ -79,7 +80,10 @@ CREATE TABLE order_details (
     CONSTRAINT fk_order_details_screening
         FOREIGN KEY (screening_id)
         REFERENCES screenings(id)
-        ON DELETE CASCADE
+        ON DELETE CASCADE,
+
+    CONSTRAINT uq_order_details_screening_seat
+        UNIQUE (screening_id, seat_num)
 );
 
 CREATE TABLE seats (
@@ -94,7 +98,10 @@ CREATE TABLE seats (
     CONSTRAINT fk_seats_screening
         FOREIGN KEY (screening_id)
         REFERENCES screenings(id)
-        ON DELETE CASCADE
+        ON DELETE CASCADE,
+
+    CONSTRAINT uq_seats_screening_seat
+        UNIQUE (screening_id, seat_label)
 );
 
 CREATE TABLE payments (
