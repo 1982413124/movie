@@ -92,9 +92,21 @@ PostgreSQL
  -reservation_id   :FK (reservations.id)
  -screening_id     :上映回ID
  -seat_label       :座席名 (例: A-1)
+ -released_at      :座席解放日時
  -created_at       :作成日
- -UNIQUE制約       :(screening_id, seat_label)
+ -UNIQUE INDEX     :(screening_id, seat_label) WHERE released_at IS NULL
+
+-reservation_ticket_types :予約券種テーブル
+ -id               :主キー
+ -reservation_id   :FK (reservations.id)
+ -ticket_type_id   :券種ID
+ -label            :券種名
+ -unit_price       :券種単価
+ -quantity         :券種枚数
+ -created_at       :作成日
 
 index
  -idx_reservations_screening_id       :reservations(screening_id)
  -idx_reservation_seats_screening_id  :reservation_seats(screening_id)
+ -uq_reservation_seats_screening_seat_active :reservation_seats(screening_id, seat_label) WHERE released_at IS NULL
+ -idx_reservation_ticket_types_reservation_id :reservation_ticket_types(reservation_id)

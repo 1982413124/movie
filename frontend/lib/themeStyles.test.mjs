@@ -36,3 +36,13 @@ test("completion action buttons use theme button variables", () => {
     assert.doesNotMatch(source, /bg-gray-700|hover:bg-gray-800|text-white/);
   }
 });
+
+test("seat and ticket mismatch warning uses red shake feedback", () => {
+  const orderPanelSource = readFileSync(resolve(appDir, "seats/OrderPanel.jsx"), "utf8");
+  const globalStyleSource = readFileSync(resolve(appDir, "globals.css"), "utf8");
+
+  assert.match(orderPanelSource, /ticket-warning-shake/);
+  assert.match(orderPanelSource, /text-\[#E82020\]/);
+  assert.match(orderPanelSource, /validationAttempt/);
+  assert.match(globalStyleSource, /@keyframes ticket-warning-shake/);
+});

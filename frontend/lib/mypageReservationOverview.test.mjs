@@ -39,3 +39,16 @@ test("mypage reservation and purchase panels show seats, totals, and history det
   assert.match(source, /gridTemplateColumns/);
   assert.doesNotMatch(source, /ticketHistoryItems/);
 });
+
+test("mypage asks for confirmation before canceling a reservation", () => {
+  const source = readFileSync(resolve(appDir, "mypage/page.tsx"), "utf8");
+
+  assert.match(source, /pendingCancelReservationId/);
+  assert.match(source, /CancelReservationModal/);
+  assert.match(source, /role="dialog"/);
+  assert.match(source, /aria-modal="true"/);
+  assert.match(source, /本当にキャンセルしますか/);
+  assert.match(source, /handleConfirmCancelReservation/);
+  assert.match(source, /onCancelReservationRequest/);
+  assert.doesNotMatch(source, /onClick=\{\(\) => onCancelReservation\(history\.id\)\}/);
+});

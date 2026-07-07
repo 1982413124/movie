@@ -11,7 +11,7 @@ import {
   logoutAccount,
   updateCurrentAccount,
 } from "../../lib/authStorage.mjs";
-import { fetchReservationHistories } from "../../lib/purchaseHistoryApi.mjs";
+import { cancelReservation, fetchReservationHistories } from "../../lib/purchaseHistoryApi.mjs";
 import { createReservationSeatDisplay } from "../../lib/reservationSeatDisplay.mjs";
 
 type MenuKey = "reservations" | "history" | "profile" | "settings" | "logout";
@@ -258,7 +258,17 @@ function ReservationStatusPanel({ histories, notice = "" }: { histories: TicketH
   );
 }
 
-function PurchaseHistoryPanel({ histories, notice = "" }: { histories: TicketHistory[]; notice?: string }) {
+function PurchaseHistoryPanel({
+  cancelingReservationId = "",
+  histories,
+  notice = "",
+  onCancelReservationRequest,
+}: {
+  cancelingReservationId?: string;
+  histories: TicketHistory[];
+  notice?: string;
+  onCancelReservationRequest: (reservationId: string) => void;
+}) {
   return (
     <section className="border-y border-[#D6CCBC] bg-[#FBF8F1]/72">
       <div className="grid gap-8 border-b border-[#D6CCBC] px-5 py-7 sm:px-8 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:px-10">
@@ -271,7 +281,7 @@ function PurchaseHistoryPanel({ histories, notice = "" }: { histories: TicketHis
           </h2>
         </div>
         <p className="max-w-2xl text-sm leading-7 text-[#6F6254]">
-          購入日時、上映回、座席、合計金額を一覧で確認できます。明細は横長のチケットに近い比率で並べています。
+          購入日時、上映回、座席、合計金額を一覧で確認できます。
         </p>
       </div>
 
@@ -343,6 +353,16 @@ function PurchaseHistoryPanel({ histories, notice = "" }: { histories: TicketHis
                         {getSeatRow(history.seats[0] ?? "-")}列 {getSeatColumn(history.seats[0] ?? "")}番から
                       </dd>
                     </div>
+                    {history.status === "キャンセル済み" ? null : (
+                      <button
+                        type="button"
+                        onClick={() => onCancelReservationRequest(history.id)}
+                        disabled={cancelingReservationId === history.id}
+                        className="mt-2 inline-flex h-11 items-center justify-center border border-[#9A3A24] px-4 text-sm font-bold text-[#9A3A24] transition hover:bg-[#F4E7DE] disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {cancelingReservationId === history.id ? "キャンセル中" : "予約をキャンセル"}
+                      </button>
+                    )}
                   </dl>
                 </div>
               </article>
@@ -353,6 +373,81 @@ function PurchaseHistoryPanel({ histories, notice = "" }: { histories: TicketHis
     </section>
   );
 }
+function CancelReservationModal({
+  history,
+  onCancel,
+  onConfirm,
+}: {
+  history: TicketHistory;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1C0800]/60 px-4 py-8">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="cancel-reservation-title"
+        className="w-full max-w-lg border border-[#D6CCBC] bg-[#FBF8F1] p-6 shadow-[0_28px_90px_rgba(28,8,0,0.28)]"
+      >
+        <p className="text-[10px] font-bold uppercase tracking-[0.32em] text-[#8A6034]">
+          Cancel Reservation
+        </p>
+        <h2 id="cancel-reservation-title" className="mt-4 text-2xl font-bold text-[#21160F]">
+          本当にキャンセルしますか？
+        </h2>
+        <p className="mt-3 text-sm leading-7 text-[#6F6254]">
+          キャンセルすると、この予約の座席は空席に戻ります。
+        </p>
+
+        <dl className="mt-6 grid gap-4 border-y border-[#D6CCBC] py-5 text-sm">
+          <div className="grid gap-1 sm:grid-cols-[120px_1fr]">
+            <dt className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#8A6034]">
+              Movie
+            </dt>
+            <dd className="font-bold text-[#21160F]">{history.movieTitle}</dd>
+          </div>
+          <div className="grid gap-1 sm:grid-cols-[120px_1fr]">
+            <dt className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#8A6034]">
+              Showtime
+            </dt>
+            <dd className="text-[#4C4035]">{history.showtime}</dd>
+          </div>
+          <div className="grid gap-1 sm:grid-cols-[120px_1fr]">
+            <dt className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#8A6034]">
+              Seats
+            </dt>
+            <dd className="font-bold text-[#4C4035]">{history.seats.join(", ")}</dd>
+          </div>
+          <div className="grid gap-1 sm:grid-cols-[120px_1fr]">
+            <dt className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#8A6034]">
+              Total
+            </dt>
+            <dd className="font-bold text-[#21160F]">{formatPrice(history.totalPrice)}</dd>
+          </div>
+        </dl>
+
+        <div className="mt-6 grid gap-3 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="inline-flex h-12 items-center justify-center border border-[#2B2119] px-5 text-sm font-bold text-[#2B2119] transition hover:bg-[#EFE8DC]"
+          >
+            戻る
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="inline-flex h-12 items-center justify-center bg-[#E82020] px-5 text-sm font-bold text-white transition hover:bg-[#C01818]"
+          >
+            キャンセルする
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ProfilePanel({ displayName, displayEmail, displayNickname }: {
   displayName: string;
   displayEmail: string;
@@ -485,6 +580,8 @@ export default function MyPage() {
   const [statusTone, setStatusTone] = useState<StatusTone>("success");
   const [histories, setHistories] = useState<TicketHistory[]>([]);
   const [historyNotice, setHistoryNotice] = useState("予約情報を読み込んでいます。");
+  const [cancelingReservationId, setCancelingReservationId] = useState("");
+  const [pendingCancelReservationId, setPendingCancelReservationId] = useState("");
 
   useEffect(() => {
     const frameId = window.requestAnimationFrame(() => {
@@ -533,6 +630,57 @@ export default function MyPage() {
     };
   }, [currentAccount?.email]);
 
+  const handleCancelReservationRequest = (reservationId: string) => {
+    setPendingCancelReservationId(reservationId);
+  };
+
+  const handleDismissCancelReservation = () => {
+    if (!cancelingReservationId) {
+      setPendingCancelReservationId("");
+    }
+  };
+
+  const handleConfirmCancelReservation = () => {
+    if (!pendingCancelReservationId) {
+      return;
+    }
+
+    const reservationId = pendingCancelReservationId;
+    setPendingCancelReservationId("");
+    void handleCancelReservation(reservationId);
+  };
+
+  const handleCancelReservation = async (reservationId: string) => {
+    if (!currentAccount?.email || cancelingReservationId) {
+      return;
+    }
+
+    setCancelingReservationId(reservationId);
+    setHistoryNotice("");
+
+    try {
+      const result = await cancelReservation(reservationId, currentAccount.email);
+
+      if (!result.ok) {
+        setHistoryNotice("予約のキャンセルに失敗しました。");
+        return;
+      }
+
+      const canceledStatus = result.status || "キャンセル済み";
+      setHistories((currentHistories) =>
+        currentHistories.map((history) =>
+          history.id === reservationId
+            ? { ...history, status: canceledStatus }
+            : history,
+        ),
+      );
+      setHistoryNotice("予約をキャンセルしました。");
+    } catch {
+      setHistoryNotice("予約のキャンセルに失敗しました。");
+    } finally {
+      setCancelingReservationId("");
+    }
+  };
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
     setForm((currentForm) => ({ ...currentForm, [name]: value }));
@@ -598,13 +746,22 @@ export default function MyPage() {
     "user"
   }`;
 
+  const pendingCancelHistory = pendingCancelReservationId
+    ? histories.find((history) => history.id === pendingCancelReservationId) ?? null
+    : null;
+
   const activePanel = (() => {
     if (activeMenu === "reservations") {
       return <ReservationStatusPanel histories={histories} notice={historyNotice} />;
     }
 
     if (activeMenu === "history") {
-      return <PurchaseHistoryPanel histories={histories} notice={historyNotice} />;
+      return <PurchaseHistoryPanel
+              cancelingReservationId={cancelingReservationId}
+              histories={histories}
+              notice={historyNotice}
+              onCancelReservationRequest={handleCancelReservationRequest}
+            />;
     }
 
     if (activeMenu === "profile") {
@@ -726,6 +883,14 @@ export default function MyPage() {
           <div className="min-w-0">{activePanel}</div>
         </div>
       </main>
+
+      {pendingCancelHistory ? (
+        <CancelReservationModal
+          history={pendingCancelHistory}
+          onCancel={handleDismissCancelReservation}
+          onConfirm={handleConfirmCancelReservation}
+        />
+      ) : null}
     </div>
   );
 }

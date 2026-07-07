@@ -1,16 +1,26 @@
-import { countAvailableSeats, getScreeningsForDateAndScreen } from "@/lib/seatSelection.mjs";
+import {
+  countAvailableSeats,
+  formatTicketTypeSummary,
+  getScreeningsForDateAndScreen,
+  ticketTypes,
+} from "@/lib/seatSelection.mjs";
 import { formatPrice } from "./formatters";
 
 export default function OrderPanel({
   error,
   onProceed,
   onScreeningChange,
+  onTicketQuantityChange,
   screeningId,
   selectedScreening,
   selectedSeatIds,
+  ticketCounts,
+  ticketSelection,
+  validationAttempt = 0,
 }) {
-  const ticketCount = selectedSeatIds.length;
-  const totalPrice = selectedScreening.price * ticketCount;
+  const ticketCount = ticketSelection.totalQuantity;
+  const totalPrice = ticketSelection.totalPrice;
+  const hasError = Boolean(error);
 
   return (
     <aside className="md:sticky md:top-8 md:h-fit">
@@ -21,19 +31,25 @@ export default function OrderPanel({
           selectedScreening={selectedScreening}
           onScreeningChange={onScreeningChange}
         />
+        <TicketTypeControls
+          onTicketQuantityChange={onTicketQuantityChange}
+          ticketCounts={ticketCounts}
+        />
         <OrderDetails
           selectedSeatIds={selectedSeatIds}
           ticketCount={ticketCount}
+          ticketSelection={ticketSelection}
           totalPrice={totalPrice}
         />
 
         <p
+          key={hasError ? validationAttempt : "ticket-hint"}
           aria-live="polite"
-          className={`mt-4 min-h-5 text-sm ${
-            error ? "text-[#1C0800]" : "text-[#8C5D2A]"
+          className={`mt-4 min-h-5 text-sm font-bold ${
+            hasError ? "ticket-warning-shake text-[#E82020]" : "text-[#8C5D2A]"
           }`}
         >
-          {error || "座席を選ぶとフード選択へ進めます。"}
+          {error || "座席数と券種の合計枚数が一致するとフード選択へ進めます。"}
         </p>
 
         <button
@@ -122,14 +138,66 @@ function ScreeningButton({ isActive, onClick, screening }) {
   );
 }
 
-function OrderDetails({ selectedSeatIds, ticketCount, totalPrice }) {
+function TicketTypeControls({ onTicketQuantityChange, ticketCounts }) {
+  return (
+    <div className="mt-6 border-y border-[#1C0800]/14 py-4">
+      <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[#8C5D2A]">
+        券種
+      </p>
+      <div className="mt-3 grid gap-2">
+        {ticketTypes.map((ticketType) => {
+          const quantity = ticketCounts[ticketType.id] ?? 0;
+
+          return (
+            <div
+              key={ticketType.id}
+              className="grid grid-cols-[minmax(0,1fr)_96px] items-center gap-3 border border-[#1C0800]/10 px-3 py-2"
+            >
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-[#1C0800]">{ticketType.label}</p>
+                <p className="mt-0.5 font-mono text-xs text-[#8C5D2A]">
+                  {formatPrice(ticketType.price)}
+                </p>
+              </div>
+              <div className="grid grid-cols-[30px_36px_30px] items-center border border-[#1C0800]/14 bg-white">
+                <button
+                  type="button"
+                  aria-label={`${ticketType.label}を減らす`}
+                  onClick={() => onTicketQuantityChange(ticketType.id, -1)}
+                  disabled={quantity === 0}
+                  className="grid h-8 place-items-center text-lg font-semibold text-[#5C3010] transition-colors hover:bg-[#F4EFE6] disabled:cursor-not-allowed disabled:opacity-35"
+                >
+                  -
+                </button>
+                <span className="grid h-8 place-items-center bg-[#FFF8E1] font-mono text-sm font-black text-[#1C0800]">
+                  {quantity}
+                </span>
+                <button
+                  type="button"
+                  aria-label={`${ticketType.label}を増やす`}
+                  onClick={() => onTicketQuantityChange(ticketType.id, 1)}
+                  className="grid h-8 place-items-center bg-[#1C0800] text-lg font-semibold text-white transition-colors hover:bg-[#3A2A20]"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function OrderDetails({ selectedSeatIds, ticketCount, ticketSelection, totalPrice }) {
   return (
     <div className="mt-6 divide-y divide-[#1C0800]/10 border-y border-[#1C0800]/14">
       <DetailRow
         label="選択座席"
         value={selectedSeatIds.length > 0 ? selectedSeatIds.join(", ") : "--"}
       />
-      <DetailRow label="チケット" value={`一般 ${ticketCount}枚`} />
+      <DetailRow label="券種" value={formatTicketTypeSummary(ticketSelection.ticketTypes, ticketCount)} />
+      <DetailRow label="枚数" value={`${ticketCount}枚 / 座席${selectedSeatIds.length}席`} />
       <DetailRow label="合計" value={formatPrice(totalPrice)} large />
     </div>
   );

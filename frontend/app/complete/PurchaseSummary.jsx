@@ -31,6 +31,7 @@ export default function PurchaseSummary({ details }) {
       <dl className="grid gap-x-8 px-6 py-2 md:grid-cols-2">
         <DetailRow label="上映館" value={details.theaterName} />
         <DetailRow label="枚数" value={`${details.ticketNum}枚`} />
+        <DetailRow label="券種" value={details.ticketSummary} />
         {hasFood ? (
           <>
             <DetailRow label="チケット小計" value={`${formatPrice(details.ticketTotalPrice)}（税込）`} />

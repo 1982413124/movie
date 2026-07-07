@@ -4,14 +4,16 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { fetchReservedSeats } from "@/lib/reservationApi.mjs";
 import {
+  buildTicketSelection,
   countAvailableSeats,
   createInitialSeatSelection,
+  createInitialTicketCounts,
   createSeatMap,
   findScreening,
   movieDetail,
   screenings,
   toggleSeatSelection,
-  validateSeatSelection,
+  validateTicketSelection,
 } from "@/lib/seatSelection.mjs";
 import MovieSummary from "./MovieSummary";
 import OrderPanel from "./OrderPanel";
@@ -27,13 +29,20 @@ export default function SeatSelectionClient() {
     () => createInitialSeatSelection(draft),
     [draft],
   );
+  const restoredTicketCounts = useMemo(
+    () => createInitialTicketCounts(draft),
+    [draft],
+  );
   const [selectionOverride, setSelectionOverride] = useState(null);
+  const [ticketCountsOverride, setTicketCountsOverride] = useState(null);
   const [apiReservedSeatIds, setApiReservedSeatIds] = useState([]);
   const [error, setError] = useState("");
+  const [validationAttempt, setValidationAttempt] = useState(0);
   const screeningId =
     selectionOverride?.screeningId ?? restoredSelection.screeningId;
   const selectedSeatIds =
     selectionOverride?.selectedSeatIds ?? restoredSelection.selectedSeatIds;
+  const ticketCounts = ticketCountsOverride ?? restoredTicketCounts;
 
   useEffect(() => {
     let isActive = true;
@@ -67,6 +76,10 @@ export default function SeatSelectionClient() {
     [apiReservedSeatIds, screeningId],
   );
   const selectedScreening = findScreening(screeningId) ?? screenings[0];
+  const ticketSelection = useMemo(
+    () => buildTicketSelection(ticketCounts),
+    [ticketCounts],
+  );
   const availableSeats = useMemo(
     () => countAvailableSeats(screeningId, apiReservedSeatIds),
     [apiReservedSeatIds, screeningId],
@@ -91,25 +104,46 @@ export default function SeatSelectionClient() {
     }
   }
 
+  function handleTicketQuantityChange(ticketTypeId, delta) {
+    setTicketCountsOverride((currentCounts) => {
+      const baseCounts = currentCounts ?? ticketCounts;
+      const currentQuantity = Number(baseCounts[ticketTypeId] ?? 0);
+
+      return {
+        ...baseCounts,
+        [ticketTypeId]: Math.max(0, currentQuantity + delta),
+      };
+    });
+    setError("");
+  }
+
   function handleProceed() {
-    const validation = validateSeatSelection(filteredSelectedSeatIds);
+    const validation = validateTicketSelection(filteredSelectedSeatIds, ticketCounts);
 
     if (!validation.ok) {
+      setValidationAttempt((attempt) => attempt + 1);
       setError(validation.message);
       return;
     }
 
     const draft = {
       movieId: movieDetail.id,
+      movieTitle: movieDetail.title,
+      movieDurationMinutes: movieDetail.durationMinutes,
       screeningId: selectedScreening.id,
       screeningTime: selectedScreening.label,
+      screeningDate: selectedScreening.dateId,
+      screenId: selectedScreening.screenId,
       screenName: selectedScreening.screenName,
+      screenCapacity: selectedScreening.capacity,
+      theaterName: selectedScreening.theaterName,
       seatIds: filteredSelectedSeatIds,
-      ticketCount: filteredSelectedSeatIds.length,
-      ticketTotalPrice: selectedScreening.price * filteredSelectedSeatIds.length,
+      ticketTypes: ticketSelection.ticketTypes,
+      ticketCount: ticketSelection.totalQuantity,
+      ticketTotalPrice: ticketSelection.totalPrice,
       foodItems: [],
       foodTotalPrice: 0,
-      totalPrice: selectedScreening.price * filteredSelectedSeatIds.length,
+      totalPrice: ticketSelection.totalPrice,
     };
 
     window.sessionStorage.setItem("movieReservationDraft", JSON.stringify(draft));
@@ -136,8 +170,12 @@ export default function SeatSelectionClient() {
         onProceed={handleProceed}
         onScreeningChange={handleScreeningChange}
         screeningId={screeningId}
+        onTicketQuantityChange={handleTicketQuantityChange}
         selectedScreening={selectedScreening}
         selectedSeatIds={filteredSelectedSeatIds}
+        ticketCounts={ticketCounts}
+        ticketSelection={ticketSelection}
+        validationAttempt={validationAttempt}
       />
     </main>
   );

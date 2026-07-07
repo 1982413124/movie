@@ -48,6 +48,7 @@ export default function ConfirmClient() {
     try {
       const account = getCurrentAccount(window.localStorage);
       const response = await createReservation(draft, {
+        paymentMethod: paymentMethodId,
         userEmail: account?.email ?? "",
       });
 

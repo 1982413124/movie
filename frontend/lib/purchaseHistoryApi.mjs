@@ -1,4 +1,9 @@
-import { findScreening, movieDetail } from "./seatSelection.mjs";
+import {
+  findScreening,
+  formatTicketTypeSummary,
+  movieDetail,
+  normalizeTicketTypes,
+} from "./seatSelection.mjs";
 
 const defaultApiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:5000";
 
@@ -16,6 +21,29 @@ function normalizeSeatLabels(value) {
     .filter(Boolean);
 }
 
+function normalizeFoodItems(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item) => {
+      const foodId = String(item?.food_id ?? item?.foodId ?? item?.id ?? "").trim();
+      const name = String(item?.name ?? foodId).trim();
+      const quantity = Number(item?.quantity ?? 0);
+      const unitPrice = Number(item?.unit_price ?? item?.unitPrice ?? item?.price ?? 0);
+      const subtotal = Number(item?.subtotal ?? item?.lineTotal ?? unitPrice * quantity);
+
+      return {
+        foodId,
+        name,
+        quantity: Number.isFinite(quantity) ? Math.max(0, Math.floor(quantity)) : 0,
+        unitPrice: Number.isFinite(unitPrice) ? Math.max(0, Math.floor(unitPrice)) : 0,
+        subtotal: Number.isFinite(subtotal) ? Math.max(0, Math.floor(subtotal)) : 0,
+      };
+    })
+    .filter((item) => item.foodId && item.name && item.quantity > 0);
+}
 function normalizeStatus(status) {
   const statusText = String(status ?? "").trim().toLowerCase();
 
@@ -78,6 +106,11 @@ export function normalizeReservationHistoryResponse(payload) {
 
   return payload.reservations.map((item) => {
     const seats = normalizeSeatLabels(item?.seats);
+    const ticketTypes = normalizeTicketTypes(item?.ticket_types);
+    const foodItems = normalizeFoodItems(item?.food_items);
+    const ticketCount = Number(
+      item?.ticket_count ?? (ticketTypes.reduce((total, ticketType) => total + ticketType.quantity, 0) || seats.length),
+    );
 
     return {
       id: String(item?.id ?? ""),
@@ -87,9 +120,13 @@ export function normalizeReservationHistoryResponse(payload) {
       showtime: resolveShowtime(item),
       screen: item?.screen_name ?? findScreening(item?.screening_id)?.screenName ?? "-",
       seats,
-      ticketCount: Number(item?.ticket_count ?? seats.length),
+      ticketCount,
+      ticketTypes,
+      ticketSummary: formatTicketTypeSummary(ticketTypes, ticketCount),
+      foodItems,
       totalPrice: Number(item?.total_price ?? 0),
       status: normalizeStatus(item?.reservation_status),
+      paymentStatus: String(item?.payment_status ?? "").trim().toLowerCase() || "unpaid",
       posterUrl: "",
     };
   });
@@ -116,4 +153,49 @@ export async function fetchReservationHistories(
   }
 
   return normalizeReservationHistoryResponse(await response.json());
+}
+
+export async function cancelReservation(
+  reservationId,
+  userEmail,
+  { apiBaseUrl = defaultApiBaseUrl, fetchImpl = fetch } = {},
+) {
+  const normalizedId = String(reservationId ?? "").trim();
+  const normalizedEmail = String(userEmail ?? "").trim().toLowerCase();
+
+  if (!normalizedId || !normalizedEmail) {
+    return { ok: false, message: "cancel_reservation_missing_input" };
+  }
+
+  const response = await fetchImpl(
+    `${getApiBaseUrl(apiBaseUrl)}/api/reservations/${encodeURIComponent(normalizedId)}/cancel`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ user_email: normalizedEmail }),
+    },
+  );
+  const payload = await safeReadJson(response);
+
+  if (response.ok) {
+    return {
+      ok: true,
+      status: normalizeStatus(payload?.reservation_status ?? "canceled"),
+    };
+  }
+
+  return {
+    ok: false,
+    message: payload?.message ?? "cancel_reservation_failed",
+  };
+}
+
+async function safeReadJson(response) {
+  try {
+    return await response.json();
+  } catch {
+    return {};
+  }
 }

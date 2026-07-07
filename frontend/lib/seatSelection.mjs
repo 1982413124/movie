@@ -83,14 +83,64 @@ export const theaterScreens = [
   },
 ];
 
-export const screeningDates = [
-  { id: "2026-06-30", label: "6/30(火)", shortLabel: "6/30", dayLabel: "火", caption: "本日" },
-  { id: "2026-07-01", label: "7/1(水)", shortLabel: "7/1", dayLabel: "水", caption: "明日" },
-  { id: "2026-07-02", label: "7/2(木)", shortLabel: "7/2", dayLabel: "木", caption: "通常上映" },
-  { id: "2026-07-03", label: "7/3(金)", shortLabel: "7/3", dayLabel: "金", caption: "レイト追加" },
-  { id: "2026-07-04", label: "7/4(土)", shortLabel: "7/4", dayLabel: "土", caption: "週末" },
-  { id: "2026-07-05", label: "7/5(日)", shortLabel: "7/5", dayLabel: "日", caption: "週末" },
-];
+const weekdayLabels = ["日", "月", "火", "水", "木", "金", "土"];
+
+export function createScreeningDates(now = new Date()) {
+  const startDate = createLocalDate(now);
+
+  return Array.from({ length: 6 }, (_, dateIndex) => {
+    const date = addDays(startDate, dateIndex);
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    const dayLabel = weekdayLabels[date.getDay()];
+    const shortLabel = `${month}/${day}`;
+
+    return {
+      id: formatDateId(date),
+      label: `${shortLabel}(${dayLabel})`,
+      shortLabel,
+      dayLabel,
+      caption: createScreeningDateCaption(dateIndex, date),
+    };
+  });
+}
+
+export const screeningDates = createScreeningDates();
+
+function createLocalDate(value) {
+  const date = value instanceof Date ? value : new Date(value);
+  const source = Number.isNaN(date.getTime()) ? new Date() : date;
+
+  return new Date(source.getFullYear(), source.getMonth(), source.getDate());
+}
+
+function addDays(date, days) {
+  const nextDate = new Date(date);
+  nextDate.setDate(date.getDate() + days);
+
+  return nextDate;
+}
+
+function formatDateId(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function createScreeningDateCaption(dateIndex, date) {
+  if (dateIndex === 0) {
+    return "本日";
+  }
+
+  if (dateIndex === 1) {
+    return "明日";
+  }
+
+  const day = date.getDay();
+  return day === 0 || day === 6 ? "週末" : "通常上映";
+}
 
 const baseTimesBySize = {
   large: ["10:10", "13:40", "18:20", "20:50"],
@@ -314,6 +364,136 @@ export function validateSeatSelection(selectedSeatIds) {
     return {
       ok: false,
       message: "座席を1つ以上選択してください。",
+    };
+  }
+
+  return { ok: true, message: "" };
+}
+
+function normalizeQuantity(value) {
+  const quantity = Number(value ?? 0);
+
+  if (!Number.isFinite(quantity)) {
+    return 0;
+  }
+
+  return Math.max(0, Math.floor(quantity));
+}
+
+export function normalizeTicketTypes(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((ticketType) => {
+      const ticketTypeId = String(
+        ticketType?.ticketTypeId ?? ticketType?.ticket_type_id ?? ticketType?.id ?? "",
+      ).trim();
+      const knownTicketType = ticketTypes.find((item) => item.id === ticketTypeId);
+      const label = String(ticketType?.label ?? knownTicketType?.label ?? "").trim();
+      const unitPrice = Number(
+        ticketType?.unitPrice ?? ticketType?.unit_price ?? knownTicketType?.price ?? 0,
+      );
+      const quantity = normalizeQuantity(ticketType?.quantity);
+
+      return {
+        ticketTypeId,
+        label,
+        unitPrice: Number.isFinite(unitPrice) ? Math.max(0, Math.floor(unitPrice)) : 0,
+        quantity,
+      };
+    })
+    .filter((ticketType) => ticketType.ticketTypeId && ticketType.label && ticketType.quantity > 0);
+}
+
+export function normalizeTicketCounts(ticketCounts) {
+  const counts = Object.fromEntries(ticketTypes.map((ticketType) => [ticketType.id, 0]));
+
+  if (Array.isArray(ticketCounts)) {
+    for (const ticketType of normalizeTicketTypes(ticketCounts)) {
+      counts[ticketType.ticketTypeId] = ticketType.quantity;
+    }
+    return counts;
+  }
+
+  if (!ticketCounts || typeof ticketCounts !== "object") {
+    return counts;
+  }
+
+  for (const ticketType of ticketTypes) {
+    counts[ticketType.id] = normalizeQuantity(ticketCounts[ticketType.id]);
+  }
+
+  return counts;
+}
+
+export function createInitialTicketCounts(draft) {
+  if (Array.isArray(draft?.ticketTypes) && draft.ticketTypes.length > 0) {
+    return normalizeTicketCounts(draft.ticketTypes);
+  }
+
+  const counts = normalizeTicketCounts(null);
+  const fallbackQuantity = normalizeQuantity(
+    draft?.ticketCount ?? (Array.isArray(draft?.seatIds) ? draft.seatIds.length : 0),
+  );
+
+  if (fallbackQuantity > 0) {
+    counts.general = fallbackQuantity;
+  }
+
+  return counts;
+}
+
+export function buildTicketSelection(ticketCounts) {
+  const counts = normalizeTicketCounts(ticketCounts);
+  const selectedTicketTypes = ticketTypes
+    .map((ticketType) => {
+      const quantity = counts[ticketType.id] ?? 0;
+
+      return {
+        ticketTypeId: ticketType.id,
+        label: ticketType.label,
+        unitPrice: ticketType.price,
+        quantity,
+        lineTotal: ticketType.price * quantity,
+      };
+    })
+    .filter((ticketType) => ticketType.quantity > 0);
+
+  return {
+    ticketTypes: selectedTicketTypes,
+    totalQuantity: selectedTicketTypes.reduce((total, ticketType) => total + ticketType.quantity, 0),
+    totalPrice: selectedTicketTypes.reduce((total, ticketType) => total + ticketType.lineTotal, 0),
+  };
+}
+
+export function formatTicketTypeSummary(ticketTypesValue, fallbackTicketCount = 0) {
+  const normalizedTicketTypes = normalizeTicketTypes(ticketTypesValue);
+
+  if (normalizedTicketTypes.length > 0) {
+    return normalizedTicketTypes
+      .map((ticketType) => `${ticketType.label} ${ticketType.quantity}枚`)
+      .join("、");
+  }
+
+  const count = normalizeQuantity(fallbackTicketCount);
+  return count > 0 ? `一般 ${count}枚` : "--";
+}
+
+export function validateTicketSelection(selectedSeatIds, ticketCounts) {
+  const seatValidation = validateSeatSelection(selectedSeatIds);
+
+  if (!seatValidation.ok) {
+    return seatValidation;
+  }
+
+  const ticketSelection = buildTicketSelection(ticketCounts);
+
+  if (selectedSeatIds.length !== ticketSelection.totalQuantity) {
+    return {
+      ok: false,
+      message: "選択した座席数と券種の合計枚数を一致させてください。",
     };
   }
 

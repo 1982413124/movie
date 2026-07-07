@@ -1,4 +1,10 @@
-import { findScreening, movieDetail, screenings } from "./seatSelection.mjs";
+import {
+  findScreening,
+  formatTicketTypeSummary,
+  movieDetail,
+  normalizeTicketTypes,
+  screenings,
+} from "./seatSelection.mjs";
 
 const defaultPaymentMethod = "クレジットカード";
 
@@ -6,8 +12,15 @@ export function buildPurchaseCompletion(draft, options = {}) {
   const now = options.now ?? new Date();
   const screening = findScreening(draft?.screeningId) ?? screenings[0];
   const seatIds = Array.isArray(draft?.seatIds) ? draft.seatIds : [];
-  const ticketNum = draft?.ticketCount ?? seatIds.length;
-  const ticketTotalPrice = draft?.ticketTotalPrice ?? draft?.totalPrice ?? screening.price * ticketNum;
+  const ticketTypes = normalizeTicketTypes(draft?.ticketTypes);
+  const fallbackTicketNum = draft?.ticketCount ?? seatIds.length;
+  const ticketTypeCount = ticketTypes.reduce((total, ticketType) => total + ticketType.quantity, 0);
+  const ticketNum = ticketTypeCount || fallbackTicketNum;
+  const ticketTypeTotalPrice = ticketTypes.reduce(
+    (total, ticketType) => total + ticketType.unitPrice * ticketType.quantity,
+    0,
+  );
+  const ticketTotalPrice = draft?.ticketTotalPrice ?? (ticketTypeTotalPrice || draft?.totalPrice || screening.price * ticketNum);
   const foodItems = normalizeFoodItems(draft?.foodItems);
   const foodTotalPrice =
     draft?.foodTotalPrice ?? foodItems.reduce((total, item) => total + item.lineTotal, 0);
@@ -26,6 +39,8 @@ export function buildPurchaseCompletion(draft, options = {}) {
     theaterName: screening.theaterName,
     seatNum: formatSeatNumbers(seatIds),
     ticketNum,
+    ticketTypes,
+    ticketSummary: formatTicketTypeSummary(ticketTypes, ticketNum),
     ticketTotalPrice,
     foodItems,
     foodTotalPrice,
