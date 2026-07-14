@@ -51,7 +51,7 @@ function normalizeStatus(status) {
     return "キャンセル済み";
   }
 
-  if (statusText === "reserved" || statusText === "confirmed") {
+  if (statusText === "reserved" || statusText === "confirmed" || statusText === "paid") {
     return "予約済み";
   }
 

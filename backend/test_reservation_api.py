@@ -1,4 +1,4 @@
-import sys
+﻿import sys
 import unittest
 from datetime import datetime
 from pathlib import Path
@@ -371,10 +371,13 @@ class FakeCursor:
         if "from reservation_seats" in normalized and "join showings" in normalized:
             order_ids = set(params[0])
             rows = []
+            filters_active_seats = "rs.released_at is null" in normalized
             for order in self.database.orders:
                 if order["id"] not in order_ids:
                     continue
                 for seat in order["reservation_seats"]:
+                    if filters_active_seats and seat.get("released_at") is not None:
+                        continue
                     showing = self.database.showing_masters.get(seat["showing_id"], {})
                     rows.append(
                         (
@@ -461,10 +464,28 @@ class FakeCursor:
             )
             if order:
                 order["order_status"] = "cancelled"
-                self.row = (order["id"], order["order_status"])
+                if "cancelled_at" in normalized:
+                    order["cancelled_at"] = datetime(2026, 6, 30, 12, 5, 0)
+                self.row = (order["id"], order["order_status"], order.get("cancelled_at"))
             else:
                 self.row = None
             self.rows = []
+            return
+
+        if normalized.startswith("update payments"):
+            order_id = params[0]
+            order = next(
+                (item for item in self.database.orders if item["id"] == order_id),
+                None,
+            )
+            rows = []
+            if order and order.get("payment"):
+                payment = order["payment"]
+                if payment["payment_status"] == "paid":
+                    payment["payment_status"] = "refunded"
+                    rows.append(("refunded",))
+            self.rows = rows
+            self.row = rows[0] if rows else None
             return
 
         if normalized.startswith("update reservations"):
@@ -481,8 +502,11 @@ class FakeCursor:
             released = []
             if order:
                 for seat in order["reservation_seats"]:
+                    if seat.get("released_at") is not None:
+                        continue
                     key = (seat["showing_id"], seat["seat_id"])
                     self.database.released_seats.add(key)
+                    seat["released_at"] = datetime(2026, 6, 30, 12, 5, 0)
                     released.append(key)
             self.rows = released
             self.row = None
@@ -584,7 +608,7 @@ class ReservationApiTest(unittest.TestCase):
         self.assertEqual(fake_db.order_rows[0][0], 7)
         self.assertEqual(fake_db.order_rows[0][1], "test@example.com")
         self.assertEqual(fake_db.order_rows[0][3], 3780)
-        self.assertEqual(fake_db.order_rows[0][4], "confirmed")
+        self.assertEqual(fake_db.order_rows[0][4], "paid")
         self.assertEqual(
             fake_db.reservation_seat_rows,
             [
@@ -745,7 +769,7 @@ class ReservationApiTest(unittest.TestCase):
                     "id": 101,
                     "user_email": "test@example.com",
                     "total_amount": 4580,
-                    "order_status": "confirmed",
+                    "order_status": "paid",
                     "created_at": datetime(2026, 6, 30, 12, 0, 0),
                     "reservation_seats": [
                         {
@@ -786,10 +810,20 @@ class ReservationApiTest(unittest.TestCase):
                     },
                 },
                 {
+                    "id": 103,
+                    "user_email": "test@example.com",
+                    "total_amount": 3600,
+                    "order_status": "cancelled",
+                    "created_at": datetime(2026, 6, 30, 13, 0, 0),
+                    "reservation_seats": [],
+                    "food_order_details": [],
+                    "payment": None,
+                },
+                {
                     "id": 102,
                     "user_email": "other@example.com",
                     "total_amount": 1800,
-                    "order_status": "confirmed",
+                    "order_status": "paid",
                     "created_at": datetime(2026, 6, 30, 13, 0, 0),
                     "reservation_seats": [],
                     "food_order_details": [],
@@ -818,7 +852,7 @@ class ReservationApiTest(unittest.TestCase):
                         "ticket_total_price": 2800,
                         "food_total_price": 980,
                         "total_price": 4580,
-                        "reservation_status": "confirmed",
+                        "reservation_status": "paid",
                         "payment_status": "paid",
                         "created_at": "2026-06-30T12:00:00",
                         "seats": ["C-4", "C-5"],
@@ -858,7 +892,7 @@ class ReservationApiTest(unittest.TestCase):
                     "id": 101,
                     "user_email": "test@example.com",
                     "total_amount": 3600,
-                    "order_status": "confirmed",
+                    "order_status": "paid",
                     "created_at": datetime(2026, 6, 30, 12, 0, 0),
                     "reservation_seats": [
                         {
@@ -900,6 +934,189 @@ class ReservationApiTest(unittest.TestCase):
         self.assertIn(("scr-1820", "C-4"), fake_db.released_seats)
         self.assertIn(("scr-1820", "C-5"), fake_db.released_seats)
 
+    def test_cancel_reservation_marks_paid_payment_refunded(self):
+        fake_db = FakeDatabase(
+            orders=[
+                {
+                    "id": 101,
+                    "user_email": "test@example.com",
+                    "total_amount": 1800,
+                    "order_status": "paid",
+                    "cancelled_at": None,
+                    "created_at": datetime(2026, 6, 30, 12, 0, 0),
+                    "reservation_seats": [
+                        {
+                            "movie_id": "movie-001",
+                            "showing_id": "scr-1820",
+                            "screen_name": "スクリーン 3",
+                            "showing_time": "18:20",
+                            "seat_id": "C-4",
+                            "ticket_type_id": "general",
+                            "ticket_type_label": "一般",
+                            "price_at_purchase": 1800,
+                            "released_at": None,
+                        }
+                    ],
+                    "food_order_details": [],
+                    "payment": {
+                        "payment_method": "credit-card",
+                        "payment_amount": 1800,
+                        "payment_status": "paid",
+                        "paid_at": datetime(2026, 6, 30, 12, 1, 0),
+                    },
+                }
+            ],
+        )
+
+        with patch.object(app_module, "db_conn", fake_db.connect):
+            response = self.client.patch(
+                "/api/reservations/101/cancel",
+                json={"user_email": "test@example.com"},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["payment_status"], "refunded")
+        self.assertEqual(fake_db.orders[0]["payment"]["payment_status"], "refunded")
+
+    def test_get_reservations_keeps_cancelled_history_seats_after_release(self):
+        fake_db = FakeDatabase(
+            orders=[
+                {
+                    "id": 103,
+                    "user_email": "test@example.com",
+                    "total_amount": 3600,
+                    "order_status": "cancelled",
+                    "cancelled_at": datetime(2026, 6, 30, 12, 5, 0),
+                    "created_at": datetime(2026, 6, 30, 12, 0, 0),
+                    "reservation_seats": [
+                        {
+                            "movie_id": "movie-001",
+                            "movie_title_at_purchase": "映画のタイトル",
+                            "showing_id": "scr-1820",
+                            "screen_name": "スクリーン 3",
+                            "showing_time": "18:20",
+                            "seat_id": "C-4",
+                            "ticket_type_id": "general",
+                            "ticket_type_label": "一般",
+                            "price_at_purchase": 1800,
+                            "released_at": datetime(2026, 6, 30, 12, 5, 0),
+                        },
+                        {
+                            "movie_id": "movie-001",
+                            "movie_title_at_purchase": "映画のタイトル",
+                            "showing_id": "scr-1820",
+                            "screen_name": "スクリーン 3",
+                            "showing_time": "18:20",
+                            "seat_id": "C-5",
+                            "ticket_type_id": "general",
+                            "ticket_type_label": "一般",
+                            "price_at_purchase": 1800,
+                            "released_at": datetime(2026, 6, 30, 12, 5, 0),
+                        },
+                    ],
+                    "food_order_details": [],
+                    "payment": None,
+                }
+            ],
+        )
+
+        with patch.object(app_module, "db_conn", fake_db.connect):
+            response = self.client.get("/api/reservations?user_email=test@example.com")
+
+        self.assertEqual(response.status_code, 200)
+        reservation = response.get_json()["reservations"][0]
+        self.assertEqual(reservation["reservation_status"], "cancelled")
+        self.assertEqual(reservation["screening_id"], "scr-1820")
+        self.assertEqual(reservation["seats"], ["C-4", "C-5"])
+        self.assertEqual(reservation["ticket_count"], 2)
+
+    def test_cancel_reservation_records_cancelled_at_and_preserves_history_values(self):
+        fake_db = FakeDatabase(
+            reserved={("scr-1820", "C-4")},
+            orders=[
+                {
+                    "id": 101,
+                    "user_email": "test@example.com",
+                    "total_amount": 1800,
+                    "order_status": "paid",
+                    "cancelled_at": None,
+                    "created_at": datetime(2026, 6, 30, 12, 0, 0),
+                    "reservation_seats": [
+                        {
+                            "movie_id": "movie-001",
+                            "showing_id": "scr-1820",
+                            "screen_name": "スクリーン 3",
+                            "showing_time": "18:20",
+                            "seat_id": "C-4",
+                            "ticket_type_id": "general",
+                            "ticket_type_label": "一般",
+                            "price_at_purchase": 1800,
+                            "released_at": None,
+                        },
+                    ],
+                    "food_order_details": [],
+                    "payment": None,
+                }
+            ],
+        )
+
+        with patch.object(app_module, "db_conn", fake_db.connect):
+            response = self.client.patch(
+                "/api/reservations/101/cancel",
+                json={"user_email": "test@example.com"},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(fake_db.orders[0]["order_status"], "cancelled")
+        self.assertIsNotNone(fake_db.orders[0]["cancelled_at"])
+        seat = fake_db.orders[0]["reservation_seats"][0]
+        self.assertEqual(seat["showing_id"], "scr-1820")
+        self.assertEqual(seat["seat_id"], "C-4")
+        self.assertIsNotNone(seat["released_at"])
+
+    def test_active_seat_queries_use_status_and_released_at_not_nulling(self):
+        source = (BACKEND_DIR / "app.py").read_text(encoding="utf-8")
+
+        self.assertIn("o.order_status IN ('pending', 'paid')", source)
+        self.assertIn("rs.released_at IS NULL", source)
+        self.assertNotIn("o.order_status <> 'cancelled'", source)
+        self.assertNotIn("screening_id = NULL", source)
+        self.assertNotIn("seat_id = NULL", source)
+        self.assertNotIn("seat_label = NULL", source)
+        self.assertNotIn("order_id = NULL", source)
+
+    def test_schema_adds_cancelled_at_jst_timezone_and_legacy_cleanup_notes(self):
+        ddl = (ROOT_DIR / "DDL.txt").read_text(encoding="utf-8")
+        migration = (ROOT_DIR / "backend" / "database" / "add_reservations.sql").read_text(encoding="utf-8")
+        db_py = (ROOT_DIR / "backend" / "database" / "db.py").read_text(encoding="utf-8")
+
+        self.assertIn("cancelled_at TIMESTAMPTZ", ddl)
+        self.assertIn("CHECK (order_status IN ('pending', 'paid', 'cancelled', 'expired'))", ddl)
+        self.assertIn("released_at TIMESTAMPTZ", ddl)
+        self.assertIn("paid_at TIMESTAMPTZ", ddl)
+        self.assertIn("ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMPTZ", migration)
+        self.assertIn("UPDATE orders", migration)
+        self.assertIn("order_status = 'paid'", migration)
+        self.assertIn("DROP COLUMN IF EXISTS reservation_id", migration)
+        self.assertIn("DROP COLUMN IF EXISTS screening_id", migration)
+        self.assertIn("DROP COLUMN IF EXISTS seat_label", migration)
+        self.assertIn("DROP COLUMN IF EXISTS movie_id", migration)
+        self.assertIn("DROP TABLE screenings", migration)
+        self.assertIn("DROP CONSTRAINT IF EXISTS fk_seats_screening", migration)
+        self.assertIn("DROP COLUMN IF EXISTS col_num", migration)
+        self.assertIn("DROP COLUMN IF EXISTS is_reserved", migration)
+        self.assertIn("DROP COLUMN IF EXISTS pay_datetime", migration)
+        self.assertIn("DROP COLUMN IF EXISTS total_price", migration)
+        self.assertIn("DROP COLUMN IF EXISTS pay_method", migration)
+        self.assertIn("DROP COLUMN IF EXISTS pay_num", migration)
+        self.assertIn("DROP COLUMN IF EXISTS pay_status", migration)
+        self.assertIn("p.payment_status = 'paid'", migration)
+        self.assertIn("o.order_status = 'cancelled'", migration)
+        self.assertIn("release_reservation_seats_for_expired_order", ddl)
+        self.assertIn("NEW.order_status = 'expired'", ddl)
+        self.assertIn("o.order_status = 'expired'", migration)
+        self.assertIn("使われていないと判断した理由", migration)
+        self.assertIn("timezone=Asia/Tokyo", db_py)
     def test_schema_uses_screen_showing_order_detail_and_payment_tables(self):
         ddl = (ROOT_DIR / "DDL.txt").read_text(encoding="utf-8")
         migration = (ROOT_DIR / "backend" / "database" / "add_reservations.sql").read_text(encoding="utf-8")

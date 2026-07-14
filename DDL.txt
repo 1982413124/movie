@@ -1,10 +1,12 @@
+﻿ALTER DATABASE movie SET timezone TO 'Asia/Tokyo';
+
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     password TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE movies (
@@ -16,15 +18,15 @@ CREATE TABLE movies (
     synopsis TEXT,
     poster_image TEXT,
     release_date DATE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE theaters (
     id SERIAL PRIMARY KEY,
     theater_name VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT uq_theaters_name
         UNIQUE (theater_name)
@@ -36,8 +38,8 @@ CREATE TABLE screens (
     name VARCHAR(100) NOT NULL,
     seat_count INTEGER NOT NULL,
     description TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT fk_screens_theater
         FOREIGN KEY (theater_id)
@@ -58,8 +60,8 @@ CREATE TABLE showings (
     show_date DATE NOT NULL,
     start_time TIME NOT NULL,
     end_time TIME NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT fk_showings_movie
         FOREIGN KEY (movie_id)
@@ -84,8 +86,8 @@ CREATE TABLE seats (
     row_name VARCHAR(5) NOT NULL,
     seat_number INTEGER NOT NULL,
     seat_label VARCHAR(20) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT fk_seats_screen
         FOREIGN KEY (screen_id)
@@ -103,8 +105,8 @@ CREATE TABLE ticket_types (
     id VARCHAR(50) PRIMARY KEY,
     label VARCHAR(100) NOT NULL,
     current_price INTEGER NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT chk_ticket_types_current_price
         CHECK (current_price >= 0)
@@ -116,8 +118,8 @@ CREATE TABLE foods (
     category VARCHAR(100),
     current_price INTEGER NOT NULL,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT chk_foods_current_price
         CHECK (current_price >= 0)
@@ -130,8 +132,9 @@ CREATE TABLE orders (
     order_num VARCHAR(100) UNIQUE NOT NULL,
     total_amount INTEGER NOT NULL DEFAULT 0,
     order_status VARCHAR(20) NOT NULL DEFAULT 'pending',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    cancelled_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT fk_orders_user
         FOREIGN KEY (user_id)
@@ -142,7 +145,7 @@ CREATE TABLE orders (
         CHECK (total_amount >= 0),
 
     CONSTRAINT chk_orders_status
-        CHECK (order_status IN ('pending', 'confirmed', 'cancelled'))
+        CHECK (order_status IN ('pending', 'paid', 'cancelled', 'expired'))
 );
 
 CREATE TABLE reservation_seats (
@@ -156,9 +159,9 @@ CREATE TABLE reservation_seats (
     ticket_type_id VARCHAR(50) NOT NULL,
     ticket_type_label VARCHAR(100) NOT NULL,
     price_at_purchase INTEGER NOT NULL DEFAULT 0,
-    released_at TIMESTAMP,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    released_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT fk_reservation_seats_order
         FOREIGN KEY (order_id)
@@ -193,8 +196,8 @@ CREATE TABLE food_order_details (
     quantity INTEGER NOT NULL,
     unit_price INTEGER NOT NULL,
     subtotal INTEGER NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT fk_food_order_details_order
         FOREIGN KEY (order_id)
@@ -219,9 +222,9 @@ CREATE TABLE payments (
     payment_method VARCHAR(50) NOT NULL,
     payment_amount INTEGER NOT NULL,
     payment_status VARCHAR(20) NOT NULL DEFAULT 'unpaid',
-    paid_at TIMESTAMP,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    paid_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT fk_payments_order
         FOREIGN KEY (order_id)
@@ -269,3 +272,26 @@ CREATE INDEX idx_food_order_details_food_id
 
 CREATE INDEX idx_payments_order_id
     ON payments(order_id);
+
+CREATE OR REPLACE FUNCTION release_reservation_seats_for_expired_order()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.order_status = 'expired' THEN
+        UPDATE reservation_seats
+        SET released_at = COALESCE(released_at, CURRENT_TIMESTAMP),
+            updated_at = CURRENT_TIMESTAMP
+        WHERE order_id = NEW.id
+          AND released_at IS NULL;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_release_reservation_seats_for_expired_order ON orders;
+
+CREATE TRIGGER trg_release_reservation_seats_for_expired_order
+AFTER UPDATE OF order_status ON orders
+FOR EACH ROW
+WHEN (NEW.order_status = 'expired')
+EXECUTE FUNCTION release_reservation_seats_for_expired_order();

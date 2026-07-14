@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta, timezone
+﻿from datetime import date, datetime, timedelta, timezone
 
 from flask import Flask, jsonify, request
 from flask_cors import CORS
@@ -525,7 +525,7 @@ def get_reserved_seats(screening_id):
                       ON o.id = rs.order_id
                     WHERE rs.showing_id = %s
                       AND rs.released_at IS NULL
-                      AND o.order_status <> 'cancelled'
+                      AND o.order_status IN ('pending', 'paid')
                     ORDER BY rs.seat_id;
                     """,
                     (normalized_screening_id,),
@@ -591,7 +591,6 @@ def get_reservations():
                         JOIN showings sh
                           ON sh.id = rs.showing_id
                         WHERE rs.order_id = ANY(%s)
-                          AND rs.released_at IS NULL
                         ORDER BY rs.order_id, rs.id;
                         """,
                         (order_ids,),
@@ -648,6 +647,8 @@ def get_reservations():
             order_id = row[0]
             seat_rows = seats_by_order.get(order_id, [])
             food_items = foods_by_order.get(order_id, [])
+            if not seat_rows and not food_items:
+                continue
             ticket_types = {}
 
             for seat_row in seat_rows:
@@ -713,13 +714,28 @@ def cancel_reservation(reservation_id):
                     """
                     UPDATE orders
                     SET order_status = 'cancelled',
+                        cancelled_at = CURRENT_TIMESTAMP,
                         updated_at = CURRENT_TIMESTAMP
                     WHERE id = %s
-                    RETURNING id, order_status;
+                    RETURNING id, order_status, cancelled_at;
                     """,
                     (reservation_id,),
                 )
                 updated_row = cursor.fetchone()
+
+                cursor.execute(
+                    """
+                    UPDATE payments
+                    SET payment_status = 'refunded',
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE order_id = %s
+                      AND payment_status = 'paid'
+                    RETURNING payment_status;
+                    """,
+                    (reservation_id,),
+                )
+                refunded_payment_rows = cursor.fetchall()
+                payment_status = refunded_payment_rows[-1][0] if refunded_payment_rows else None
 
                 cursor.execute(
                     """
@@ -739,6 +755,8 @@ def cancel_reservation(reservation_id):
                 "status": "ok",
                 "reservation_id": updated_row[0],
                 "reservation_status": updated_row[1],
+                "payment_status": payment_status,
+                "cancelled_at": updated_row[2].isoformat() if updated_row[2] else None,
                 "released_seats": released_seats,
             }
         )
@@ -820,7 +838,7 @@ def create_reservation():
                     WHERE rs.showing_id = %s
                       AND rs.seat_id = ANY(%s)
                       AND rs.released_at IS NULL
-                      AND o.order_status <> 'cancelled';
+                      AND o.order_status IN ('pending', 'paid');
                     """,
                     (showing_id, seat_ids),
                 )
@@ -907,7 +925,7 @@ def create_reservation():
                     VALUES (%s, %s, %s, %s, %s)
                     RETURNING id, created_at;
                     """,
-                    (user_id, user_email, create_order_num(), total_price, "confirmed"),
+                    (user_id, user_email, create_order_num(), total_price, "paid"),
                 )
                 order_row = cursor.fetchone()
                 order_id = order_row[0]

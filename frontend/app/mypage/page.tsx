@@ -1,17 +1,17 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type ChangeEvent } from "react";
 
 import CampaignHeader from "../components/CampaignHeader";
-import type { TicketHistory } from "../purchase-history/types";
+import type { FoodHistory, TicketHistory, TicketTypeHistory } from "../../lib/reservationHistoryTypes";
 import {
   getCurrentAccount,
   logoutAccount,
   updateCurrentAccount,
 } from "../../lib/authStorage.mjs";
 import { cancelReservation, fetchReservationHistories } from "../../lib/purchaseHistoryApi.mjs";
+import { movieDetail } from "../../lib/seatSelection.mjs";
 import { createReservationSeatDisplay } from "../../lib/reservationSeatDisplay.mjs";
 
 type MenuKey = "reservations" | "history" | "profile" | "settings" | "logout";
@@ -35,7 +35,7 @@ type MenuItem = {
 };
 
 const MENU_ITEMS: MenuItem[] = [
-  { key: "reservations", label: "予約状況", meta: "Reservations" },
+  { key: "reservations", label: "予約履歴", meta: "Reservations" },
   { key: "history", label: "購入履歴", meta: "History" },
   { key: "profile", label: "プロフィール", meta: "Profile" },
   { key: "settings", label: "設定", meta: "Settings" },
@@ -91,6 +91,35 @@ function getSeatRow(seat: string): string {
   return seat.charAt(0).toUpperCase();
 }
 
+function formatSeatArea(seats: string[]): string {
+  const firstSeat = seats[0];
+
+  if (!firstSeat) {
+    return "-";
+  }
+
+  return seats.length > 1
+    ? `${getSeatRow(firstSeat)}列 ${getSeatColumn(firstSeat)}番から`
+    : `${getSeatRow(firstSeat)}列 ${getSeatColumn(firstSeat)}番`;
+}
+
+function formatPaymentStatus(value = ""): string {
+  const status = value.trim().toLowerCase();
+
+  if (status === "paid") {
+    return "支払い済み";
+  }
+
+  if (status === "failed") {
+    return "支払い失敗";
+  }
+
+  if (status === "refunded") {
+    return "返金済み";
+  }
+
+  return status === "unpaid" ? "未払い" : value || "-";
+}
 function OverviewMetric({ label, value, helper }: { label: string; value: string; helper: string }) {
   return (
     <div className="border border-[#D6CCBC] bg-[#F8F4EC] p-4">
@@ -157,7 +186,15 @@ function SeatMiniMap({ seats, screeningId }: { seats: string[]; screeningId?: st
     </div>
   );
 }
-function ReservationStatusPanel({ histories, notice = "" }: { histories: TicketHistory[]; notice?: string }) {
+function ReservationStatusPanel({
+  histories,
+  notice = "",
+  onShowHistory,
+}: {
+  histories: TicketHistory[];
+  notice?: string;
+  onShowHistory: () => void;
+}) {
   const latestReservation = histories[0];
   const totalSeatCount = histories.reduce((total, history) => total + history.seats.length, 0);
   const totalPrice = histories.reduce((total, history) => total + history.totalPrice, 0);
@@ -175,10 +212,10 @@ function ReservationStatusPanel({ histories, notice = "" }: { histories: TicketH
       <div className="grid gap-8 border-b border-[#D6CCBC] px-5 py-7 sm:px-8 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:px-10">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.34em] text-[#8A6034]">
-            Reservation Status
+            Reservation History
           </p>
           <h2 className="mt-4 text-3xl font-bold tracking-normal text-[#21160F]">
-            予約状況
+            予約履歴
           </h2>
         </div>
         <p className="max-w-2xl text-sm leading-7 text-[#6F6254]">
@@ -246,12 +283,13 @@ function ReservationStatusPanel({ histories, notice = "" }: { histories: TicketH
           <OverviewMetric label="購入件数" value={`${histories.length}件`} helper="保存されている履歴" />
           <OverviewMetric label="予約座席" value={`${totalSeatCount}席`} helper="全履歴の座席数" />
           <OverviewMetric label="累計金額" value={formatPrice(totalPrice)} helper="チケット合計" />
-          <Link
-            href="/purchase-history"
+          <button
+            type="button"
+            onClick={onShowHistory}
             className="inline-flex h-12 items-center justify-center border border-[#2B2119] bg-[#2B2119] px-5 text-sm font-bold text-[#FFF8E8] transition hover:bg-[#4A3426] sm:col-span-3 xl:col-span-1"
           >
-            購入履歴をすべて見る
-          </Link>
+            購入履歴を見る
+          </button>
         </aside>
       </div>
     </section>
@@ -263,11 +301,13 @@ function PurchaseHistoryPanel({
   histories,
   notice = "",
   onCancelReservationRequest,
+  setSelectedHistoryId,
 }: {
   cancelingReservationId?: string;
   histories: TicketHistory[];
   notice?: string;
   onCancelReservationRequest: (reservationId: string) => void;
+  setSelectedHistoryId: (historyId: string) => void;
 }) {
   return (
     <section className="border-y border-[#D6CCBC] bg-[#FBF8F1]/72">
@@ -350,9 +390,16 @@ function PurchaseHistoryPanel({
                         Seat Area
                       </dt>
                       <dd className="mt-2 text-sm font-bold text-[#4C4035]">
-                        {getSeatRow(history.seats[0] ?? "-")}列 {getSeatColumn(history.seats[0] ?? "")}番から
+                        {formatSeatArea(history.seats)}
                       </dd>
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedHistoryId(history.id)}
+                      className="mt-2 inline-flex h-11 items-center justify-center border border-[#2B2119] bg-[#2B2119] px-4 text-sm font-bold text-[#FFF8E8] transition hover:bg-[#4A3426]"
+                    >
+                      詳細を見る
+                    </button>
                     {history.status === "キャンセル済み" ? null : (
                       <button
                         type="button"
@@ -371,6 +418,249 @@ function PurchaseHistoryPanel({
         )}
       </div>
     </section>
+  );
+}
+function PurchaseHistoryDetailPanel({
+  cancelingReservationId = "",
+  history,
+  onBackToHistory,
+  onCancelReservationRequest,
+  onShowReservations,
+}: {
+  cancelingReservationId?: string;
+  history: TicketHistory;
+  onBackToHistory: () => void;
+  onCancelReservationRequest: (reservationId: string) => void;
+  onShowReservations: () => void;
+}) {
+  const ticketTypes = history.ticketTypes ?? [];
+  const foodItems = history.foodItems ?? [];
+  const foodCount = foodItems.reduce((total, item) => total + item.quantity, 0);
+  const foodTotal = foodItems.reduce((total, item) => total + item.subtotal, 0);
+
+  return (
+    <section className="border-y border-[#D6CCBC] bg-[#FBF8F1]/72">
+      <div className="grid gap-6 border-b border-[#D6CCBC] px-5 py-7 sm:px-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start lg:px-10">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.34em] text-[#8A6034]">
+            Purchase Detail
+          </p>
+          <h2 className="mt-4 text-3xl font-bold tracking-normal text-[#21160F]">
+            購入詳細
+          </h2>
+          <p className="mt-4 max-w-2xl text-sm leading-7 text-[#6F6254]">
+            映画、座席表、券種、購入したフードをこのページ内で確認できます。
+          </p>
+        </div>
+        <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
+          <button
+            type="button"
+            onClick={onBackToHistory}
+            className="inline-flex h-11 items-center justify-center border border-[#2B2119] px-5 text-sm font-bold text-[#2B2119] transition hover:bg-[#EFE8DC]"
+          >
+            購入履歴へ戻る
+          </button>
+          <button
+            type="button"
+            onClick={onShowReservations}
+            className="inline-flex h-11 items-center justify-center border border-[#8A6034] px-5 text-sm font-bold text-[#8A6034] transition hover:bg-[#EFE8DC]"
+          >
+            予約履歴を見る
+          </button>
+        </div>
+      </div>
+
+      <div className="grid gap-7 px-5 py-8 sm:px-8 xl:grid-cols-[minmax(0,1fr)_320px] lg:px-10 lg:py-10">
+        <div className="min-w-0 space-y-6">
+          <article className="border border-[#CFC4B4] bg-[#F8F4EC] p-5 sm:p-6">
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_240px] lg:items-start">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-[#8A6034]">
+                  Movie
+                </p>
+                <h3 className="mt-4 text-3xl font-bold leading-tight text-[#21160F]">
+                  {history.movieTitle || movieDetail.title}
+                </h3>
+                <p className="mt-4 text-sm font-bold leading-7 text-[#4C4035]">
+                  {history.showtime}
+                  <br />
+                  {history.screen}
+                </p>
+              </div>
+              <dl className="grid gap-4 border-t border-[#D6CCBC] pt-5 text-sm lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
+                <DetailMetric label="Status" value={history.status} />
+                <DetailMetric label="購入日時" value={history.purchasedAt} />
+                <DetailMetric label="予約番号" value={history.id} />
+                <DetailMetric label="支払い" value={formatPaymentStatus(history.paymentStatus)} />
+              </dl>
+            </div>
+
+            <div className="mt-7 border-t border-[#D6CCBC] pt-6">
+              <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#8A6034]">
+                映画詳細
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2 text-xs font-bold text-[#4C4035]">
+                <span className="border border-[#CFC4B4] px-3 py-2">{movieDetail.genre}</span>
+                <span className="border border-[#CFC4B4] px-3 py-2">{movieDetail.durationMinutes}分</span>
+                <span className="border border-[#CFC4B4] px-3 py-2">{movieDetail.ageRating}</span>
+              </div>
+              <p className="mt-4 max-w-3xl text-sm leading-7 text-[#6F6254]">
+                {movieDetail.synopsis}
+              </p>
+            </div>
+          </article>
+
+          <section className="border border-[#CFC4B4] bg-[#F8F4EC] p-5 sm:p-6">
+            <div className="flex flex-col gap-4 border-b border-[#D6CCBC] pb-5 md:flex-row md:items-end md:justify-between">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#8A6034]">
+                  Seats
+                </p>
+                <h3 className="mt-3 text-2xl font-bold text-[#21160F]">座席表</h3>
+                <p className="mt-2 text-sm text-[#6F6254]">購入した座席</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {history.seats.length > 0 ? (
+                  history.seats.map((seat) => (
+                    <span
+                      key={seat}
+                      className="seat-pill inline-flex h-10 min-w-12 items-center justify-center border border-[#2B2119] bg-[#2B2119] px-3 text-sm font-bold text-[#FFF8E8]"
+                    >
+                      {seat}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-sm font-bold text-[#7C6F61]">座席なし</span>
+                )}
+              </div>
+            </div>
+            <div className="mt-5">
+              <SeatMiniMap seats={history.seats} screeningId={history.screeningId} />
+            </div>
+          </section>
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <TicketTypeBreakdown
+              ticketCount={history.ticketCount}
+              ticketSummary={history.ticketSummary}
+              ticketTypes={ticketTypes}
+            />
+            <FoodBreakdown foodItems={foodItems} />
+          </div>
+        </div>
+
+        <aside className="grid gap-4 self-start sm:grid-cols-3 xl:sticky xl:top-28 xl:grid-cols-1">
+          <OverviewMetric label="Tickets" value={`${history.ticketCount}枚`} helper="購入したチケット" />
+          <OverviewMetric label="Seat Area" value={formatSeatArea(history.seats)} helper="購入した座席" />
+          <OverviewMetric label="Food" value={`${foodCount}点`} helper={`フード合計 ${formatPrice(foodTotal)}`} />
+          <div className="border border-[#CFC4B4] bg-[#F8F4EC] p-5 sm:col-span-3 xl:col-span-1">
+            <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#8A6034]">
+              合計金額
+            </p>
+            <p className="mt-4 text-3xl font-bold text-[#21160F]">{formatPrice(history.totalPrice)}</p>
+            <p className="mt-2 text-xs leading-5 text-[#7C6F61]">税込</p>
+            {history.status === "キャンセル済み" ? null : (
+              <button
+                type="button"
+                onClick={() => onCancelReservationRequest(history.id)}
+                disabled={cancelingReservationId === history.id}
+                className="mt-6 inline-flex h-11 w-full items-center justify-center border border-[#9A3A24] px-4 text-sm font-bold text-[#9A3A24] transition hover:bg-[#F4E7DE] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {cancelingReservationId === history.id ? "キャンセル中" : "予約をキャンセル"}
+              </button>
+            )}
+          </div>
+        </aside>
+      </div>
+    </section>
+  );
+}
+
+function DetailMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#8A6034]">
+        {label}
+      </dt>
+      <dd className="mt-2 break-words font-bold text-[#21160F]">{value}</dd>
+    </div>
+  );
+}
+
+function TicketTypeBreakdown({
+  ticketCount,
+  ticketSummary = "",
+  ticketTypes,
+}: {
+  ticketCount: number;
+  ticketSummary?: string;
+  ticketTypes: TicketTypeHistory[];
+}) {
+  return (
+    <section className="border border-[#CFC4B4] bg-[#F8F4EC] p-5">
+      <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#8A6034]">
+        Tickets
+      </p>
+      <h3 className="mt-3 text-2xl font-bold text-[#21160F]">券種</h3>
+      <div className="mt-5 grid gap-3">
+        {ticketTypes.length > 0 ? (
+          ticketTypes.map((ticketType) => (
+            <BreakdownRow
+              key={ticketType.ticketTypeId}
+              label={ticketType.label}
+              meta={`${ticketType.quantity}枚 x ${formatPrice(ticketType.unitPrice)}`}
+              value={formatPrice(ticketType.quantity * ticketType.unitPrice)}
+            />
+          ))
+        ) : (
+          <BreakdownRow
+            label={ticketSummary || `一般 ${ticketCount}枚`}
+            meta="購入履歴の保存値"
+            value={`${ticketCount}枚`}
+          />
+        )}
+      </div>
+    </section>
+  );
+}
+
+function FoodBreakdown({ foodItems }: { foodItems: FoodHistory[] }) {
+  return (
+    <section className="border border-[#CFC4B4] bg-[#F8F4EC] p-5">
+      <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#8A6034]">
+        Food
+      </p>
+      <h3 className="mt-3 text-2xl font-bold text-[#21160F]">購入したフード</h3>
+      <p className="mt-2 text-sm text-[#6F6254]">フード明細</p>
+      <div className="mt-5 grid gap-3">
+        {foodItems.length > 0 ? (
+          foodItems.map((item, index) => (
+            <BreakdownRow
+              key={`${item.foodId}-${index}`}
+              label={item.name}
+              meta={`${item.quantity}点 x ${formatPrice(item.unitPrice)}`}
+              value={formatPrice(item.subtotal)}
+            />
+          ))
+        ) : (
+          <p className="border-t border-[#D6CCBC] pt-4 text-sm font-bold text-[#7C6F61]">
+            購入したフードはありません。
+          </p>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function BreakdownRow({ label, meta, value }: { label: string; meta: string; value: string }) {
+  return (
+    <div className="grid gap-2 border-t border-[#D6CCBC] pt-4 sm:grid-cols-[1fr_auto] sm:items-end">
+      <div>
+        <p className="font-bold text-[#21160F]">{label}</p>
+        <p className="mt-1 text-xs font-bold text-[#7C6F61]">{meta}</p>
+      </div>
+      <p className="font-mono text-lg font-bold text-[#21160F]">{value}</p>
+    </div>
   );
 }
 function CancelReservationModal({
@@ -582,6 +872,7 @@ export default function MyPage() {
   const [historyNotice, setHistoryNotice] = useState("予約情報を読み込んでいます。");
   const [cancelingReservationId, setCancelingReservationId] = useState("");
   const [pendingCancelReservationId, setPendingCancelReservationId] = useState("");
+  const [selectedHistoryId, setSelectedHistoryId] = useState("");
 
   useEffect(() => {
     const frameId = window.requestAnimationFrame(() => {
@@ -693,6 +984,7 @@ export default function MyPage() {
     setForm(emptyForm);
     setStatusMessage("");
     setActiveMenu("reservations");
+    setSelectedHistoryId("");
     router.replace("/");
   };
 
@@ -702,6 +994,7 @@ export default function MyPage() {
       return;
     }
 
+    setSelectedHistoryId("");
     setActiveMenu(menuKey);
   };
 
@@ -749,19 +1042,49 @@ export default function MyPage() {
   const pendingCancelHistory = pendingCancelReservationId
     ? histories.find((history) => history.id === pendingCancelReservationId) ?? null
     : null;
+  const selectedHistory = selectedHistoryId
+    ? histories.find((history) => history.id === selectedHistoryId) ?? null
+    : null;
 
   const activePanel = (() => {
     if (activeMenu === "reservations") {
-      return <ReservationStatusPanel histories={histories} notice={historyNotice} />;
+      return (
+        <ReservationStatusPanel
+          histories={histories}
+          notice={historyNotice}
+          onShowHistory={() => {
+            setSelectedHistoryId("");
+            setActiveMenu("history");
+          }}
+        />
+      );
     }
 
     if (activeMenu === "history") {
-      return <PurchaseHistoryPanel
-              cancelingReservationId={cancelingReservationId}
-              histories={histories}
-              notice={historyNotice}
-              onCancelReservationRequest={handleCancelReservationRequest}
-            />;
+      if (selectedHistory) {
+        return (
+          <PurchaseHistoryDetailPanel
+            cancelingReservationId={cancelingReservationId}
+            history={selectedHistory}
+            onBackToHistory={() => setSelectedHistoryId("")}
+            onCancelReservationRequest={handleCancelReservationRequest}
+            onShowReservations={() => {
+              setSelectedHistoryId("");
+              setActiveMenu("reservations");
+            }}
+          />
+        );
+      }
+
+      return (
+        <PurchaseHistoryPanel
+          cancelingReservationId={cancelingReservationId}
+          histories={histories}
+          notice={historyNotice}
+          onCancelReservationRequest={handleCancelReservationRequest}
+          setSelectedHistoryId={setSelectedHistoryId}
+        />
+      );
     }
 
     if (activeMenu === "profile") {
@@ -804,7 +1127,7 @@ export default function MyPage() {
                 MY PAGE
               </h1>
               <p className="mt-5 max-w-2xl text-sm leading-7 text-[#6F6254] sm:text-base">
-                予約状況、購入履歴、プロフィール情報をまとめて確認できます。
+                予約履歴、購入履歴、プロフィール情報をまとめて確認できます。
               </p>
             </div>
 

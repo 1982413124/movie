@@ -1,3 +1,5 @@
+﻿ALTER DATABASE movie SET timezone TO 'Asia/Tokyo';
+
 DO $$
 DECLARE
     legacy_movie_fk RECORD;
@@ -80,8 +82,8 @@ CREATE TABLE IF NOT EXISTS screens (
     name VARCHAR(100) NOT NULL,
     seat_count INTEGER NOT NULL,
     description TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT fk_screens_theater
         FOREIGN KEY (theater_id)
@@ -102,8 +104,8 @@ CREATE TABLE IF NOT EXISTS showings (
     show_date DATE NOT NULL,
     start_time TIME NOT NULL,
     end_time TIME NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT fk_showings_screen
         FOREIGN KEY (screen_id)
@@ -123,8 +125,8 @@ CREATE TABLE IF NOT EXISTS seats (
     row_name VARCHAR(5) NOT NULL,
     seat_number INTEGER NOT NULL,
     seat_label VARCHAR(20) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT fk_seats_screen
         FOREIGN KEY (screen_id)
@@ -141,7 +143,7 @@ CREATE TABLE IF NOT EXISTS seats (
 ALTER TABLE seats
     ADD COLUMN IF NOT EXISTS screen_id VARCHAR(50),
     ADD COLUMN IF NOT EXISTS seat_number INTEGER,
-    ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+    ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP;
 
 DO $$
 DECLARE
@@ -222,8 +224,8 @@ CREATE TABLE IF NOT EXISTS ticket_types (
     id VARCHAR(50) PRIMARY KEY,
     label VARCHAR(100) NOT NULL,
     current_price INTEGER NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT chk_ticket_types_current_price
         CHECK (current_price >= 0)
@@ -235,8 +237,8 @@ CREATE TABLE IF NOT EXISTS foods (
     category VARCHAR(100),
     current_price INTEGER NOT NULL,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT chk_foods_current_price
         CHECK (current_price >= 0)
@@ -246,7 +248,8 @@ ALTER TABLE orders
     ADD COLUMN IF NOT EXISTS user_email VARCHAR(255),
     ADD COLUMN IF NOT EXISTS total_amount INTEGER NOT NULL DEFAULT 0,
     ADD COLUMN IF NOT EXISTS order_status VARCHAR(20) NOT NULL DEFAULT 'pending',
-    ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+    ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMPTZ,
+    ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP;
 
 ALTER TABLE orders
     ALTER COLUMN user_id DROP NOT NULL;
@@ -294,7 +297,7 @@ BEGIN
     ) THEN
         ALTER TABLE orders
             ADD CONSTRAINT chk_orders_status
-            CHECK (order_status IN ('pending', 'confirmed', 'cancelled'));
+            CHECK (order_status IN ('pending', 'paid', 'cancelled', 'expired'));
     END IF;
 END $$;
 
@@ -309,9 +312,9 @@ CREATE TABLE IF NOT EXISTS reservation_seats (
     ticket_type_id VARCHAR(50),
     ticket_type_label VARCHAR(100),
     price_at_purchase INTEGER NOT NULL DEFAULT 0,
-    released_at TIMESTAMP,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    released_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 ALTER TABLE reservation_seats
@@ -324,8 +327,8 @@ ALTER TABLE reservation_seats
     ADD COLUMN IF NOT EXISTS ticket_type_id VARCHAR(50),
     ADD COLUMN IF NOT EXISTS ticket_type_label VARCHAR(100),
     ADD COLUMN IF NOT EXISTS price_at_purchase INTEGER NOT NULL DEFAULT 0,
-    ADD COLUMN IF NOT EXISTS released_at TIMESTAMP,
-    ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+    ADD COLUMN IF NOT EXISTS released_at TIMESTAMPTZ,
+    ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP;
 
 ALTER TABLE reservation_seats
     ALTER COLUMN seat_id TYPE VARCHAR(100);
@@ -486,8 +489,8 @@ CREATE TABLE IF NOT EXISTS food_order_details (
     quantity INTEGER NOT NULL,
     unit_price INTEGER NOT NULL,
     subtotal INTEGER NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT fk_food_order_details_order
         FOREIGN KEY (order_id)
@@ -510,7 +513,8 @@ ALTER TABLE payments
     ADD COLUMN IF NOT EXISTS payment_method VARCHAR(50),
     ADD COLUMN IF NOT EXISTS payment_amount INTEGER NOT NULL DEFAULT 0,
     ADD COLUMN IF NOT EXISTS payment_status VARCHAR(20) NOT NULL DEFAULT 'unpaid',
-    ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+    ADD COLUMN IF NOT EXISTS paid_at TIMESTAMPTZ,
+    ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP;
 
 DO $$
 BEGIN
@@ -566,6 +570,26 @@ BEGIN
         SET payment_status = pay_status
         WHERE payment_status = 'unpaid'
           AND pay_status IS NOT NULL;
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF to_regclass('public.orders') IS NOT NULL
+       AND EXISTS (
+           SELECT 1
+           FROM information_schema.columns
+           WHERE table_schema = 'public'
+             AND table_name = 'orders'
+             AND column_name = 'pay_datetime'
+       )
+       AND to_regclass('public.payments') IS NOT NULL THEN
+        UPDATE payments p
+        SET paid_at = o.pay_datetime
+        FROM orders o
+        WHERE p.order_id = o.id
+          AND p.paid_at IS NULL
+          AND o.pay_datetime IS NOT NULL;
     END IF;
 END $$;
 
@@ -635,6 +659,36 @@ CREATE INDEX IF NOT EXISTS idx_reservation_seats_seat_id
 CREATE INDEX IF NOT EXISTS idx_reservation_seats_ticket_type_id
     ON reservation_seats(ticket_type_id);
 
+UPDATE reservation_seats rs
+SET released_at = COALESCE(rs.released_at, o.updated_at, o.created_at, CURRENT_TIMESTAMP),
+    updated_at = CURRENT_TIMESTAMP
+FROM orders o
+WHERE rs.order_id = o.id
+  AND o.order_status = 'expired'
+  AND rs.released_at IS NULL;
+
+CREATE OR REPLACE FUNCTION release_reservation_seats_for_expired_order()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.order_status = 'expired' THEN
+        UPDATE reservation_seats
+        SET released_at = COALESCE(released_at, CURRENT_TIMESTAMP),
+            updated_at = CURRENT_TIMESTAMP
+        WHERE order_id = NEW.id
+          AND released_at IS NULL;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_release_reservation_seats_for_expired_order ON orders;
+
+CREATE TRIGGER trg_release_reservation_seats_for_expired_order
+AFTER UPDATE OF order_status ON orders
+FOR EACH ROW
+WHEN (NEW.order_status = 'expired')
+EXECUTE FUNCTION release_reservation_seats_for_expired_order();
 DROP INDEX IF EXISTS uq_reservation_seats_screening_seat_active;
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_reservation_seats_showing_seat_active
@@ -649,3 +703,376 @@ CREATE INDEX IF NOT EXISTS idx_food_order_details_food_id
 
 CREATE INDEX IF NOT EXISTS idx_payments_order_id
     ON payments(order_id);
+
+-- 既存のtimestamp without time zoneは、旧DBではUTCとして保存されていた前提でtimestamptzへ寄せる。
+-- 保存値を単純に+9時間せず、接続時のtimezone=Asia/Tokyoで日本時間として見えるようにする。
+DO $$
+DECLARE
+    target_column RECORD;
+BEGIN
+    FOR target_column IN
+        SELECT *
+        FROM (VALUES
+            ('users', 'created_at'),
+            ('users', 'updated_at'),
+            ('movies', 'created_at'),
+            ('movies', 'updated_at'),
+            ('theaters', 'created_at'),
+            ('theaters', 'updated_at'),
+            ('screens', 'created_at'),
+            ('screens', 'updated_at'),
+            ('showings', 'created_at'),
+            ('showings', 'updated_at'),
+            ('seats', 'created_at'),
+            ('seats', 'updated_at'),
+            ('ticket_types', 'created_at'),
+            ('ticket_types', 'updated_at'),
+            ('foods', 'created_at'),
+            ('foods', 'updated_at'),
+            ('orders', 'created_at'),
+            ('orders', 'updated_at'),
+            ('orders', 'cancelled_at'),
+            ('reservation_seats', 'created_at'),
+            ('reservation_seats', 'updated_at'),
+            ('reservation_seats', 'released_at'),
+            ('food_order_details', 'created_at'),
+            ('food_order_details', 'updated_at'),
+            ('payments', 'paid_at'),
+            ('payments', 'created_at'),
+            ('payments', 'updated_at')
+        ) AS columns_to_convert(table_name, column_name)
+    LOOP
+        IF EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = target_column.table_name
+              AND column_name = target_column.column_name
+              AND data_type = 'timestamp without time zone'
+        ) THEN
+            EXECUTE format(
+                'ALTER TABLE %I ALTER COLUMN %I TYPE TIMESTAMPTZ USING %I AT TIME ZONE %L',
+                target_column.table_name,
+                target_column.column_name,
+                target_column.column_name,
+                'UTC'
+            );
+        END IF;
+    END LOOP;
+END $$;
+
+ALTER TABLE orders
+    ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMPTZ;
+
+ALTER TABLE orders
+    DROP CONSTRAINT IF EXISTS chk_orders_status;
+
+UPDATE orders
+SET order_status = 'paid'
+WHERE order_status = 'confirmed';
+
+UPDATE orders
+SET order_status = 'cancelled'
+WHERE order_status = 'canceled';
+
+ALTER TABLE orders
+    ADD CONSTRAINT chk_orders_status
+    CHECK (order_status IN ('pending', 'paid', 'cancelled', 'expired'));
+
+UPDATE payments p
+SET payment_status = 'refunded',
+    updated_at = CURRENT_TIMESTAMP
+FROM orders o
+WHERE p.order_id = o.id
+  AND o.order_status = 'cancelled'
+  AND p.payment_status = 'paid';
+
+DO $$
+BEGIN
+    IF to_regclass('public.orders') IS NOT NULL THEN
+        ALTER TABLE orders
+            DROP COLUMN IF EXISTS pay_datetime,
+            DROP COLUMN IF EXISTS total_price;
+    END IF;
+
+    IF to_regclass('public.payments') IS NOT NULL THEN
+        ALTER TABLE payments
+            DROP COLUMN IF EXISTS pay_method,
+            DROP COLUMN IF EXISTS pay_num,
+            DROP COLUMN IF EXISTS pay_status;
+    END IF;
+END $$;
+
+-- 使われていないと判断した理由:
+-- 現在の予約作成、キャンセル、履歴APIは orders を親にし、reservation_seats は order_id/showing_id/seat_id を参照している。
+-- 旧 reservations / reservation_ticket_types と reservation_seats.reservation_id/screening_id/seat_label/movie_id はAPIから参照されていない。
+-- ただし履歴を消さないため、旧 reservations の内容を LEGACY-RES-* の orders に移し、移行できた場合だけ旧カラムを削除する。
+DO $$
+BEGIN
+    IF to_regclass('public.reservations') IS NOT NULL THEN
+        INSERT INTO orders (
+            user_id,
+            user_email,
+            order_num,
+            total_amount,
+            order_status,
+            cancelled_at,
+            created_at,
+            updated_at
+        )
+        SELECT
+            r.user_id,
+            r.user_email,
+            'LEGACY-RES-' || r.id::text,
+            r.total_price,
+            CASE
+                WHEN lower(r.status) IN ('canceled', 'cancelled') THEN 'cancelled'
+                WHEN lower(r.status) IN ('expired') THEN 'expired'
+                ELSE 'paid'
+            END,
+            CASE
+                WHEN lower(r.status) IN ('canceled', 'cancelled') THEN COALESCE((
+                    SELECT max(rs.released_at)
+                    FROM reservation_seats rs
+                    WHERE rs.reservation_id = r.id
+                ), r.created_at)
+                ELSE NULL
+            END,
+            r.created_at,
+            CURRENT_TIMESTAMP
+        FROM reservations r
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM orders o
+            WHERE o.order_num = 'LEGACY-RES-' || r.id::text
+        );
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF to_regclass('public.reservation_ticket_types') IS NOT NULL THEN
+        INSERT INTO ticket_types (id, label, current_price)
+        SELECT DISTINCT ticket_type_id, label, unit_price
+        FROM reservation_ticket_types
+        ON CONFLICT (id) DO NOTHING;
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF to_regclass('public.reservations') IS NOT NULL THEN
+        INSERT INTO movies (id, title, duration_minutes)
+        SELECT DISTINCT r.movie_id, r.movie_id, 120
+        FROM reservations r
+        WHERE r.movie_id IS NOT NULL
+        ON CONFLICT (id) DO NOTHING;
+
+        INSERT INTO theaters (theater_name)
+        SELECT 'HAL CINEMA 名古屋栄'
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM theaters
+            WHERE theater_name = 'HAL CINEMA 名古屋栄'
+        );
+
+        INSERT INTO screens (id, theater_id, name, seat_count)
+        SELECT
+            'legacy-' || md5(COALESCE(r.screen_name, r.screening_id, 'screen')),
+            t.id,
+            COALESCE(r.screen_name, '旧スクリーン'),
+            GREATEST(MAX(COALESCE(r.ticket_count, 1)), 1)
+        FROM reservations r
+        CROSS JOIN LATERAL (
+            SELECT id
+            FROM theaters
+            WHERE theater_name = 'HAL CINEMA 名古屋栄'
+            ORDER BY id
+            LIMIT 1
+        ) t
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM screens sc
+            WHERE sc.theater_id = t.id
+              AND sc.name = COALESCE(r.screen_name, '旧スクリーン')
+        )
+        GROUP BY 1, t.id, COALESCE(r.screen_name, '旧スクリーン')
+        ON CONFLICT (id) DO NOTHING;
+
+        INSERT INTO showings (id, movie_id, screen_id, show_date, start_time, end_time)
+        SELECT DISTINCT
+            r.screening_id,
+            r.movie_id,
+            sc.id,
+            COALESCE(r.created_at::date, CURRENT_DATE),
+            CASE
+                WHEN COALESCE(r.screening_time, '') ~ '^\d{1,2}:\d{2}' THEN r.screening_time::time
+                ELSE TIME '00:00'
+            END,
+            CASE
+                WHEN COALESCE(r.screening_time, '') ~ '^\d{1,2}:\d{2}' THEN r.screening_time::time + INTERVAL '120 minutes'
+                ELSE TIME '02:00'
+            END
+        FROM reservations r
+        CROSS JOIN LATERAL (
+            SELECT id
+            FROM theaters
+            WHERE theater_name = 'HAL CINEMA 名古屋栄'
+            ORDER BY id
+            LIMIT 1
+        ) t
+        JOIN LATERAL (
+            SELECT id
+            FROM screens
+            WHERE theater_id = t.id
+              AND name = COALESCE(r.screen_name, '旧スクリーン')
+            ORDER BY id
+            LIMIT 1
+        ) sc ON TRUE
+        WHERE r.screening_id IS NOT NULL
+          AND r.movie_id IS NOT NULL
+        ON CONFLICT (id) DO NOTHING;
+    END IF;
+
+    IF to_regclass('public.reservations') IS NOT NULL
+       AND to_regclass('public.reservation_seats') IS NOT NULL THEN
+        INSERT INTO seats (id, screen_id, row_name, seat_number, seat_label)
+        SELECT DISTINCT
+            COALESCE(rs.seat_id, rs.seat_label),
+            sh.screen_id,
+            COALESCE(NULLIF(split_part(COALESCE(rs.seat_id, rs.seat_label), '-', 1), ''), 'A'),
+            CASE
+                WHEN COALESCE(rs.seat_id, rs.seat_label) ~ '[0-9]+' THEN substring(COALESCE(rs.seat_id, rs.seat_label) from '([0-9]+)$')::integer
+                ELSE 1
+            END,
+            COALESCE(rs.seat_id, rs.seat_label)
+        FROM reservation_seats rs
+        JOIN reservations r
+          ON r.id = rs.reservation_id
+        JOIN showings sh
+          ON sh.id = r.screening_id
+        WHERE COALESCE(rs.seat_id, rs.seat_label) IS NOT NULL
+        ON CONFLICT (id) DO NOTHING;
+    END IF;
+END $$;
+DO $$
+BEGIN
+    IF to_regclass('public.reservations') IS NOT NULL
+       AND to_regclass('public.reservation_seats') IS NOT NULL THEN
+        UPDATE reservation_seats rs
+        SET order_id = o.id,
+            showing_id = COALESCE(rs.showing_id, r.screening_id),
+            seat_id = COALESCE(rs.seat_id, rs.seat_label),
+            screen_name = COALESCE(rs.screen_name, r.screen_name),
+            showing_time = COALESCE(rs.showing_time, r.screening_time),
+            movie_title_at_purchase = COALESCE(rs.movie_title_at_purchase, m.title, r.movie_id),
+            ticket_type_id = COALESCE(rs.ticket_type_id, rtt.ticket_type_id, 'general'),
+            ticket_type_label = COALESCE(rs.ticket_type_label, rtt.label, '一般'),
+            price_at_purchase = CASE
+                WHEN rs.price_at_purchase > 0 THEN rs.price_at_purchase
+                ELSE COALESCE(rtt.unit_price, 0)
+            END,
+            updated_at = CURRENT_TIMESTAMP
+        FROM reservations r
+        JOIN orders o
+          ON o.order_num = 'LEGACY-RES-' || r.id::text
+        LEFT JOIN movies m
+          ON m.id = r.movie_id
+        LEFT JOIN LATERAL (
+            SELECT ticket_type_id, label, unit_price
+            FROM reservation_ticket_types
+            WHERE reservation_id = r.id
+            ORDER BY id
+            LIMIT 1
+        ) rtt ON TRUE
+        WHERE rs.reservation_id = r.id;
+    END IF;
+END $$;
+
+DROP INDEX IF EXISTS idx_reservation_seats_screening_id;
+DROP INDEX IF EXISTS uq_reservation_seats_screening_seat_active;
+
+ALTER TABLE reservation_seats
+    DROP CONSTRAINT IF EXISTS fk_reservation_seats_reservation,
+    DROP CONSTRAINT IF EXISTS fk_reservation_seats_movie;
+
+DO $$
+BEGIN
+    IF to_regclass('public.reservation_seats') IS NOT NULL
+       AND NOT EXISTS (
+           SELECT 1
+           FROM reservation_seats
+           WHERE order_id IS NULL
+              OR showing_id IS NULL
+              OR seat_id IS NULL
+       ) THEN
+        ALTER TABLE reservation_seats
+            DROP COLUMN IF EXISTS reservation_id,
+            DROP COLUMN IF EXISTS screening_id,
+            DROP COLUMN IF EXISTS seat_label,
+            DROP COLUMN IF EXISTS movie_id;
+    ELSE
+        RAISE NOTICE 'reservation_seats legacy columns were kept because some rows were not migrated to order_id/showing_id/seat_id.';
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF to_regclass('public.reservations') IS NOT NULL THEN
+        IF NOT EXISTS (
+            SELECT 1
+            FROM reservations r
+            WHERE NOT EXISTS (
+                SELECT 1
+                FROM orders o
+                WHERE o.order_num = 'LEGACY-RES-' || r.id::text
+            )
+        ) THEN
+            DROP TABLE IF EXISTS reservation_ticket_types;
+            DROP TABLE IF EXISTS reservations;
+        ELSE
+            RAISE NOTICE 'legacy reservations tables were kept because some rows were not migrated to orders.';
+        END IF;
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF to_regclass('public.order_details') IS NOT NULL THEN
+        IF NOT EXISTS (SELECT 1 FROM order_details) THEN
+            DROP TABLE order_details;
+        ELSE
+            RAISE NOTICE 'order_details was kept because it still has rows.';
+        END IF;
+    END IF;
+END $$;
+ALTER TABLE seats
+    DROP CONSTRAINT IF EXISTS fk_seats_screening;
+
+DO $$
+BEGIN
+    IF to_regclass('public.seats') IS NOT NULL
+       AND NOT EXISTS (
+           SELECT 1
+           FROM seats
+           WHERE screen_id IS NULL
+              OR seat_number IS NULL
+       ) THEN
+        ALTER TABLE seats
+            DROP COLUMN IF EXISTS screening_id,
+            DROP COLUMN IF EXISTS col_num,
+            DROP COLUMN IF EXISTS is_reserved;
+    ELSE
+        RAISE NOTICE 'seats legacy columns were kept because some rows were not migrated to screen_id/seat_number.';
+    END IF;
+END $$;
+DO $$
+BEGIN
+    IF to_regclass('public.screenings') IS NOT NULL THEN
+        IF NOT EXISTS (SELECT 1 FROM screenings) THEN
+            DROP TABLE screenings;
+        ELSE
+            RAISE NOTICE 'screenings was kept because it still has rows.';
+        END IF;
+    END IF;
+END $$;

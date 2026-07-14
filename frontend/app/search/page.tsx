@@ -4,7 +4,7 @@ import CampaignHeader from "../components/CampaignHeader";
 const quickLinks = [
   { href: "/movie-now", label: "上映中の作品を見る" },
   { href: "/movie-detail", label: "映画詳細へ進む" },
-  { href: "/purchase-history", label: "購入履歴を確認する" },
+  { href: "/mypage", label: "マイページで履歴を確認する" },
 ];
 
 export default function SearchPage() {

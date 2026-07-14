@@ -10,7 +10,7 @@ const appDir = resolve(currentDir, "../app");
 test("mypage side menu routes between reservation, history, profile, and settings panels", () => {
   const source = readFileSync(resolve(appDir, "mypage/page.tsx"), "utf8");
 
-  for (const label of ["予約状況", "購入履歴", "プロフィール", "設定", "ログアウト"]) {
+  for (const label of ["予約履歴", "購入履歴", "プロフィール", "設定", "ログアウト"]) {
     assert.match(source, new RegExp(label));
   }
 
@@ -26,7 +26,7 @@ test("mypage reservation and purchase panels show seats, totals, and history det
 
   assert.match(source, /ReservationStatusPanel/);
   assert.match(source, /PurchaseHistoryPanel/);
-  assert.match(source, /予約状況/);
+  assert.match(source, /予約履歴/);
   assert.match(source, /購入履歴/);
   assert.match(source, /座席/);
   assert.match(source, /seat-pill/);
@@ -37,6 +37,19 @@ test("mypage reservation and purchase panels show seats, totals, and history det
   assert.match(source, /latestReservation\.screeningId/);
   assert.match(source, /overflow-x-auto/);
   assert.match(source, /gridTemplateColumns/);
+  assert.match(source, /selectedHistoryId/);
+  assert.match(source, /PurchaseHistoryDetailPanel/);
+  assert.match(source, /reservationHistoryTypes/);
+  assert.doesNotMatch(source, /purchase-history\/types/);
+  assert.match(source, /setSelectedHistoryId\(history\.id\)/);
+  assert.match(source, /購入履歴へ戻る/);
+  assert.match(source, /予約履歴を見る/);
+  assert.match(source, /映画詳細/);
+  assert.match(source, /座席表/);
+  assert.match(source, /購入したフード/);
+  assert.match(source, /券種/);
+  assert.doesNotMatch(source, /href="\/purchase-history"/);
+  assert.doesNotMatch(source, /\/purchase-history\/\$\{encodeURIComponent/);
   assert.doesNotMatch(source, /ticketHistoryItems/);
 });
 

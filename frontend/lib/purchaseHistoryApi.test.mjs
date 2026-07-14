@@ -23,7 +23,7 @@ test("reservation history API response is normalized for history cards", () => {
         screening_time: "18:20",
         ticket_count: 2,
         total_price: 4580,
-        reservation_status: "confirmed",
+        reservation_status: "paid",
         payment_status: "paid",
         created_at: "2026-06-30T12:00:00",
         seats: [" C-4 ", "C-5"],
@@ -115,13 +115,13 @@ test("cancelReservation calls the user scoped cancel endpoint", async () => {
   assert.equal(calls[0].options.method, "PATCH");
   assert.deepEqual(JSON.parse(calls[0].options.body), { user_email: "test@example.com" });
 });
-test("mypage and purchase history screens read DB-backed reservation histories", () => {
+test("mypage reads DB-backed reservation histories for list and detail views", () => {
   const mypageSource = readFileSync(resolve(appDir, "mypage/page.tsx"), "utf8");
-  const historyPageSource = readFileSync(resolve(appDir, "purchase-history/PurchaseHistoryClient.tsx"), "utf8");
 
   assert.match(mypageSource, /fetchReservationHistories/);
   assert.match(mypageSource, /cancelReservation/);
   assert.match(mypageSource, /予約をキャンセル/);
-  assert.match(historyPageSource, /fetchReservationHistories/);
-  assert.match(historyPageSource, /getCurrentAccount/);
+  assert.match(mypageSource, /getCurrentAccount/);
+  assert.match(mypageSource, /PurchaseHistoryPanel/);
+  assert.match(mypageSource, /PurchaseHistoryDetailPanel/);
 });
