@@ -151,3 +151,14 @@ proxy/
 .agents/
 .codegraph/
 skills-lock.json
+
+# ローカルDBバックアップ
+/backups/*.sql
+/backend/uploads/
+/backend/test-uploads/
+
+# 管理者ログインで使用する透過動画
+!/frontend/public/images/UI/login/cat-actions/*.webm
+
+# ダウンロード時の補助情報
+*Zone.Identifier

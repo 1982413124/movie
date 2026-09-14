@@ -1,4 +1,10 @@
-import { findScreening, movieDetail, screenings } from "./seatSelection.mjs";
+import {
+  findScreening,
+  formatTicketTypeSummary,
+  movieDetail,
+  normalizeTicketTypes,
+  screenings,
+} from "./seatSelection.mjs";
 import { formatSeatNumbers } from "./purchaseCompletion.mjs";
 
 export const paymentMethods = [
@@ -37,17 +43,36 @@ export const paymentMethods = [
 export function buildPurchaseConfirmation(draft) {
   const screening = findScreening(draft?.screeningId) ?? screenings[0];
   const seatIds = Array.isArray(draft?.seatIds) ? draft.seatIds : [];
-  const ticketNum = draft?.ticketCount ?? seatIds.length;
+  const ticketTypes = normalizeTicketTypes(draft?.ticketTypes);
+  const fallbackTicketNum = draft?.ticketCount ?? seatIds.length;
+  const ticketTypeCount = ticketTypes.reduce((total, ticketType) => total + ticketType.quantity, 0);
+  const ticketNum = ticketTypeCount || fallbackTicketNum;
+  const ticketTypeTotalPrice = ticketTypes.reduce(
+    (total, ticketType) => total + ticketType.unitPrice * ticketType.quantity,
+    0,
+  );
+  const ticketTotalPrice = draft?.ticketTotalPrice ?? (ticketTypeTotalPrice || draft?.totalPrice || screening.price * ticketNum);
+  const foodItems = normalizeFoodItems(draft?.foodItems);
+  const foodTotalPrice =
+    draft?.foodTotalPrice ?? foodItems.reduce((total, item) => total + item.lineTotal, 0);
 
   return {
-    movieTitle: movieDetail.title,
-    posterLabel: movieDetail.title,
-    theaterName: screening.theaterName,
-    screeningDatetime: `${screening.dateLabel} ${draft?.screeningTime ?? screening.label}`,
+    movieTitle: draft?.movieTitle ?? movieDetail.title,
+    posterLabel: draft?.movieTitle ?? movieDetail.title,
+    theaterName: draft?.theaterName ?? screening.theaterName,
+    screeningDatetime: `${draft?.screeningDate ?? screening.dateLabel} ${draft?.screeningTime ?? screening.label}`,
+    showStartAt: draft?.screeningDate && (draft?.screeningTime ?? screening.label)
+      ? `${draft.screeningDate}T${draft.screeningTime ?? screening.label}:00+09:00`
+      : "",
     screenName: draft?.screenName ?? screening.screenName,
-    seatNum: formatSeatNumbers(seatIds),
+    seatNum: formatSeatNumbers(draft?.seatLabels ?? seatIds),
     ticketNum,
-    totalPrice: draft?.totalPrice ?? screening.price * ticketNum,
+    ticketTypes,
+    ticketSummary: formatTicketTypeSummary(ticketTypes, ticketNum),
+    ticketTotalPrice,
+    foodItems,
+    foodTotalPrice,
+    totalPrice: draft?.totalPrice ?? ticketTotalPrice + foodTotalPrice,
   };
 }
 
@@ -73,4 +98,20 @@ export function validatePaymentMethod(paymentMethodId) {
 
 export function findPaymentMethod(paymentMethodId) {
   return paymentMethods.find((method) => method.id === paymentMethodId);
+}
+
+function normalizeFoodItems(foodItems) {
+  if (!Array.isArray(foodItems)) {
+    return [];
+  }
+
+  return foodItems
+    .filter((item) => item && item.quantity > 0)
+    .map((item) => ({
+      id: item.id,
+      name: item.name,
+      price: item.price,
+      quantity: item.quantity,
+      lineTotal: item.lineTotal,
+    }));
 }
