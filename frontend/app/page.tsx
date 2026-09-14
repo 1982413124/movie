@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { MagnifyingGlassIcon, CalendarDaysIcon, TicketIcon, MapPinIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
+import { MagnifyingGlassIcon, CakeIcon, TicketIcon, MapPinIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 import CampaignHeader from "./components/CampaignHeader";
 import HomeMemberPanel from "./components/HomeMemberPanel";
 import HomeMovieList from "./components/HomeMovieList";
@@ -32,7 +32,7 @@ export default function Home() {
             </div>
           </div>
           <nav aria-label="よく使うメニュー" className="cinema-container home-quick-links">
-            <Link href="/movie-detail"><CalendarDaysIcon aria-hidden="true" />上映スケジュール<ChevronRightIcon aria-hidden="true" /></Link>
+            <Link href="/food-menu"><CakeIcon aria-hidden="true" />フードメニュー<ChevronRightIcon aria-hidden="true" /></Link>
             <Link href="/mypage"><TicketIcon aria-hidden="true" />予約・購入履歴の確認<ChevronRightIcon aria-hidden="true" /></Link>
             <Link href="/theater"><MapPinIcon aria-hidden="true" />劇場・チケット料金<ChevronRightIcon aria-hidden="true" /></Link>
           </nav>

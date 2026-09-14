@@ -557,6 +557,9 @@ class ReservationApiTest(unittest.TestCase):
         app_module.app.config.update(TESTING=True)
         # Outbox SQL/Resend delivery is covered against real PostgreSQL in test_booking_benefits.
         self.enterContext(patch.object(app_module, "enqueue_reservation_mail", return_value="queued"))
+        # Ownership, expiry and concurrent consumption use real PostgreSQL in test_seat_holds.
+        self.enterContext(patch.object(app_module, "consume_holds"))
+        self.enterContext(patch.object(app_module, "lock_showing"))
         self.client = app_module.app.test_client()
         self.client.environ_base.update(HTTP_ORIGIN="http://localhost:3000", HTTP_X_CSRF_TOKEN="unit-csrf")
         member = patch("member_auth.load_member", return_value={"id": 7, "name": "Test", "email": "test@example.com", "csrf_token": "unit-csrf"})

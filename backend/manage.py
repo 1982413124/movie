@@ -17,6 +17,7 @@ def migrate():
     with db_conn() as conn, conn.cursor() as cur:
         cur.execute(sql)
         cur.execute(Path(__file__).with_name("database").joinpath("booking_benefits_migration.sql").read_text(encoding="utf-8"))
+        cur.execute(Path(__file__).with_name("database").joinpath("seat_holds_migration.sql").read_text(encoding="utf-8"))
         cur.execute("CREATE TABLE IF NOT EXISTS cinema_migrations (name TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)")
         cur.execute("INSERT INTO cinema_migrations (name) VALUES ('existing-catalog-20260910') ON CONFLICT DO NOTHING RETURNING name")
         if cur.fetchone():

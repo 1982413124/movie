@@ -21,6 +21,14 @@ from movie_domain import japan_today, movie_status, validate_movie, youtube_id
 ORIGIN = {"Origin": "http://localhost:3000"}
 
 
+def hold_seats(client, showing_id, seat_ids):
+    session = client.post("/api/reservations/hold-session", headers=ORIGIN)
+    assert session.status_code == 200, session.json
+    for seat_id in seat_ids:
+        response = client.put(f"/api/screenings/{showing_id}/holds/{seat_id}", headers=ORIGIN)
+        assert response.status_code == 200, response.json
+
+
 def png_bytes():
     stream = io.BytesIO()
     Image.new("RGB", (24, 36), (73, 96, 62)).save(stream, "PNG")
@@ -189,6 +197,7 @@ class AdminApiTest(unittest.TestCase):
         detail = self.client.get(f"/api/screenings/{showing_id}").json
         self.assertEqual(len(detail["seats"]), 20)
         seat_id = detail["seats"][0]["id"]
+        hold_seats(self.customer, showing_id, [seat_id])
         booking = self.customer.post("/api/reservations", headers=self.customer_headers, json={"movie_id": movie["id"], "screening_id": showing_id, "seat_ids": [seat_id], "ticket_count": 1, "ticket_types": [{"ticket_type_id": "general", "label": "Tampered", "unit_price": 1, "quantity": 1}], "payment_method": "credit-card", "user_email": "user@example.test"})
         self.assertEqual(booking.status_code, 201, booking.json)
         history = self.customer.get("/api/reservations?user_email=user@example.test").json["reservations"][0]

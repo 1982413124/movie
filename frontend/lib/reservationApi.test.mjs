@@ -171,7 +171,7 @@ test("seat selection and confirmation screens are wired to reservation APIs", ()
 
   assert.match(seatSelectionSource, /cinemaApi\(`screenings\//);
   assert.match(seatSelectionSource, /buildCatalogScreeningDraft\(toScreening\(latest.showing\), latest.movie/);
-  assert.match(seatSelectionSource, /seatLabels: available.map/);
+  assert.match(seatSelectionSource, /seatLabels: held.map/);
   assert.doesNotMatch(seatSelectionSource, /createSeatMap|findScreening|movieDetail\.title/);
   assert.match(confirmSource, /createReservation/);
   assert.match(confirmSource, /response\.conflict/);

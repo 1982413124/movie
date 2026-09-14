@@ -23,7 +23,8 @@ class ScreeningAvailabilityTest(unittest.TestCase):
         sql, params = cursor.execute.call_args.args
         self.assertIn("rs.released_at IS NULL", sql)
         self.assertIn("o.order_status IN ('pending', 'paid')", sql)
-        self.assertEqual(params, (["show-a", "show-b", "show-c"],))
+        self.assertIn("h.expires_at > clock_timestamp()", sql)
+        self.assertEqual(params, (["show-a", "show-b", "show-c"], ["show-a", "show-b", "show-c"]))
 
     def test_invalid_batches_are_rejected_without_querying(self):
         with patch.object(app_module, "db_conn") as connect:

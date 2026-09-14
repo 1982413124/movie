@@ -57,6 +57,7 @@ class MemberCancellationTest(unittest.TestCase):
                    "ticket_types": [{"ticket_type_id": "general", "quantity": 1}],
                    "food_items": [{"food_id": "popcorn", "quantity": 1}],
                    "payment_method": "credit-card", "user_email": "user@example.test", **changes}
+        fixtures.hold_seats(client or self.owner, self.showing_id, payload["seat_ids"])
         result = (client or self.owner).post("/api/reservations", json=payload, headers=headers or self.owner_headers)
         self.assertEqual(result.status_code, 201, result.json)
         return result.json["reservation_id"]

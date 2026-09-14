@@ -38,6 +38,7 @@ class BookingBenefitsTest(unittest.TestCase):
                 'food_items': [{'food_id': 'popcorn', 'quantity': 1}], 'payment_method': 'credit-card', **changes}
 
     def book(self, seat=0, **changes):
+        fixtures.hold_seats(self.customer, self.showing_id, self.booking_payload(seat)["seat_ids"])
         return self.customer.post('/api/reservations', json=self.booking_payload(seat, **changes), headers=self.customer_headers)
 
     def coupon(self, **changes):
@@ -154,6 +155,7 @@ class BookingBenefitsTest(unittest.TestCase):
             client = app.test_client()
             for cookie in self.customer._cookies.values():
                 client.set_cookie(cookie.key,cookie.value)
+            fixtures.hold_seats(client, self.showing_id, self.booking_payload(seat)["seat_ids"])
             barrier.wait(timeout=10)
             return client.post('/api/reservations',json=self.booking_payload(seat,coupon_code='HAL500',points_to_use=20),headers=self.customer_headers).status_code
         with ThreadPoolExecutor(2) as pool:
@@ -180,6 +182,7 @@ class BookingBenefitsTest(unittest.TestCase):
 
     def test_guest_contact_email_does_not_assign_member_points_or_ownership(self):
         guest=app.test_client()
+        fixtures.hold_seats(guest, self.showing_id, self.booking_payload()["seat_ids"])
         response=guest.post('/api/reservations',json=self.booking_payload(contact_email='guest@example.test'))
         self.assertEqual(response.status_code,201,response.json)
         self.assertEqual((response.json['points_earned'],response.json['email_status']),(0,'queued'))

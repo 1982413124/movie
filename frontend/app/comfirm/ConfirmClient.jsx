@@ -17,6 +17,7 @@ import EmptyConfirm from "./EmptyConfirm";
 import PaymentPanel from "./PaymentPanel";
 import ReservationPanel from "./ReservationPanel";
 import DiscountPanel from "./DiscountPanel";
+import ReservationHoldTimer from "../components/ReservationHoldTimer";
 
 const draftStorageKey = "movieReservationDraft";
 const completedStorageKey = "movieCompletedPurchase";
@@ -34,6 +35,7 @@ export default function ConfirmClient() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [quote, setQuote] = useState(null);
   const [contactEmail, setContactEmail] = useState("");
+  const [holdReady, setHoldReady] = useState(false);
   const submitLock = useRef(false);
   const receiveQuote = useCallback(value => {
     setQuote(value);
@@ -42,7 +44,7 @@ export default function ConfirmClient() {
   useToastError(error);
 
   async function handleConfirm() {
-    if (!quote || submitLock.current) return;
+    if (!quote || !holdReady || submitLock.current) return;
     const validation = quote.total_price === 0 ? { ok: true } : validatePaymentMethod(paymentMethodId);
 
     if (!validation.ok) {
@@ -114,6 +116,7 @@ export default function ConfirmClient() {
   return (
     <main className="cinema-container cinema-page text-[var(--text-primary)]">
       <header className="cinema-page-heading"><h1>予約内容の確認・お支払い</h1><p>上映日時・座席・金額を確認して、お支払い方法を選んでください。</p></header>
+      <ReservationHoldTimer draft={draft} onReady={setHoldReady} />
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
       <div className="space-y-6">
         <ReservationPanel summary={quote ? { ...summary, ticketTotalPrice: quote.ticket_total_price, foodTotalPrice: quote.food_total_price, totalPrice: quote.subtotal_amount } : summary} />
@@ -136,7 +139,7 @@ export default function ConfirmClient() {
         }}
         selectedMethodId={paymentMethodId}
         totalPrice={quote?.total_price ?? summary.totalPrice}
-        ready={Boolean(quote)}
+        ready={Boolean(quote) && holdReady}
       />
       </div>
     </main>

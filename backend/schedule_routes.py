@@ -11,6 +11,7 @@ from database.db import db_conn
 from movie_domain import japan_today
 from movie_repository import get_movie, list_showings
 from screening_service import ensure_screen_seats, room_has_conflict
+from seat_holds import owner_hash
 
 schedule = Blueprint("cinema_schedule", __name__, url_prefix="/api")
 
@@ -95,15 +96,24 @@ def showing_detail(showing_id):
         if not showing:
             return failure("上映回が見つかりません。", 404)
         with db_conn() as conn, conn.cursor(row_factory=dict_row) as cur:
+            cur.execute("SELECT clock_timestamp() AS now")
+            now = cur.fetchone()["now"]
             cur.execute("""SELECT st.id, st.row_name, st.seat_number, st.seat_label,
                 EXISTS (SELECT 1 FROM reservation_seats rs JOIN orders o ON o.id = rs.order_id
                     WHERE rs.seat_id = st.id AND rs.showing_id = %s AND rs.released_at IS NULL
-                    AND o.order_status IN ('pending', 'paid')) AS reserved
-                FROM seats st WHERE st.screen_id = %s ORDER BY st.row_name, st.seat_number""", (showing_id, showing["screen_id"]))
+                    AND o.order_status IN ('pending', 'paid')) AS reserved,
+                h.expires_at AS hold_expires_at, COALESCE(h.owner_hash = %s, FALSE) AS held_by_me
+                FROM seats st LEFT JOIN seat_holds h ON h.seat_id = st.id
+                    AND h.showing_id = %s AND h.expires_at > %s
+                WHERE st.screen_id = %s ORDER BY st.row_name, st.seat_number""",
+                        (showing_id, owner_hash(), showing_id, now, showing["screen_id"]))
             seats = cur.fetchall()
+            for seat in seats:
+                seat["hold_expires_at"] = seat["hold_expires_at"].isoformat() if seat["hold_expires_at"] else None
             cur.execute("SELECT id, label, current_price AS price FROM ticket_types ORDER BY current_price DESC")
             ticket_types = cur.fetchall()
-        return jsonify({"showing": showing, "movie": get_movie(showing["movie_id"]), "seats": seats, "ticket_types": ticket_types})
+        return jsonify({"showing": showing, "movie": get_movie(showing["movie_id"]), "seats": seats,
+                        "ticket_types": ticket_types, "server_now": now.isoformat()})
     except Exception:
         current_app.logger.exception("Showing detail failed")
         return failure("上映情報を取得できませんでした。", 503)

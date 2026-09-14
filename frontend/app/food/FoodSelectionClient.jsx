@@ -17,10 +17,11 @@ import {
 import { getFoodPickupWindow } from "@/lib/reservationExperience.mjs";
 import { formatPrice } from "../seats/formatters";
 import { useReducedMotion } from "../components/useReducedMotion";
+import ReservationHoldTimer from "../components/ReservationHoldTimer";
 
 const draftStorageKey = "movieReservationDraft";
 
-export default function FoodSelectionClient() {
+export default function FoodSelectionClient({ menuOnly = false }) {
   const router = useRouter();
   const rawDraft = useSessionStorageValue(draftStorageKey);
   const draft = useMemo(() => parseJson(rawDraft), [rawDraft]);
@@ -89,13 +90,18 @@ export default function FoodSelectionClient() {
     router.push("/confirm");
   }
 
-  if (!draft) {
+  if (!draft && !menuOnly) {
     return <EmptyFoodSelection />;
   }
 
   return (
     <main className="cinema-container cinema-page text-[var(--text-primary)]">
-      <header className="cinema-page-heading"><h1>フードを選ぶ</h1><p>商品を選んで数量を指定してください。チケットのみの予約もできます。</p></header>
+      <header className="cinema-page-heading">
+        <h1>{menuOnly ? "フードメニュー" : "フードを選ぶ"}</h1>
+        <p>{menuOnly ? "ポップコーンやドリンクなどの商品と料金をご覧いただけます。ご注文は座席選択後に追加できます。" : "商品を選んで数量を指定してください。チケットのみの予約もできます。"}</p>
+        {menuOnly && <Link href="/movie-now" className="cinema-text-link">映画を選んで予約する</Link>}
+      </header>
+      {!menuOnly && <ReservationHoldTimer draft={draft} />}
       <FoodPromoCarousel
         activePromoIndex={activePromoIndex}
         onPromoSelect={setActivePromoIndex}
@@ -105,6 +111,7 @@ export default function FoodSelectionClient() {
       />
       <div className="w-full">
         <FoodContentGrid
+          menuOnly={menuOnly}
           activeCategoryId={activeCategoryId}
           bumpingFoodId={bumpingFoodId}
           draft={draft}
@@ -163,6 +170,7 @@ function FoodPromoCarousel({ activePromoIndex, onPromoSelect, isPromoPaused, set
   );
 }
 function FoodContentGrid({
+  menuOnly,
   activeCategoryId,
   bumpingFoodId,
   draft,
@@ -175,26 +183,27 @@ function FoodContentGrid({
   summaryPulseKey,
 }) {
   return (
-    <div className="grid w-full gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
+    <div className={`grid w-full gap-8 ${menuOnly ? "" : "lg:grid-cols-[minmax(0,1fr)_340px]"}`}>
       <div className="min-w-0 space-y-8">
         <CategoryTabs
           activeCategoryId={activeCategoryId}
           onCategoryClick={onCategoryClick}
         />
         <FoodRows
+          menuOnly={menuOnly}
           bumpingFoodId={bumpingFoodId}
           onQuantityChange={onQuantityChange}
           selection={selection}
         />
       </div>
 
-      <OrderSummary
+      {!menuOnly && <OrderSummary
           draft={draft}
           onProceed={onProceed}
           onSkip={onSkip}
           order={order}
           summaryPulseKey={summaryPulseKey}
-      />
+      />}
     </div>
   );
 }
@@ -229,7 +238,7 @@ function CategoryTabs({ activeCategoryId, onCategoryClick }) {
   );
 }
 
-function FoodRows({ bumpingFoodId, onQuantityChange, selection }) {
+function FoodRows({ bumpingFoodId, onQuantityChange, selection, menuOnly }) {
   return (
     <div className="space-y-8">
       {foodCategories.map((category) => (
@@ -256,11 +265,12 @@ function FoodRows({ bumpingFoodId, onQuantityChange, selection }) {
           >
             {getFoodItemsByCategory(category.id).map((item) => (
               <FoodCard
+                menuOnly={menuOnly}
                 key={`${category.id}-${item.id}`}
                 isBumping={bumpingFoodId === item.id}
                 item={item}
                 onQuantityChange={onQuantityChange}
-                quantity={selection[item.id] ?? 0}
+                quantity={menuOnly ? 0 : selection[item.id] ?? 0}
               />
             ))}
           </div>
@@ -270,7 +280,7 @@ function FoodRows({ bumpingFoodId, onQuantityChange, selection }) {
   );
 }
 
-function FoodCard({ isBumping, item, onQuantityChange, quantity }) {
+function FoodCard({ isBumping, item, onQuantityChange, quantity, menuOnly }) {
   const isAvailable = item.isAvailable !== false;
 
   return (
@@ -333,7 +343,7 @@ function FoodCard({ isBumping, item, onQuantityChange, quantity }) {
           <p className="font-mono text-xl font-semibold text-[var(--text-primary)]">
             {formatPrice(item.price)}
           </p>
-          <div className="rounded-lg grid grid-cols-[44px_28px_44px] items-center border border-[var(--border-subtle)] bg-[var(--surface-bg)]">
+          {!menuOnly && <div className="rounded-lg grid grid-cols-[44px_28px_44px] items-center border border-[var(--border-subtle)] bg-[var(--surface-bg)]">
             <button
               type="button"
               aria-label={item.name + "を減らす"}
@@ -358,7 +368,7 @@ function FoodCard({ isBumping, item, onQuantityChange, quantity }) {
             >
               +
             </button>
-          </div>
+          </div>}
         </div>
       </div>
     </article>

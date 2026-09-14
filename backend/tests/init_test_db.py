@@ -26,4 +26,5 @@ with psycopg.connect(url) as conn:
     conn.execute(ddl)
     conn.execute(migration)
     conn.execute(root.joinpath("backend/database/booking_benefits_migration.sql").read_text(encoding="utf-8"))
+    conn.execute(root.joinpath("backend/database/seat_holds_migration.sql").read_text(encoding="utf-8"))
 print("Isolated test database initialized.")

@@ -31,7 +31,7 @@ export function toMovieCard(movie, showings = [], now = new Date()) {
 /** @param {import("./cinema-types").Showing} showing
  * @returns {import("./screeningScheduleTypes").Screening} */
 export function toScreening(showing, now = new Date()) {
-  const remainingSeats = Math.max(0, showing.capacity - showing.reserved_count);
+  const remainingSeats = Math.max(0, showing.capacity - showing.reserved_count - (showing.held_count || 0));
   const screening = {
     id: showing.id, movieId: showing.movie_id, label: showing.start_time.slice(0, 5),
     startTime: showing.start_time.slice(0, 5), endTime: showing.end_time.slice(0, 5), endDayOffset: 0,
