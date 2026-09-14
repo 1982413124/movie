@@ -18,7 +18,9 @@ test("reservation history API response is normalized for history cards", () => {
       {
         id: 101,
         movie_id: "movie-001",
+        movie_title: "SPIDER MAN",
         screening_id: "scr-1820",
+        show_date: "2026-07-14",
         screen_name: "スクリーン 3",
         screening_time: "18:20",
         ticket_count: 2,
@@ -48,9 +50,13 @@ test("reservation history API response is normalized for history cards", () => {
     {
       id: "101",
       purchasedAt: "2026/06/30 21:00",
-      movieTitle: "映画のタイトル",
+      purchasedAtRaw: "2026-06-30T12:00:00",
+      movieId: "movie-001",
+      movieTitle: "SPIDER MAN",
       screeningId: "scr-1820",
-      showtime: "本日 18:20",
+      showDate: "2026-07-14",
+      showStartAt: "2026-07-14T18:20:00+09:00",
+      showtime: "2026-07-14 18:20",
       screen: "スクリーン 3",
       seats: ["C-4", "C-5"],
       ticketCount: 2,
@@ -70,8 +76,10 @@ test("reservation history API response is normalized for history cards", () => {
       ],
       totalPrice: 4580,
       status: "予約済み",
+      orderStatus: "paid",
       paymentStatus: "paid",
       posterUrl: "",
+      canCancel: undefined, cancelDeadline: "", cancelReason: "", refundMode: "",
     },
   ]);
 });
@@ -92,28 +100,29 @@ test("fetchReservationHistories calls the user scoped reservations endpoint", as
   assert.deepEqual(histories, []);
   assert.equal(
     calls[0],
-    "http://backend.test/api/reservations?user_email=test%40example.com",
+    "http://backend.test/api/reservations",
   );
 });
 
 
-test("cancelReservation calls the user scoped cancel endpoint", async () => {
+test("cancelReservation uses authenticated identity and the actual server status", async () => {
   const calls = [];
   const result = await cancelReservation("101", "test@example.com", {
     apiBaseUrl: "http://backend.test",
     fetchImpl: async (url, options) => {
       calls.push({ url, options });
-      return {
-        ok: true,
-        json: async () => ({ status: "ok", reservation_status: "canceled" }),
-      };
+      return { ok: true, json: async () => url.endsWith("/session")
+        ? { csrf_token: "session-csrf" }
+        : { status: "ok", reservation_status: "cancelled", payment_status: "refunded", refund_mode: "simulation", refunded_amount: 4580 } };
     },
   });
-
-  assert.deepEqual(result, { ok: true, status: "キャンセル済み" });
-  assert.equal(calls[0].url, "http://backend.test/api/reservations/101/cancel");
-  assert.equal(calls[0].options.method, "PATCH");
-  assert.deepEqual(JSON.parse(calls[0].options.body), { user_email: "test@example.com" });
+  assert.equal(result.ok, true);
+  assert.equal(result.status, "キャンセル済み");
+  assert.equal(result.paymentStatus, "refunded");
+  assert.equal(calls[1].url, "http://backend.test/api/reservations/101/cancel");
+  assert.equal(calls[1].options.method, "PATCH");
+  assert.equal(calls[1].options.headers.get("X-CSRF-Token"), "session-csrf");
+  assert.deepEqual(JSON.parse(calls[1].options.body), {});
 });
 test("mypage reads DB-backed reservation histories for list and detail views", () => {
   const mypageSource = readFileSync(resolve(appDir, "mypage/page.tsx"), "utf8");
@@ -121,7 +130,7 @@ test("mypage reads DB-backed reservation histories for list and detail views", (
   assert.match(mypageSource, /fetchReservationHistories/);
   assert.match(mypageSource, /cancelReservation/);
   assert.match(mypageSource, /予約をキャンセル/);
-  assert.match(mypageSource, /getCurrentAccount/);
+  assert.match(mypageSource, /readMemberSession/);
   assert.match(mypageSource, /PurchaseHistoryPanel/);
-  assert.match(mypageSource, /PurchaseHistoryDetailPanel/);
+  assert.match(mypageSource, /ReservationDetailPanel/);
 });

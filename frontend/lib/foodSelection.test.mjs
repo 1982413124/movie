@@ -58,8 +58,8 @@ test("promo slides keep billboard copy concise", () => {
   const firstSlide = foodHeroSlides[0];
 
   assert.equal(firstSlide.promoLabel, "Food Pre-Order");
-  assert.equal(firstSlide.productName, "シネマセットA");
-  assert.equal(firstSlide.priceLabel, "980円");
+  assert.equal(firstSlide.productName, "塩ポップコーン M");
+  assert.equal(firstSlide.priceLabel, "520円");
   assert.equal(firstSlide.offer, "座席予約と一緒に");
   assert.equal(firstSlide.visualLabel, "01");
   assert.equal(firstSlide.subtitle, "受け取りは劇場カウンターで。");

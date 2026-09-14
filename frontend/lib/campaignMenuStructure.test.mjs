@@ -6,51 +6,39 @@ import { fileURLToPath } from "node:url";
 
 const currentDir = dirname(fileURLToPath(import.meta.url));
 const appDir = resolve(currentDir, "../app");
+const headerPath = resolve(appDir, "components/CampaignHeader.tsx");
 
-const menuSources = [
-  resolve(appDir, "page.tsx"),
-  resolve(appDir, "movie-main/page.tsx"),
-  resolve(appDir, "components/CampaignHeader.tsx"),
-];
+test("shared cinema header exposes the public navigation structure", () => {
+  const source = readFileSync(headerPath, "utf8");
 
-test("full screen campaign menus use the public navigation structure", () => {
-  for (const sourcePath of menuSources) {
-    const source = readFileSync(sourcePath, "utf8");
-
-    for (const expected of [
-      /label:\s*"上映スケジュール"[\s\S]*meta:\s*"SCHEDULE"/,
-      /label:\s*"映画一覧"[\s\S]*meta:\s*"LINEUP"/,
-      /label:\s*"劇場案内"[\s\S]*meta:\s*"THEATER"/,
-      /label:\s*"ご利用ガイド"[\s\S]*meta:\s*"GUIDE"/,
-    ]) {
-      assert.match(source, expected, sourcePath);
-    }
-
-    assert.doesNotMatch(source, /購入情報確認|予約状況確認|My Tickets|Confirm/);
+  for (const expected of [
+    /href:\s*"\/"[\s\S]*label:\s*"ホーム"/,
+    /href:\s*"\/movie-now"[\s\S]*label:\s*"作品を探す"/,
+    /href:\s*"\/search"[\s\S]*label:\s*"検索"/,
+    /href:\s*"\/mypage"[\s\S]*label:\s*"マイページ"/,
+    /href:\s*"\/theater"[\s\S]*label:\s*"劇場案内"/,
+    /href:\s*"\/guide"[\s\S]*label:\s*"ご利用ガイド"/,
+  ]) {
+    assert.match(source, expected);
   }
+
+  assert.match(source, /aria-expanded=\{isMenuOpen\}/);
+  assert.match(source, /role="dialog"/);
 });
 
-test("home campaign pages keep schedule and lineup as local anchors", () => {
-  for (const sourcePath of [resolve(appDir, "page.tsx"), resolve(appDir, "movie-main/page.tsx")]) {
-    const source = readFileSync(sourcePath, "utf8");
+test("home keeps the reservation guide and today's lineup as local anchors", () => {
+  const homeSource = readFileSync(resolve(appDir, "page.tsx"), "utf8");
+  const legacyHomeSource = readFileSync(resolve(appDir, "movie-main/page.tsx"), "utf8");
 
-    for (const target of ["schedule", "lineup"]) {
-      assert.match(source, new RegExp(`id=\"${target}\"`), `${target} missing in ${sourcePath}`);
-    }
-
-    assert.doesNotMatch(source, /id="theater"|id="guide"/);
-  }
+  assert.match(homeSource, /id="experience"/);
+  assert.match(homeSource, /id="today"/);
+  assert.match(legacyHomeSource, /export \{ default \} from "\.\.\/page"/);
 });
 
-test("theater and guide are separate lightweight app routes", () => {
+test("theater and guide remain separate app routes", () => {
   assert.ok(existsSync(resolve(appDir, "theater/page.tsx")));
   assert.ok(existsSync(resolve(appDir, "guide/page.tsx")));
 
-  for (const sourcePath of menuSources) {
-    const source = readFileSync(sourcePath, "utf8");
-
-    assert.match(source, /href:\s*"\/theater"[\s\S]*label:\s*"劇場案内"/);
-    assert.match(source, /href:\s*"\/guide"[\s\S]*label:\s*"ご利用ガイド"/);
-    assert.doesNotMatch(source, /#theater|#guide|\/movie-main#theater|\/movie-main#guide/);
-  }
+  const source = readFileSync(headerPath, "utf8");
+  assert.doesNotMatch(source, /#theater|#guide|\/movie-main#theater|\/movie-main#guide/);
 });

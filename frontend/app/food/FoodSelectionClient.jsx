@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import panelStyles from "../components/BookingSidePanel.module.css";
+
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -12,7 +14,9 @@ import {
   getFoodItemsByCategory,
   updateFoodQuantity,
 } from "@/lib/foodSelection.mjs";
+import { getFoodPickupWindow } from "@/lib/reservationExperience.mjs";
 import { formatPrice } from "../seats/formatters";
+import { useReducedMotion } from "../components/useReducedMotion";
 
 const draftStorageKey = "movieReservationDraft";
 
@@ -20,16 +24,25 @@ export default function FoodSelectionClient() {
   const router = useRouter();
   const rawDraft = useSessionStorageValue(draftStorageKey);
   const draft = useMemo(() => parseJson(rawDraft), [rawDraft]);
-  const [selection, setSelection] = useState({});
+  const restoredSelection = useMemo(() => {
+    const items = Array.isArray(draft?.foodItems) ? draft.foodItems : [];
+    return Object.fromEntries(items.filter((item) => item?.id).map((item) => [
+      item.id, Math.max(0, Math.floor(Number(item.quantity) || 0)),
+    ]));
+  }, [draft]);
+  const [selectionOverride, setSelection] = useState(null);
+  const selection = selectionOverride ?? restoredSelection;
   const [activeCategoryId, setActiveCategoryId] = useState(foodCategories[0].id);
   const [activePromoIndex, setActivePromoIndex] = useState(0);
-  const [isPromoPaused, setIsPromoPaused] = useState(false);
+  const [isPromoPaused, setIsPromoPaused] = useState(true);
+  const reducedMotion = useReducedMotion();
+  const bumpTimer = useRef(null);
   const [bumpingFoodId, setBumpingFoodId] = useState("");
   const [summaryPulseKey, setSummaryPulseKey] = useState(0);
   const order = useMemo(() => buildFoodOrder(selection), [selection]);
 
   useEffect(() => {
-    if (isPromoPaused) {
+    if (isPromoPaused || reducedMotion || foodHeroSlides.length < 2) {
       return undefined;
     }
 
@@ -37,35 +50,31 @@ export default function FoodSelectionClient() {
       setActivePromoIndex((currentIndex) => (
         currentIndex + 1
       ) % foodHeroSlides.length);
-    }, 4000);
+    }, 7000);
 
     return () => window.clearInterval(timer);
-  }, [isPromoPaused]);
+  }, [isPromoPaused, reducedMotion]);
+
+  useEffect(() => () => window.clearTimeout(bumpTimer.current), []);
 
   function handleCategoryClick(categoryId) {
     setActiveCategoryId(categoryId);
     document.getElementById(`food-row-${categoryId}`)?.scrollIntoView({
-      behavior: "smooth",
+      behavior: reducedMotion ? "instant" : "smooth",
       block: "start",
-    });
-  }
-
-  function handleShowAll(categoryId) {
-    document.getElementById(`food-rail-${categoryId}`)?.scrollBy({
-      left: 560,
-      behavior: "smooth",
     });
   }
 
   function handleQuantityChange(foodId, delta) {
     setSelection((currentSelection) => (
-      updateFoodQuantity(currentSelection, foodId, delta)
+      updateFoodQuantity(currentSelection ?? restoredSelection, foodId, delta)
     ));
     setSummaryPulseKey((currentKey) => currentKey + 1);
 
     if (delta > 0) {
       setBumpingFoodId(foodId);
-      window.setTimeout(() => setBumpingFoodId(""), 260);
+      window.clearTimeout(bumpTimer.current);
+      bumpTimer.current = window.setTimeout(() => setBumpingFoodId(""), 260);
     }
   }
 
@@ -85,13 +94,16 @@ export default function FoodSelectionClient() {
   }
 
   return (
-    <main className="w-full pb-10 text-[#1C0800]">
+    <main className="cinema-container cinema-page text-[var(--text-primary)]">
+      <header className="cinema-page-heading"><h1>フードを選ぶ</h1><p>商品を選んで数量を指定してください。チケットのみの予約もできます。</p></header>
       <FoodPromoCarousel
         activePromoIndex={activePromoIndex}
         onPromoSelect={setActivePromoIndex}
         setIsPromoPaused={setIsPromoPaused}
+        isPromoPaused={isPromoPaused}
+        reducedMotion={reducedMotion}
       />
-      <div className="mx-auto w-full max-w-[1600px] px-4 sm:px-6 lg:px-10">
+      <div className="w-full">
         <FoodContentGrid
           activeCategoryId={activeCategoryId}
           bumpingFoodId={bumpingFoodId}
@@ -99,7 +111,6 @@ export default function FoodSelectionClient() {
           onCategoryClick={handleCategoryClick}
           onProceed={() => handleProceed(selection)}
           onQuantityChange={handleQuantityChange}
-          onShowAll={handleShowAll}
           onSkip={() => handleProceed({})}
           order={order}
           selection={selection}
@@ -110,93 +121,44 @@ export default function FoodSelectionClient() {
   );
 }
 
-function FoodPromoCarousel({ activePromoIndex, onPromoSelect, setIsPromoPaused }) {
+function FoodPromoCarousel({ activePromoIndex, onPromoSelect, isPromoPaused, setIsPromoPaused, reducedMotion }) {
   return (
-    <section
-      className="promo-banner-shell relative mb-10 min-h-[250px] w-full overflow-hidden bg-[#15110D] text-white shadow-[0_24px_80px_rgba(28,8,0,0.16)] sm:min-h-[290px]"
-      aria-label="映画館フード広告"
-      onMouseEnter={() => setIsPromoPaused(true)}
-      onMouseLeave={() => setIsPromoPaused(false)}
-    >
+    <section className="promo-banner-shell relative mb-8 min-h-[250px] overflow-hidden rounded-lg bg-[var(--surface-inverse)] text-white"
+      aria-label="おすすめのフード">
       {foodHeroSlides.map((slide, index) => {
         const isActive = index === activePromoIndex;
-
         return (
-          <article
-            key={slide.id}
-            className={[
-              "absolute inset-0 overflow-hidden bg-[#15110D] transition-[opacity,transform] duration-700 ease-out",
-              isActive
-                ? "opacity-100 translate-y-0"
-                : "pointer-events-none opacity-0 translate-y-3",
-            ].join(" ")}
-            aria-hidden={!isActive}
-          >
-            <div className="promo-banner-fill absolute inset-y-0 right-0 w-full lg:w-[70%]">
-              <Image
-                src={slide.imageSrc}
-                alt=""
-                aria-hidden="true"
-                fill
-                loading={index === 0 ? "eager" : "lazy"}
-                priority={index === 0}
-                sizes="100vw"
-                className="object-contain object-center opacity-88 saturate-[0.9] lg:object-right"
-              />
+          <article key={slide.id} aria-hidden={!isActive}
+            className={`absolute inset-0 overflow-hidden transition-opacity duration-300 ${isActive ? "opacity-100" : "pointer-events-none opacity-0"}`}>
+            <div className="promo-banner-fill absolute inset-y-0 right-0 w-[64%]">
+              <Image loading="eager" src={slide.imageSrc} alt="" aria-hidden="true" fill sizes="(min-width: 1024px) 800px, 100vw" className="object-cover object-center" />
             </div>
-            <div
-              className="absolute inset-0"
-              style={{
-                background:
-                  "linear-gradient(90deg, rgba(13,10,7,0.96) 0%, rgba(13,10,7,0.78) 34%, rgba(13,10,7,0.28) 68%, rgba(13,10,7,0.04) 100%)",
-              }}
-            />
-            <div className="promo-banner-inner relative z-10 mx-auto flex min-h-[250px] w-full max-w-[1500px] items-end px-4 py-7 sm:min-h-[290px] sm:px-6 sm:py-9 lg:px-10">
-              <div className="max-w-[520px] border-l border-white/24 pl-5">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.36em] text-white/64">
-                  {slide.promoLabel}
-                </p>
-                <h1 className="mt-4 text-3xl font-semibold leading-tight text-white sm:text-5xl">
-                  {slide.title}
-                </h1>
-                <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-white/78">
-                  <span className="text-base font-semibold text-white">
-                    {slide.productName}
-                  </span>
-                  <span className="font-mono text-white/80">{slide.priceLabel}</span>
-                  <span>{slide.offer}</span>
-                </div>
-                <p className="mt-4 max-w-sm text-sm leading-6 text-white/68">
-                  {slide.subtitle}
-                </p>
-              </div>
+            <div className="absolute inset-0 bg-[linear-gradient(90deg,#202326_0%,#202326_30%,rgba(32,35,38,0.7)_52%,transparent_100%)]" />
+            <div className="promo-banner-inner relative z-10 max-w-[56%] px-7 pb-20 pt-7">
+              <p className="text-xs font-bold text-white/80">{slide.promoLabel}</p>
+              <h2 className="mt-2 text-2xl font-bold leading-snug">{slide.title}</h2>
+              <p className="mt-3 text-sm">{slide.productName}<span className="ml-4 font-mono font-bold">{slide.priceLabel}</span></p>
+              <p className="mt-2 text-sm text-white/80">{slide.offer}</p>
             </div>
-            <span className="absolute right-5 top-5 z-10 font-mono text-xs tracking-[0.28em] text-white/54">
-              {slide.visualLabel}
-            </span>
           </article>
         );
       })}
-
-      <div className="absolute inset-x-0 bottom-5 z-20">
-        <div className="mx-auto flex w-full max-w-[1500px] gap-2 px-4 sm:px-6 lg:px-10">
+      {foodHeroSlides.length > 1 ? <div className="absolute bottom-3 left-6 right-6 z-20 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-1">
+          <button type="button" aria-label="前のフード広告" className="grid h-11 w-11 place-items-center rounded border border-white/40 bg-black/25 text-xl hover:bg-black/50"
+            onClick={() => onPromoSelect((activePromoIndex - 1 + foodHeroSlides.length) % foodHeroSlides.length)}>‹</button>
           {foodHeroSlides.map((slide, index) => (
-            <button
-              key={slide.id}
-              type="button"
-              aria-label={slide.productName + "の広告を表示"}
-              aria-pressed={index === activePromoIndex}
-              onClick={() => onPromoSelect(index)}
-              className={[
-                "promo-dot h-1.5 rounded-full transition-all duration-300",
-                index === activePromoIndex
-                  ? "w-9 bg-white"
-                  : "w-1.5 bg-white/38 hover:bg-white/70",
-              ].join(" ")}
-            />
+            <button key={slide.id} type="button" aria-label={slide.productName + "の広告を表示"} aria-pressed={index === activePromoIndex}
+              onClick={() => onPromoSelect(index)} className="grid h-11 w-11 place-items-center rounded hover:bg-white/15">
+              <span aria-hidden="true" className={`h-2.5 w-2.5 rounded-full transition-colors ${index === activePromoIndex ? "bg-white" : "bg-white/40"}`} />
+            </button>
           ))}
+          <button type="button" aria-label="次のフード広告" className="grid h-11 w-11 place-items-center rounded border border-white/40 bg-black/25 text-xl hover:bg-black/50"
+            onClick={() => onPromoSelect((activePromoIndex + 1) % foodHeroSlides.length)}>›</button>
         </div>
-      </div>
+        {!reducedMotion && <button type="button" aria-pressed={!isPromoPaused} onClick={() => setIsPromoPaused((paused) => !paused)}
+          className="min-h-11 rounded border border-white/40 bg-black/25 px-4 text-xs font-bold hover:bg-black/50">{isPromoPaused ? "自動切替を開始" : "自動切替を停止"}</button>}
+      </div> : null}
     </section>
   );
 }
@@ -207,7 +169,6 @@ function FoodContentGrid({
   onCategoryClick,
   onProceed,
   onQuantityChange,
-  onShowAll,
   onSkip,
   order,
   selection,
@@ -223,7 +184,6 @@ function FoodContentGrid({
         <FoodRows
           bumpingFoodId={bumpingFoodId}
           onQuantityChange={onQuantityChange}
-          onShowAll={onShowAll}
           selection={selection}
         />
       </div>
@@ -242,7 +202,7 @@ function FoodContentGrid({
 function CategoryTabs({ activeCategoryId, onCategoryClick }) {
   return (
     <nav
-      className="flex gap-2 overflow-x-auto border-y border-[#1C0800]/14 py-4"
+      className="flex gap-2 overflow-x-auto border-y border-[var(--border-subtle)] py-4"
       aria-label="フードカテゴリ"
     >
       {foodCategories.map((category) => {
@@ -252,12 +212,13 @@ function CategoryTabs({ activeCategoryId, onCategoryClick }) {
           <button
             key={category.id}
             type="button"
+            aria-pressed={isActive}
             onClick={() => onCategoryClick(category.id)}
             className={[
               "shrink-0 border px-4 py-3 text-sm font-black transition-colors",
               isActive
-                ? "border-[#1C0800] bg-[#1C0800] text-white"
-                : "border-[#1C0800]/16 bg-white text-[#5C3010] hover:bg-[#F4EFE6]",
+                ? "border-[var(--border-strong)] bg-[var(--button-bg)] text-white"
+                : "border-[var(--border-subtle)] bg-[var(--surface-bg)] text-[var(--text-secondary)] hover:bg-[var(--surface-muted)]",
             ].join(" ")}
           >
             {category.label}
@@ -268,36 +229,30 @@ function CategoryTabs({ activeCategoryId, onCategoryClick }) {
   );
 }
 
-function FoodRows({ bumpingFoodId, onQuantityChange, onShowAll, selection }) {
+function FoodRows({ bumpingFoodId, onQuantityChange, selection }) {
   return (
     <div className="space-y-8">
       {foodCategories.map((category) => (
         <section
           key={category.id}
           id={`food-row-${category.id}`}
-          className="scroll-mt-6"
+          className="scroll-mt-28"
         >
           <div className="mb-4 flex items-center justify-between gap-4">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[#A0703A]">
+              <p className="text-[10px] font-black uppercase tracking-wide text-[var(--text-muted)]">
                 Menu
               </p>
-              <h2 className="mt-1 text-2xl font-black text-[#1C0800]">
+              <h2 className="mt-1 text-2xl font-black text-[var(--text-primary)]">
                 {category.label}
               </h2>
             </div>
-            <button
-              type="button"
-              onClick={() => onShowAll(category.id)}
-              className="shrink-0 border border-[#1C0800]/16 bg-white px-4 py-2 text-xs font-semibold text-[#5C3010] transition-colors hover:bg-[#F4EFE6]"
-            >
-              一覧を表示
-            </button>
+
           </div>
 
           <div
             id={`food-rail-${category.id}`}
-            className="grid snap-x snap-mandatory auto-cols-[minmax(220px,260px)] grid-flow-col gap-4 overflow-x-auto scroll-px-2 pb-3"
+            className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
           >
             {getFoodItemsByCategory(category.id).map((item) => (
               <FoodCard
@@ -316,72 +271,89 @@ function FoodRows({ bumpingFoodId, onQuantityChange, onShowAll, selection }) {
 }
 
 function FoodCard({ isBumping, item, onQuantityChange, quantity }) {
-  const visual = item.visual ?? {};
-  const previewStyle = {
-    backgroundImage: 'url("' + item.imageSrc + '")',
-    "--food-surface": visual.surface ?? "#F4F0E8",
-    "--food-accent": visual.accent ?? "#332D27",
-  };
+  const isAvailable = item.isAvailable !== false;
 
   return (
     <article
       className={[
-        "relative grid min-h-[330px] snap-start grid-rows-[150px_1fr] overflow-hidden border border-[#1C0800]/12 bg-[#FFFEF8] shadow-[0_14px_36px_rgba(28,8,0,0.06)] transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-1 hover:border-[#1C0800]/22 hover:shadow-[0_22px_52px_rgba(28,8,0,0.10)]",
+        `relative grid min-h-[330px] snap-start ${item.imageSrc ? "grid-rows-[150px_1fr]" : "grid-rows-1"} overflow-hidden border border-[var(--border-subtle)] bg-[var(--surface-bg)] shadow-sm transition-[transform,box-shadow,border-color] duration-200 hover:border-[var(--border-subtle)] hover:shadow-sm`,
         isBumping ? "is-bumping" : "",
       ].join(" ")}
     >
       {quantity > 0 ? (
-        <span className="selected-badge absolute right-3 top-3 z-20 grid h-8 min-w-8 place-items-center rounded-full bg-[#1C0800] px-2 font-mono text-sm font-black text-white shadow-[0_10px_24px_rgba(0,0,0,0.18)]">
+        <span className="selected-badge absolute right-3 top-3 z-20 grid h-8 min-w-8 place-items-center rounded-full bg-[var(--button-bg)] px-2 font-mono text-sm font-black text-white shadow-sm">
           {quantity}
         </span>
       ) : null}
 
-      <div className="food-card-media relative overflow-hidden" style={previewStyle}>
-        <div className="relative z-10 flex h-full flex-col justify-between p-4">
-          <span className="w-fit border border-[#1C0800]/14 bg-white/78 px-3 py-1 text-[10px] font-semibold text-[#1C0800] backdrop-blur">
+      {item.imageSrc ? (
+        <div className="relative overflow-hidden bg-[var(--surface-bg)]">
+          <Image
+            src={item.imageSrc}
+            alt={`${item.name}の商品イメージ`}
+            fill
+            sizes="260px"
+            className="object-cover object-[70%_50%]"
+          />
+          <span className="rounded-lg absolute left-3 top-3 z-10 w-fit border border-[var(--border-subtle)] bg-[var(--surface-bg)]/90 px-3 py-1 text-[10px] font-semibold text-[var(--text-primary)]">
             {item.badge}
           </span>
-          <div className="food-card-mark">
-            <span className="block text-[10px] font-semibold uppercase tracking-[0.28em]">
-              HAL CINEMA
-            </span>
-            <span className="mt-2 block text-xl font-semibold leading-none">
-              {visual.label ?? item.name}
-            </span>
-          </div>
         </div>
-      </div>
+      ) : null}
 
       <div className="flex flex-col p-4">
-        <h3 className="text-lg font-semibold leading-tight text-[#1C0800]">
+        {!item.imageSrc ? (
+          <span className="mb-5 w-fit border border-[var(--border-subtle)] px-3 py-1 text-[10px] font-semibold text-[var(--text-secondary)]">
+            {item.badge}
+          </span>
+        ) : null}
+        <h3 className="text-lg font-semibold leading-tight text-[var(--text-primary)]">
           {item.name}
         </h3>
-        <p className="mt-2 min-h-10 text-xs leading-5 text-[#6D5847]">
+        <p className="mt-2 min-h-10 text-xs leading-5 text-[var(--text-secondary)]">
           {item.description}
         </p>
+        <dl className="mt-3 space-y-1 border-t border-[var(--border-subtle)] pt-3 text-xs text-[var(--text-secondary)]">
+          <div className="flex justify-between gap-3">
+            <dt>サイズ</dt>
+            <dd className="font-semibold text-[var(--text-primary)]">{item.sizeLabel}</dd>
+          </div>
+          <div className="flex justify-between gap-3">
+            <dt>アレルギー</dt>
+            <dd className="text-right font-semibold text-[var(--text-primary)]">{item.allergenNote}</dd>
+          </div>
+          <div className="flex justify-between gap-3">
+            <dt>販売状況</dt>
+            <dd className={isAvailable ? "font-semibold text-[var(--success)]" : "font-semibold text-[var(--danger)]"}>
+              {isAvailable ? "注文受付中" : "売り切れ"}
+            </dd>
+          </div>
+        </dl>
         <div className="mt-auto flex items-end justify-between gap-3 pt-4">
-          <p className="font-mono text-xl font-semibold text-[#1C0800]">
+          <p className="font-mono text-xl font-semibold text-[var(--text-primary)]">
             {formatPrice(item.price)}
           </p>
-          <div className="grid grid-cols-[36px_34px_36px] items-center border border-[#1C0800]/14 bg-white">
+          <div className="rounded-lg grid grid-cols-[44px_28px_44px] items-center border border-[var(--border-subtle)] bg-[var(--surface-bg)]">
             <button
               type="button"
               aria-label={item.name + "を減らす"}
               onClick={() => onQuantityChange(item.id, -1)}
-              className="grid h-9 place-items-center bg-white text-lg font-semibold text-[#5C3010] transition-colors hover:bg-[#F4EFE6]"
+              disabled={quantity === 0}
+              className="grid h-11 place-items-center bg-[var(--surface-bg)] text-lg font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-muted)] disabled:cursor-not-allowed disabled:opacity-35"
             >
               -
             </button>
-            <span className="grid h-9 place-items-center bg-[#F6F1E8] font-mono text-sm font-semibold text-[#1C0800]">
+            <span className="grid h-11 place-items-center bg-[var(--surface-muted)] font-mono text-sm font-semibold text-[var(--text-primary)]">
               {quantity}
             </span>
             <button
               type="button"
               aria-label={item.name + "を増やす"}
               onClick={() => onQuantityChange(item.id, 1)}
+              disabled={!isAvailable}
               className={[
-                "grid h-9 place-items-center bg-[#1C0800] text-lg font-semibold text-white transition-[transform,background-color] hover:bg-[#3A2A20]",
-                isBumping ? "is-bumping scale-110" : "",
+                "grid h-11 place-items-center bg-[var(--button-bg)] text-lg font-semibold text-white transition-[transform,background-color] hover:bg-[var(--button-hover)] disabled:cursor-not-allowed disabled:bg-[var(--disabled-bg)]",
+                isBumping ? "is-bumping" : "",
               ].join(" ")}
             >
               +
@@ -395,21 +367,37 @@ function FoodCard({ isBumping, item, onQuantityChange, quantity }) {
 function OrderSummary({ draft, onProceed, onSkip, order, summaryPulseKey }) {
   const ticketTotalPrice = draft.ticketTotalPrice ?? draft.totalPrice ?? 0;
   const totalPrice = ticketTotalPrice + order.totalPrice;
+  const showStartAt = draft.screeningDate && draft.screeningTime
+    ? `${draft.screeningDate}T${draft.screeningTime}:00+09:00`
+    : "";
+  const pickup = getFoodPickupWindow(showStartAt);
 
   return (
-    <aside className="lg:sticky lg:top-8 lg:h-fit">
-      <div className="border border-[#1C0800]/12 bg-[#FFFEF8] p-6 shadow-[0_18px_60px_rgba(28,8,0,0.07)]">
-        <p className="text-[10px] font-black uppercase tracking-[0.32em] text-[#8C5D2A]">
-          Optional
+    <aside className={"lg:sticky lg:top-28 lg:h-fit" + " " + panelStyles.panel}>
+      <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-bg)] p-6 shadow-sm">
+        <p className="text-[10px] font-black uppercase tracking-wide text-[var(--text-muted)]">
+          注文内容
         </p>
-        <h2 className="mt-2 text-2xl font-semibold text-[#1C0800]">
-          フードを追加
+        <h2 className="mt-2 text-2xl font-semibold text-[var(--text-primary)]">
+          ご注文の合計
         </h2>
-        <p className="mt-3 text-sm leading-6 text-[#8C5D2A]">
+        <p className="mt-3 text-sm leading-6 text-[var(--text-muted)]">
           選ばなくても支払いへ進めます。選んだ商品は購入内容に追加されます。
         </p>
 
-        <div className="mt-6 divide-y divide-[#1C0800]/10 border-y border-[#1C0800]/14">
+        <dl className="mt-5 space-y-3 border border-[var(--border-subtle)] bg-[var(--surface-muted)] p-4 text-sm">
+          <ReservationRow label="作品" value={draft.movieTitle ?? "作品名未設定"} />
+          <ReservationRow label="日時" value={`${draft.screeningDate ?? "--"} ${draft.screeningTime ?? "--"}`} />
+          <ReservationRow label="スクリーン" value={draft.screenName ?? "--"} />
+          <ReservationRow label="座席" value={(draft.seatLabels ?? draft.seatIds)?.join(", ") || "--"} />
+        </dl>
+
+        <div className="mt-4 border-l-4 border-[var(--danger)] bg-[var(--selection-soft)] p-4 text-sm leading-6 text-[var(--text-secondary)]">
+          <p className="font-bold text-[var(--text-primary)]">受取時間 {pickup.timeLabel}</p>
+          <p>受取場所 {pickup.locationLabel}</p>
+        </div>
+
+        <div className="mt-6 divide-y divide-[var(--border-subtle)] border-y border-[var(--border-subtle)]">
           <SummaryRow label="チケット" value={formatPrice(ticketTotalPrice)} />
           <SummaryRow label={`フード ${order.totalQuantity}点`} value={formatPrice(order.totalPrice)} />
           <SummaryRow
@@ -421,20 +409,20 @@ function OrderSummary({ draft, onProceed, onSkip, order, summaryPulseKey }) {
           />
         </div>
 
-        <div className="mt-5 min-h-20 space-y-2">
+        <div aria-live="polite" aria-atomic="true" className="mt-5 min-h-20 space-y-2">
           {order.items.length > 0 ? (
             order.items.map((item) => (
               <div key={item.id} className="flex justify-between gap-3 text-sm">
-                <span className="min-w-0 text-[#5C3010]">
+                <span className="min-w-0 text-[var(--text-secondary)]">
                   {item.name} x {item.quantity}
                 </span>
-                <span className="font-mono font-semibold text-[#1C0800]">
+                <span className="font-mono font-semibold text-[var(--text-primary)]">
                   {formatPrice(item.lineTotal)}
                 </span>
               </div>
             ))
           ) : (
-            <p className="text-sm text-[#8C5D2A]">
+            <p className="text-sm text-[var(--text-muted)]">
               フードはまだ選択されていません。
             </p>
           )}
@@ -443,7 +431,7 @@ function OrderSummary({ draft, onProceed, onSkip, order, summaryPulseKey }) {
         <button
           type="button"
           onClick={onProceed}
-          className="mt-6 w-full bg-[#1C0800] px-5 py-4 text-sm font-semibold tracking-[0.12em] text-white transition-colors hover:bg-[#3A2A20]"
+          className="mt-6 w-full bg-[var(--button-bg)] px-5 py-4 text-sm font-semibold tracking-[0.12em] text-white transition-colors hover:bg-[var(--button-hover)]"
         >
           支払いへ進む
         </button>
@@ -451,22 +439,31 @@ function OrderSummary({ draft, onProceed, onSkip, order, summaryPulseKey }) {
         <button
           type="button"
           onClick={onSkip}
-          className="mt-3 w-full border border-[#1C0800]/16 px-5 py-4 text-sm font-semibold text-[#5C3010] transition-colors hover:bg-[#F4EFE6]"
+          className="mt-3 w-full border border-[var(--border-subtle)] px-5 py-4 text-sm font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-muted)]"
         >
-          選ばず支払いへ
+          今回は注文しない
         </button>
       </div>
     </aside>
   );
 }
 
+function ReservationRow({ label, value }) {
+  return (
+    <div className="grid grid-cols-[72px_1fr] gap-3">
+      <dt className="text-[var(--text-muted)]">{label}</dt>
+      <dd className="text-right font-semibold text-[var(--text-primary)]">{value}</dd>
+    </div>
+  );
+}
+
 function SummaryRow({ label, value, large = false, pulse = false }) {
   return (
     <div className="flex items-center justify-between gap-4 py-4">
-      <span className="text-sm text-[#8C5D2A]">{label}</span>
+      <span className="text-sm text-[var(--text-muted)]">{label}</span>
       <span
         className={[
-          "text-right font-mono font-semibold text-[#1C0800]",
+          "text-right font-mono font-semibold text-[var(--text-primary)]",
           large ? "text-xl font-black" : "text-lg",
           pulse ? "food-summary-pulse" : "",
         ].join(" ")}
@@ -479,18 +476,18 @@ function SummaryRow({ label, value, large = false, pulse = false }) {
 
 function EmptyFoodSelection() {
   return (
-    <main className="mx-auto grid min-h-[70vh] max-w-2xl place-items-center px-4 py-12 text-[#1C0800]">
-      <section className="border border-[#1C0800]/14 bg-white p-8 text-center shadow-[0_18px_60px_rgba(28,8,0,0.08)]">
-        <p className="text-[10px] font-black uppercase tracking-[0.32em] text-[#8C5D2A]">
+    <main className="mx-auto grid min-h-[70vh] max-w-2xl place-items-center px-4 py-12 text-[var(--text-primary)]">
+      <section className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-bg)] p-8 text-center shadow-sm">
+        <p className="text-[10px] font-black uppercase tracking-wide text-[var(--text-muted)]">
           Food Selection
         </p>
-        <h1 className="mt-3 text-3xl font-black">座席選択から始めてください</h1>
-        <p className="mt-3 text-sm leading-6 text-[#8C5D2A]">
+        <h1 className="cinema-page-title mt-3">座席選択から始めてください</h1>
+        <p className="mt-3 text-sm leading-6 text-[var(--text-muted)]">
           フードは予約内容に追加するため、先に座席を選択する必要があります。
         </p>
         <Link
           href="/seats"
-          className="mt-6 inline-flex bg-[#1C0800] px-5 py-4 text-sm font-black text-white transition-colors hover:bg-[#2b2b2b]"
+          className="mt-6 inline-flex bg-[var(--button-bg)] px-5 py-4 text-sm font-black text-white transition-colors hover:bg-[var(--button-hover)]"
         >
           座席選択へ
         </Link>

@@ -6,6 +6,8 @@ export const foodCategories = [
   { id: "sweets", label: "スイーツ" },
 ];
 
+const popcornAdvertisementImageSrc = "/images/advertisement/Popcorn-b3ad4ecb.png";
+
 export const foodItems = [
   {
     id: "set-a",
@@ -14,7 +16,9 @@ export const foodItems = [
     categoryIds: ["recommended"],
     description: "ポップコーンとドリンクの定番セット",
     badge: "人気",
-    imageSrc: "/images/food/set-a.jpg",
+    sizeLabel: "各Mサイズ",
+    allergenNote: "商品ラベルで確認",
+    isAvailable: true,
     visual: {
       label: "Set",
       surface: "#F2EFE8",
@@ -28,7 +32,10 @@ export const foodItems = [
     categoryIds: ["recommended", "popcorn"],
     description: "映画館らしい軽い塩味",
     badge: "定番",
-    imageSrc: "/images/food/popcorn-salt.jpg",
+    imageSrc: popcornAdvertisementImageSrc,
+    sizeLabel: "Mサイズ",
+    allergenNote: "商品ラベルで確認",
+    isAvailable: true,
     visual: {
       label: "Popcorn",
       surface: "#F6F1E8",
@@ -42,7 +49,9 @@ export const foodItems = [
     categoryIds: ["recommended", "drinks"],
     description: "氷入りのすっきり炭酸",
     badge: "冷たい",
-    imageSrc: "/images/food/drink-cola.jpg",
+    sizeLabel: "Mサイズ",
+    allergenNote: "商品ラベルで確認",
+    isAvailable: true,
     visual: {
       label: "Drink",
       surface: "#E9EEF0",
@@ -56,7 +65,9 @@ export const foodItems = [
     categoryIds: ["recommended", "hot-snacks", "sweets"],
     description: "シナモン香るサクサク食感",
     badge: "甘い",
-    imageSrc: "/images/food/churros.jpg",
+    sizeLabel: "1本",
+    allergenNote: "商品ラベルで確認",
+    isAvailable: true,
     visual: {
       label: "Sweets",
       surface: "#F1E9E1",
@@ -70,7 +81,10 @@ export const foodItems = [
     categoryIds: ["popcorn"],
     description: "香ばしいキャラメルコート",
     badge: "甘口",
-    imageSrc: "/images/food/popcorn-caramel.jpg",
+    imageSrc: popcornAdvertisementImageSrc,
+    sizeLabel: "Mサイズ",
+    allergenNote: "商品ラベルで確認",
+    isAvailable: true,
     visual: {
       label: "Caramel",
       surface: "#EFE8DC",
@@ -84,7 +98,10 @@ export const foodItems = [
     categoryIds: ["popcorn"],
     description: "濃いめの香りで満足感あり",
     badge: "限定",
-    imageSrc: "/images/food/popcorn-butter-soy.jpg",
+    imageSrc: popcornAdvertisementImageSrc,
+    sizeLabel: "Mサイズ",
+    allergenNote: "商品ラベルで確認",
+    isAvailable: true,
     visual: {
       label: "Butter Soy",
       surface: "#ECE8DD",
@@ -98,7 +115,9 @@ export const foodItems = [
     categoryIds: ["drinks"],
     description: "鮮やかなグリーンの炭酸",
     badge: "爽快",
-    imageSrc: "/images/food/drink-melon-soda.jpg",
+    sizeLabel: "Mサイズ",
+    allergenNote: "商品ラベルで確認",
+    isAvailable: true,
     visual: {
       label: "Soda",
       surface: "#E7EFE8",
@@ -112,7 +131,9 @@ export const foodItems = [
     categoryIds: ["drinks"],
     description: "すっきり飲める無糖ティー",
     badge: "無糖",
-    imageSrc: "/images/food/drink-iced-tea.jpg",
+    sizeLabel: "Mサイズ",
+    allergenNote: "商品ラベルで確認",
+    isAvailable: true,
     visual: {
       label: "Tea",
       surface: "#E8ECE7",
@@ -126,7 +147,9 @@ export const foodItems = [
     categoryIds: ["hot-snacks"],
     description: "片手で食べやすい軽食",
     badge: "軽食",
-    imageSrc: "/images/food/hot-dog.jpg",
+    sizeLabel: "1本",
+    allergenNote: "商品ラベルで確認",
+    isAvailable: true,
     visual: {
       label: "Hot Snack",
       surface: "#EEE9E0",
@@ -140,7 +163,9 @@ export const foodItems = [
     categoryIds: ["hot-snacks"],
     description: "シェアしやすい細切りポテト",
     badge: "シェア",
-    imageSrc: "/images/food/fries.jpg",
+    sizeLabel: "Mサイズ",
+    allergenNote: "商品ラベルで確認",
+    isAvailable: true,
     visual: {
       label: "Fries",
       surface: "#EFECE3",
@@ -154,7 +179,9 @@ export const foodItems = [
     categoryIds: ["sweets"],
     description: "上映前に楽しむカップアイス",
     badge: "ひんやり",
-    imageSrc: "/images/food/ice-cream.jpg",
+    sizeLabel: "1カップ",
+    allergenNote: "商品ラベルで確認",
+    isAvailable: true,
     visual: {
       label: "Ice Cream",
       surface: "#ECEAF1",
@@ -168,7 +195,9 @@ export const foodItems = [
     categoryIds: ["sweets"],
     description: "バッグに入れやすいミニサイズ",
     badge: "ミニ",
-    imageSrc: "/images/food/chocolate.jpg",
+    sizeLabel: "ミニサイズ",
+    allergenNote: "商品ラベルで確認",
+    isAvailable: true,
     visual: {
       label: "Chocolate",
       surface: "#EAE4DE",
@@ -177,40 +206,16 @@ export const foodItems = [
   },
 ];
 
-const popcornAdvertisementImageSrc = "/images/advertisement/Popcorn-b3ad4ecb.png";
-
 export const foodHeroSlides = [
   {
     id: "popcorn-party",
     title: "上映前の定番",
     promoLabel: "Food Pre-Order",
-    productName: "シネマセットA",
-    priceLabel: "980円",
+    productName: "塩ポップコーン M",
+    priceLabel: "520円",
     offer: "座席予約と一緒に",
     visualLabel: "01",
     subtitle: "受け取りは劇場カウンターで。",
-    imageSrc: popcornAdvertisementImageSrc,
-  },
-  {
-    id: "drink-refresh",
-    title: "静かなドリンク時間",
-    promoLabel: "Drink",
-    productName: "メロンソーダ",
-    priceLabel: "390円",
-    offer: "上映前に受け取り",
-    visualLabel: "02",
-    subtitle: "氷入りドリンクも事前に選べます。",
-    imageSrc: popcornAdvertisementImageSrc,
-  },
-  {
-    id: "snack-night",
-    title: "長編にも合う軽食",
-    promoLabel: "Snack",
-    productName: "ホットドッグセット",
-    priceLabel: "620円",
-    offer: "軽く食べたい時に",
-    visualLabel: "03",
-    subtitle: "席に入る前に、手早く受け取れます。",
     imageSrc: popcornAdvertisementImageSrc,
   },
 ];
@@ -220,6 +225,11 @@ export function getFoodItemsByCategory(categoryId) {
 }
 
 export function updateFoodQuantity(selection, foodId, delta) {
+  const item = foodItems.find((foodItem) => foodItem.id === foodId);
+  if (!item || (delta > 0 && item.isAvailable === false)) {
+    return selection;
+  }
+
   const currentQuantity = selection[foodId] ?? 0;
   const nextQuantity = Math.max(0, currentQuantity + delta);
   const nextSelection = { ...selection };
@@ -238,7 +248,7 @@ export function buildFoodOrder(selection) {
     .map((item) => {
       const quantity = selection[item.id] ?? 0;
 
-      if (quantity <= 0) {
+      if (quantity <= 0 || item.isAvailable === false) {
         return null;
       }
 

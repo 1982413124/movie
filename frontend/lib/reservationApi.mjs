@@ -1,3 +1,4 @@
+import { memberFetch, MemberApiError } from "./member-api.mjs";
 import { normalizeTicketTypes } from "./seatSelection.mjs";
 
 const defaultApiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:5000";
@@ -62,6 +63,7 @@ export function buildReservationPayload(draft, userEmail = "", paymentMethod = "
     screening_id: draft?.screeningId,
     screening_time: draft?.screeningTime,
     screening_date: draft?.screeningDate,
+    ...(draft?.endTime ? { end_time: draft.endTime } : {}),
     screen_id: draft?.screenId,
     screen_name: draft?.screenName,
     screen_capacity: Number(draft?.screenCapacity ?? 0),
@@ -92,7 +94,7 @@ export async function fetchReservedSeats(
   );
 
   if (!response.ok) {
-    return [];
+    throw new Error("座席情報を取得できませんでした。");
   }
 
   return normalizeReservedSeatsResponse(await response.json());
@@ -101,29 +103,43 @@ export async function fetchReservedSeats(
 export async function createReservation(
   draft,
   {
-    apiBaseUrl = defaultApiBaseUrl,
+    apiBaseUrl,
     fetchImpl = fetch,
     paymentMethod = "",
     userEmail = "",
+    couponCode = "",
+    pointsToUse = 0,
+    expectedTotal,
+    contactEmail = "",
   } = {},
 ) {
-  const response = await fetchImpl(`${getApiBaseUrl(apiBaseUrl)}/api/reservations`, {
+  let response;
+  try {
+    response = await memberFetch("reservations", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(buildReservationPayload(draft, userEmail, paymentMethod)),
-  });
+    body: JSON.stringify({ ...buildReservationPayload(draft, userEmail, paymentMethod),
+      coupon_code: couponCode, points_to_use: pointsToUse, contact_email: contactEmail,
+      ...(expectedTotal === undefined ? {} : { expected_total: expectedTotal }),
+    }),
+    }, { apiBaseUrl, fetchImpl, optional: !userEmail });
+  } catch (error) {
+    if (error instanceof MemberApiError) return { ok: false, conflict: false, message: error.message };
+    throw error;
+  }
   const payload = await safeReadJson(response);
 
   if (response.ok) {
     return {
       ok: true,
       reservationId: payload?.reservation_id,
+      pricing: payload,
     };
   }
 
-  if (response.status === 409) {
+  if (response.status === 409 && Array.isArray(payload?.conflict_seats)) {
     return {
       ok: false,
       conflict: true,
@@ -135,7 +151,22 @@ export async function createReservation(
     ok: false,
     conflict: false,
     message: payload?.message ?? payload?.error ?? "reservation_failed",
+    code: payload?.code,
   };
+}
+
+export async function quoteReservation(draft, { couponCode = "", pointsToUse = 0, signal, ...options } = {}) {
+  const response = await memberFetch("reservations/quote", {
+    method: "POST", headers: { "Content-Type": "application/json" }, signal,
+    body: JSON.stringify({ ...buildReservationPayload(draft), coupon_code: couponCode, points_to_use: pointsToUse }),
+  }, { ...options, optional: true });
+  const payload = await safeReadJson(response);
+  if (!response.ok) {
+    const error = new MemberApiError(payload.message ?? "料金を確認できませんでした。", response.status);
+    error.code = payload.code;
+    throw error;
+  }
+  return payload;
 }
 
 async function safeReadJson(response) {

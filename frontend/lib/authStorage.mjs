@@ -40,6 +40,9 @@ function buildStoredAccount(input, existingAccount = {}) {
     name: normalizeText(input.name ?? existingAccount.name),
     password: String(input.password ?? existingAccount.password ?? ""),
     phone: normalizeText(input.phone ?? existingAccount.phone),
+    ...(input.createdAt !== undefined || existingAccount.createdAt !== undefined
+      ? { createdAt: normalizeText(input.createdAt ?? existingAccount.createdAt) }
+      : {}),
     ...(input.nickname !== undefined || existingAccount.nickname !== undefined
       ? { nickname: normalizeText(input.nickname ?? existingAccount.nickname) }
       : {}),
@@ -167,4 +170,19 @@ export function updateCurrentAccount(storage, updates) {
     ok: true,
     account,
   };
+}
+
+// Profile fields may be cached locally; the server session supplies the identity.
+export function storeMemberAccount(storage, user) {
+  const accounts = readAccounts(storage).map((account) => ({ ...account, password: "" }));
+  const index = findAccountIndex(accounts, user.email);
+  const account = buildStoredAccount({
+    email: user.email, name: user.name, password: "",
+    ...(user.created_at ? { createdAt: user.created_at } : {}),
+  }, index >= 0 ? accounts[index] : {});
+  if (index >= 0) accounts[index] = account;
+  else accounts.push(account);
+  writeAccounts(storage, accounts);
+  storage.setItem(currentUserStorageKey, account.email);
+  return account;
 }

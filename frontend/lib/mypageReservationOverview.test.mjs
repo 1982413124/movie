@@ -6,62 +6,44 @@ import { fileURLToPath } from "node:url";
 
 const currentDir = dirname(fileURLToPath(import.meta.url));
 const appDir = resolve(currentDir, "../app");
+const source = readFileSync(resolve(appDir, "mypage/page.tsx"), "utf8");
 
-test("mypage side menu routes between reservation, history, profile, and settings panels", () => {
-  const source = readFileSync(resolve(appDir, "mypage/page.tsx"), "utf8");
-
-  for (const label of ["予約履歴", "購入履歴", "プロフィール", "設定", "ログアウト"]) {
+test("mypage menu routes between reservations, history, points, profile, and settings", () => {
+  for (const label of ["次の予約", "購入履歴", "ポイント", "プロフィール", "設定", "ログアウト"]) {
     assert.match(source, new RegExp(label));
   }
 
-  assert.match(source, /type MenuKey = "reservations" \| "history" \| "profile" \| "settings" \| "logout"/);
+  const menuKeys = source.match(/type MenuKey = ([^;]+);/)[1].match(/"[^"]+"/g);
+  assert.deepEqual(new Set(menuKeys), new Set(["reservations", "history", "points", "profile", "settings", "logout"].map(key => `"${key}"`)));
   assert.match(source, /setActiveMenu\(menuKey\)/);
   assert.match(source, /activeMenu === "reservations"/);
   assert.match(source, /activeMenu === "history"/);
+  assert.match(source, /activeMenu === "points"/);
+  assert.match(source, /<PointsPanel/);
   assert.doesNotMatch(source, /ウィッシュリスト|wishlist|Member Card|Member ID/);
 });
 
-test("mypage reservation and purchase panels show seats, totals, and history detail", () => {
-  const source = readFileSync(resolve(appDir, "mypage/page.tsx"), "utf8");
-
-  assert.match(source, /ReservationStatusPanel/);
+test("mypage shows the next paid reservation and detailed history", () => {
+  assert.match(source, /NextReservationPanel/);
   assert.match(source, /PurchaseHistoryPanel/);
-  assert.match(source, /予約履歴/);
-  assert.match(source, /購入履歴/);
-  assert.match(source, /座席/);
-  assert.match(source, /seat-pill/);
-  assert.match(source, /購入日時/);
-  assert.match(source, /合計金額/);
-  assert.match(source, /fetchReservationHistories/);
-  assert.match(source, /createReservationSeatDisplay/);
-  assert.match(source, /latestReservation\.screeningId/);
-  assert.match(source, /overflow-x-auto/);
-  assert.match(source, /gridTemplateColumns/);
-  assert.match(source, /selectedHistoryId/);
-  assert.match(source, /PurchaseHistoryDetailPanel/);
-  assert.match(source, /reservationHistoryTypes/);
-  assert.doesNotMatch(source, /purchase-history\/types/);
-  assert.match(source, /setSelectedHistoryId\(history\.id\)/);
+  assert.match(source, /ReservationDetailPanel/);
+  assert.match(source, /findNextReservation/);
+  assert.match(source, /getFoodPickupDetails/);
+  assert.match(source, /次の予約はありません/);
   assert.match(source, /購入履歴へ戻る/);
-  assert.match(source, /予約履歴を見る/);
-  assert.match(source, /映画詳細/);
-  assert.match(source, /座席表/);
-  assert.match(source, /購入したフード/);
-  assert.match(source, /券種/);
-  assert.doesNotMatch(source, /href="\/purchase-history"/);
-  assert.doesNotMatch(source, /\/purchase-history\/\$\{encodeURIComponent/);
-  assert.doesNotMatch(source, /ticketHistoryItems/);
+  assert.match(source, /チケット小計/);
+  assert.match(source, /フード小計/);
+  assert.match(source, /受取時間/);
+  assert.match(source, /fetchReservationHistories/);
 });
 
 test("mypage asks for confirmation before canceling a reservation", () => {
-  const source = readFileSync(resolve(appDir, "mypage/page.tsx"), "utf8");
-
-  assert.match(source, /pendingCancelReservationId/);
+  assert.match(source, /pendingCancelId/);
   assert.match(source, /CancelReservationModal/);
   assert.match(source, /role="dialog"/);
   assert.match(source, /aria-modal="true"/);
-  assert.match(source, /本当にキャンセルしますか/);
-  assert.match(source, /handleConfirmCancelReservation/);
-  assert.match(source, /onCancelReservationRequest/);
-  assert.doesNotMatch(source, /onClick=\{\(\) => onCancelReservation\(history\.id\)\}/);
+  assert.match(source, /この予約をキャンセルしますか/);
+  assert.match(source, /handleConfirmCancel/);
+  assert.match(source, /canCancelReservation/);
+  assert.match(source, /上映開始の1時間前/);
 });

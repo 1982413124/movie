@@ -1,0 +1,146 @@
+.bookingLayout { width:min(calc(100% - 80px),1480px); margin:0 auto; display:grid; grid-template-columns:220px minmax(0,1fr); align-items:start; gap:36px; padding:28px 0 136px; }
+.bookingMain { min-width:0; }
+.filmAside { position:sticky; top:108px; }
+.poster { position:relative; aspect-ratio:2/3; overflow:hidden; border-radius:8px; background:var(--surface-inverse); box-shadow:0 5px 18px #12121216; }
+.theater { display:flex; align-items:center; gap:6px; margin-top:18px; color:var(--text-secondary); font-size:12px; font-weight:700; }
+.theater svg { width:16px; height:16px; flex-shrink:0; }
+.backLink { display:inline-block; margin-top:14px; padding:6px 0; font-size:12px; text-decoration:underline; text-underline-offset:4px; }
+.backLink:hover { color:var(--accent); }
+.filmHeading { position:relative; }
+.eyebrow { position:absolute; right:0; top:13px; font-size:11px; font-weight:700; color:var(--accent); letter-spacing:.08em; }
+.filmHeading h1 { margin-top:0; padding-right:100px; font-size:36px; font-weight:850; letter-spacing:-.025em; line-height:1.18; }
+.filmDescription { display:flex; align-items:center; flex-wrap:wrap; gap:8px 20px; margin-top:10px; }
+.filmMeta { display:flex; align-items:center; gap:12px; margin-top:0; font-size:12px; font-weight:700; color:var(--text-secondary); }
+.filmMeta span+span { padding-left:12px; border-left:1px solid var(--border-strong); }
+.catchphrase { margin-top:0; font-size:14px; color:var(--text-secondary); }
+.dateSection { display:flex; align-items:end; gap:24px; margin-top:18px; padding-bottom:18px; border-bottom:1px solid var(--border-soft); }
+.calendarWrapper { position:relative; width:366px; flex-shrink:0; z-index:10; }
+.fieldLabel { display:block; font-size:13px; font-weight:700; margin-bottom:8px; }
+.dateTrigger { display:flex; align-items:center; gap:10px; width:100%; min-height:50px; padding:10px 14px; border:1px solid var(--border-strong); border-radius:6px; background:var(--surface-bg); font-size:15px; font-weight:700; cursor:pointer; transition:border-color 150ms,box-shadow 150ms; }
+.dateTrigger:hover, .dateTrigger[aria-expanded="true"] { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent); }
+.dateTrigger:disabled { cursor:default; color:var(--text-muted); box-shadow:none; }
+.dateTrigger>svg { width:20px; height:20px; color:var(--accent); flex-shrink:0; }
+.dateTrigger>svg:last-child { margin-left:auto; width:16px; height:16px; color:var(--text-secondary); transition:transform 160ms; }
+.dateTrigger>svg.chevronOpen { transform:rotate(180deg); }
+.todayTag { font-size:10px; color:var(--accent); padding:2px 5px; border:1px solid var(--selection-border); border-radius:3px; }
+.dateHint { padding-bottom:4px; font-size:12px; color:var(--text-secondary); line-height:1.8; }
+.dateHint p { font-weight:700; color:var(--text-primary); }
+.calendarPopover { position:absolute; top:calc(100% + 8px); left:0; width:350px; padding:14px; border:1px solid var(--border-strong); border-radius:10px; box-shadow:0 12px 32px #12121224; background:var(--surface-bg); transform-origin:top left; animation:popoverIn 160ms ease-out; }
+.monthNavigation { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
+.monthNavigation h3 { font-size:16px; font-weight:700; }
+.monthNavigation button { display:grid; place-items:center; width:36px; height:36px; background:var(--surface-muted); border:1px solid var(--border-soft); border-radius:5px; cursor:pointer; transition:background 150ms,color 150ms; }
+.monthNavigation button:hover:not(:disabled) { background:var(--selection-soft); color:var(--accent); }
+.monthNavigation button:disabled { color:var(--disabled-text); background:transparent; border-color:transparent; cursor:default; opacity:.45; }
+.monthNavigation svg { width:17px; height:17px; }
+.calendarGrid { table-layout:fixed; width:100%; border-collapse:separate; border-spacing:3px; }
+.calendarGrid th { height:25px; font-size:11px; font-weight:500; color:var(--text-secondary); }
+.calendarGrid th:first-child { color:var(--accent); }
+.calendarGrid th:last-child { color:var(--text-primary); }
+.calendarGrid td { padding:0; vertical-align:middle; }
+.calendarDay { width:100%; height:42px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:0; border:1px solid transparent; border-radius:5px; background:transparent; font-size:14px; font-weight:700; line-height:1.2; cursor:pointer; transition:background 140ms,color 140ms,transform 100ms; }
+.calendarDay:hover:not(:disabled) { border-color:var(--accent); background:var(--selection-soft); }
+.calendarDay:active:not(:disabled) { transform:scale(.97); }
+.calendarDay:disabled { color:var(--text-muted); background:var(--surface-muted); font-weight:400; cursor:default; }
+.calendarDay.otherMonth { background:transparent; opacity:.5; }
+.calendarDay.dateToday { border-color:var(--border-strong); }
+.calendarDay.dateSelected { color:var(--selection-text); background:var(--selection-bg); border-color:var(--selection-border); font-weight:700; }
+.calendarDay.dateSelected:hover { background:var(--button-hover); color:var(--button-text); }
+.dayMarker { display:block; height:12px; font-size:8px; font-weight:700; color:var(--accent); line-height:12px; }
+.dateSelected .dayMarker { color:inherit; }
+.calendarLegend { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:10px; padding-top:11px; border-top:1px solid var(--border-soft); color:var(--text-secondary); font-size:10px; }
+.calendarLegend b { color:var(--accent); }
+.calendarHelp { margin-top:7px; font-size:10px; color:var(--text-secondary); }
+.screeningsSection { padding-top:21px; }
+.sectionHeading { display:flex; align-items:center; justify-content:space-between; gap:20px; margin-bottom:14px; }
+.sectionHeading h2 { font-size:21px; line-height:1.4; font-weight:750; }
+.sectionHeading p { margin-top:4px; color:var(--text-secondary); font-size:12px; }
+.availabilityLegend { display:flex; gap:15px; font-size:11px; color:var(--text-secondary); }
+.availabilityLegend span { white-space:nowrap; }
+.screeningsContent { min-height:280px; }
+.screeningGrid { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:12px; animation:screeningsIn 180ms ease-out; }
+.screeningCard { scroll-margin-block:110px; position:relative; display:flex; flex-direction:column; align-items:flex-start; min-width:0; min-height:135px; padding:14px 15px 0; border:1px solid var(--border-strong); border-radius:7px; background:var(--surface-bg); color:var(--text-primary); text-align:left; cursor:pointer; transition:border-color 150ms,background-color 150ms,color 150ms,box-shadow 150ms,transform 100ms; }
+.screeningCard:hover:not(:disabled) { border-color:var(--accent); background:var(--selection-soft); box-shadow:0 3px 9px #12121210; }
+.screeningCard:active:not(:disabled) { transform:scale(.985); }
+.screeningCard[data-selected="true"] { border-color:var(--selection-border); background:var(--selection-bg); color:var(--selection-text); box-shadow:0 0 0 1px var(--selection-border); }
+.screeningCard[data-selected="true"]:hover { background:var(--button-hover); }
+.screeningStart { font-family:var(--font-geist-sans),Arial,sans-serif; font-size:30px; font-weight:800; line-height:1; letter-spacing:-.035em; font-variant-numeric:tabular-nums; }
+.screeningEnd { display:flex; gap:6px; margin-top:7px; font-size:13px; font-weight:600; color:var(--text-secondary); }
+.screeningEnd>span { align-self:center; font-size:9px; font-weight:400; }
+.screenName { margin-top:10px; font-size:10px; font-weight:700; letter-spacing:.055em; }
+.availability { display:flex; align-items:center; gap:5px; width:calc(100% + 30px); min-height:32px; margin:10px -15px 0; padding:6px 15px; border-top:1px solid var(--border-soft); border-radius:0 0 6px 6px; background:var(--surface-muted); color:var(--text-primary); font-size:11px; font-weight:600; line-height:1.3; }
+.availability b { font-size:13px; font-weight:800; }
+.availability svg { width:14px; height:14px; }
+.screeningCard[data-status="few"] .availability { color:var(--accent); background:var(--selection-soft); }
+.screeningCard[data-selected="true"] .screeningEnd { color:inherit; }
+.screeningCard[data-selected="true"] .availability { color:inherit; background:#00000010; border-color:#ffffff40; }
+.selectedCheck { position:absolute; top:12px; right:10px; display:grid; place-items:center; width:18px; height:18px; border:1px solid currentColor; border-radius:50%; animation:checkIn 140ms ease-out; }
+.selectedCheck svg { width:13px; height:13px; stroke-width:3; }
+.screeningCard:disabled { cursor:not-allowed; background:var(--surface-muted); box-shadow:none; }
+.screeningCard[data-status="closed"] .screeningStart, .screeningCard[data-status="sold-out"] .screeningStart, .screeningCard[data-status="not-on-sale"] .screeningStart { color:var(--text-secondary); }
+.screeningCard:disabled .availability { border-top-style:dashed; }
+.screeningCard:disabled[data-selected="true"] { background:var(--selection-bg); }
+.screeningNote { margin-top:12px; color:var(--text-secondary); font-size:11px; }
+.screeningSkeleton { height:135px; padding:18px; border:1px solid var(--border-soft); border-radius:7px; background:var(--surface-bg); }
+.screeningSkeleton i { display:block; width:70%; height:22px; margin-bottom:13px; border-radius:3px; background:var(--surface-muted); animation:loadingPulse 900ms ease-in-out infinite alternate; }
+.screeningSkeleton i:nth-child(2) { width:85%; height:10px; }
+.screeningSkeleton i:nth-child(3) { width:60%; height:10px; }
+.scheduleState { display:flex; min-height:240px; flex-direction:column; align-items:center; justify-content:center; gap:12px; padding:28px; border:1px solid var(--border-soft); border-radius:8px; background:var(--surface-bg); text-align:center; animation:screeningsIn 180ms ease-out; }
+.scheduleState strong { font-size:17px; }
+.scheduleState p { font-size:13px; color:var(--text-secondary); }
+.scheduleState button { margin-top:6px; }
+.ticketSection { display:flex; align-items:center; gap:32px; margin-top:26px; padding:21px 0 0; border-top:1px solid var(--border-soft); }
+.ticketSection h2 { font-size:16px; font-weight:700; }
+.ticketSection p { margin-top:5px; font-size:11px; color:var(--text-secondary); }
+.ticketSection dl { display:grid; flex:1; grid-template-columns:repeat(4,1fr); gap:16px; }
+.ticketSection dt { color:var(--text-secondary); font-size:11px; }
+.ticketSection dd { margin-top:4px; font-size:19px; font-weight:750; font-variant-numeric:tabular-nums; }
+.bookingBar { position:fixed; inset:auto 0 0; z-index:30; padding:14px 0; border-top:1px solid var(--border-strong); background:var(--surface-bg); box-shadow:0 -3px 18px #12121209; }
+.bookingBarInner { display:grid; grid-template-columns:minmax(0,1fr) 270px; gap:0 24px; align-items:center; width:min(calc(100% - 80px),1480px); margin:auto; }
+.bookingSummary { min-width:0; }
+.selectedSummary { display:flex; align-items:center; gap:14px; animation:summaryIn 180ms ease-out; }
+.selectedSummary>svg { width:27px; height:27px; color:var(--accent); flex-shrink:0; }
+.summaryCaption { display:block; font-size:10px; color:var(--text-secondary); font-weight:600; }
+.selectedSummary p { display:flex; align-items:center; flex-wrap:wrap; gap:20px; margin-top:3px; font-size:14px; font-weight:600; }
+.selectedSummary strong { font-size:21px; font-variant-numeric:tabular-nums; font-weight:800; }
+.noSelection { margin-top:4px; font-size:16px; font-weight:700; }
+.proceedButton { min-height:52px; font-size:15px; border-radius:6px; }
+.proceedButton svg { width:20px; height:20px; }
+.proceedButton:disabled { background:var(--disabled-bg); color:var(--disabled-text); cursor:not-allowed; }
+.proceedButton:not(:disabled):hover svg { transform:translateX(3px); }
+.proceedButton svg { transition:transform 150ms; }
+.bookingError { grid-column:1 / -1; margin-top:9px; font-size:12px; color:var(--danger); animation:screeningsIn 150ms ease-out; }
+.spinner { width:17px; height:17px; border:2px solid currentColor; border-right-color:transparent; border-radius:50%; animation:spin 800ms linear infinite; }
+.bookingLayout button:focus-visible, .bookingBar button:focus-visible, .bookingLayout a:focus-visible { outline:3px solid var(--focus-ring); outline-offset:3px; }
+@media (max-width:1440px) {
+  .bookingLayout { width:calc(100% - 64px); grid-template-columns:190px minmax(0,1fr); gap:28px; padding-top:22px; }
+  .filmHeading h1 { font-size:32px; }
+  .screeningGrid { grid-template-columns:repeat(5,minmax(0,1fr)); gap:10px; }
+  .screeningCard { padding:12px 13px 0; min-height:129px; }
+  .screeningStart { font-size:28px; }
+  .availability { width:calc(100% + 26px); margin-inline:-13px; padding-inline:13px; }
+  .dateSection { margin-top:18px; padding-bottom:18px; }
+  .screeningsSection { padding-top:18px; }
+  .calendarPopover { padding:11px; }
+  .calendarDay { height:36px; }
+  .calendarHelp { display:none; }
+  .ticketSection { gap:20px; }
+  .bookingBarInner { width:calc(100% - 64px); }
+}
+@keyframes popoverIn { from { opacity:0; transform:translateY(-4px) scale(.99); } to { opacity:1; transform:none; } }
+@keyframes screeningsIn { from { opacity:.6; transform:translateY(4px); } to { opacity:1; transform:none; } }
+@keyframes summaryIn { from { opacity:.6; transform:translateY(5px); } to { opacity:1; transform:none; } }
+@keyframes checkIn { from { opacity:0; transform:scale(.8); } to { opacity:1; transform:scale(1); } }
+@keyframes loadingPulse { from { opacity:.45; } to { opacity:1; } }
+@keyframes spin { to { transform:rotate(360deg); } }
+@media (prefers-reduced-motion:reduce) {
+  .calendarPopover, .screeningGrid, .selectedSummary, .selectedCheck, .scheduleState, .bookingError, .screeningSkeleton i, .spinner { animation:none; }
+  .screeningCard, .calendarDay, .dateTrigger, .dateTrigger>svg, .proceedButton svg { transition:none; }
+  .screeningCard:active:not(:disabled), .calendarDay:active:not(:disabled) { transform:none; }
+}
+
+.closedScreenings { margin-top:14px; border:1px solid var(--border-soft); border-radius:6px; background:var(--surface-bg); }
+.closedScreenings summary { padding:12px 15px; font-size:12px; font-weight:600; color:var(--text-secondary); cursor:pointer; }
+.closedScreenings[open] summary { border-bottom:1px solid var(--border-soft); }
+.closedScreenings>div { padding:14px; }
+.screeningsTransition { animation:screeningsIn 180ms ease-out; }
+@media (prefers-reduced-motion:reduce) { .screeningsTransition { animation:none; } }

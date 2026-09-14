@@ -3,84 +3,54 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
+import { toMovieCard } from "./public-movie-catalog.mjs";
 
 const currentDir = dirname(fileURLToPath(import.meta.url));
 const appDir = resolve(currentDir, "../app");
 
-test("home movie catalog uses replaceable local image paths with alt text", () => {
-  const sourcePath = resolve(appDir, "data/movieCatalog.ts");
-
-  assert.ok(
-    existsSync(sourcePath),
-    "expected movie catalog data to live in app/data/movieCatalog.ts"
-  );
-
-  const source = readFileSync(sourcePath, "utf8");
-
-  for (const imagePath of [
-    "/images/man.jpg",
-    "/images/gozira.jpg",
-    "/images/harry.png",
-  ]) {
-    assert.match(source, new RegExp(imagePath.replaceAll("/", "\\/")));
+test("home movie cards preserve database poster images and descriptive alt text", () => {
+  for (const imagePath of ["/images/man.jpg", "/images/gozira.jpg"]) {
+    assert.ok(existsSync(resolve(currentDir, "../public", imagePath.slice(1))));
+    const card = toMovieCard({ id: "test-movie", title: "テスト作品", duration_minutes: 120, status: "NOW_SHOWING", poster_image: imagePath });
+    assert.equal(card.imageSrc, imagePath);
+    assert.equal(card.imageAlt, "テスト作品のポスター");
   }
-
-  const altEntries = source.match(/imageAlt:\s*"[^"]+"/g) ?? [];
-  assert.ok(altEntries.length >= 4, "expected hero and movie image alt text");
+  const uploaded = toMovieCard({ id: "new-movie", title: "新しい作品", duration_minutes: 100, status: "UNSCHEDULED", poster_image: "/api/cinema/media/test.webp" });
+  assert.equal(uploaded.imageSrc, "/api/cinema/media/test.webp");
+  assert.equal(uploaded.imageAlt, "新しい作品のポスター");
 });
 
-test("home campaign experience uses GSAP with movie and food entry points", () => {
+test("home leads with the combined movie and food reservation", () => {
   const source = readFileSync(resolve(appDir, "page.tsx"), "utf8");
 
-  assert.match(source, /gsap/);
-  assert.match(source, /ScrollTrigger/);
-  assert.match(source, /js-loader/);
-  assert.match(source, /js-loader-progress/);
-  assert.match(source, /href="\/movie-detail"/);
-  assert.match(source, /href="\/register"/);
-  assert.match(source, /Food × Cinema Experience/);
-  assert.match(source, /FOOD MENU/);
-  assert.doesNotMatch(source, /description/);
-  assert.doesNotMatch(source, /ポスター画像は|迷わず進める|世界観を保ちます/);
+  assert.match(source, /映画とフードを、/);
+  assert.match(source, /まとめて予約。/);
+  assert.match(source, /映画を選ぶ/);
+  assert.match(source, /本日観られる映画を見る/);
+  assert.match(source, /HomeMemberPanel/);
+  assert.doesNotMatch(source, /gsap|ScrollTrigger|js-loader/);
 });
 
-test("home campaign palette uses warm cream and red cinema accents", () => {
-  const homeSource = readFileSync(resolve(appDir, "page.tsx"), "utf8");
+test("home palette uses neutral surfaces with HAL red as the limited accent", () => {
   const styleSource = readFileSync(resolve(appDir, "globals.css"), "utf8");
-  const catalogSource = readFileSync(
-    resolve(appDir, "data/movieCatalog.ts"),
-    "utf8"
-  );
-  const combinedSource = `${homeSource}\n${styleSource}\n${catalogSource}`;
 
-  assert.match(homeSource, /bg-\[#FFF8E1\]/);
-  assert.match(homeSource, /text-\[#1C0800\]/);
-  assert.match(homeSource, /#E82020/);
-  assert.doesNotMatch(
-    combinedSource,
-    /#d8a85f|#7bb9a9|#b65f58|#8b8fbc|rgba\(216,\s*168,\s*95|rgba\(123,\s*185,\s*169/i
-  );
+  assert.match(styleSource, /--page-bg:\s*#f4f5f5/i);
+  assert.match(styleSource, /--surface-bg:\s*#ffffff/i);
+  assert.match(styleSource, /--surface-muted:\s*#f0f1f1/i);
+  assert.match(styleSource, /--text-primary:\s*#121212/i);
+  assert.match(styleSource, /--text-secondary:\s*#62676d/i);
+  assert.match(styleSource, /--text-muted:\s*#686d72/i);
+  assert.match(styleSource, /--accent:\s*#ce332b/i);
+  assert.match(styleSource, /--accent-strong:\s*#b42b25/i);
 });
 
-test("home campaign uses animated navigation with public menu links", () => {
-  const source = readFileSync(resolve(appDir, "page.tsx"), "utf8");
+test("shared header keeps public menu links accessible", () => {
+  const source = readFileSync(resolve(appDir, "components/CampaignHeader.tsx"), "utf8");
 
-  assert.match(source, /js-menu-panel/);
-  assert.match(source, /js-menu-line-top/);
-  assert.match(source, /aria-expanded=\{isOpen\}/);
+  assert.match(source, /aria-expanded=\{isMenuOpen\}/);
+  assert.match(source, /aria-label="メインナビゲーション"/);
 
-  for (const navLabel of [
-    "ホーム",
-    "上映中の作品",
-    "検索",
-    "マイページ",
-    "上映スケジュール",
-    "映画一覧",
-    "劇場案内",
-    "ご利用ガイド",
-  ]) {
+  for (const navLabel of ["ホーム", "作品を探す", "検索", "マイページ", "劇場案内", "ご利用ガイド"]) {
     assert.match(source, new RegExp(navLabel));
   }
-
-  assert.doesNotMatch(source, /購入情報確認|予約状況確認|My Tickets|Confirm/);
 });

@@ -1,11 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import CampaignHeader from "../components/CampaignHeader";
 import { useRouter } from "next/navigation";
 import type { ChangeEvent, FormEvent } from "react";
 import { useState } from "react";
+import { useToastError } from "@/lib/use-toast-error";
 
 type StoredAccount = {
+  createdAt?: string;
   email: string;
   name: string;
   password: string;
@@ -15,8 +18,6 @@ type StoredAccount = {
 
 export default function LoginPage() {
   const router = useRouter();
-  const apiBaseUrl =
-    process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:5000";
 
   const [form, setForm] = useState({
     email: "",
@@ -24,6 +25,7 @@ export default function LoginPage() {
   });
   const [errorMessage, setErrorMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  useToastError(errorMessage);
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
@@ -41,7 +43,8 @@ export default function LoginPage() {
     setErrorMessage("");
 
     try {
-      const response = await fetch(`${apiBaseUrl}/api/login`, {
+      const response = await fetch("/api/cinema/login", {
+        credentials: "same-origin",
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -97,6 +100,7 @@ export default function LoginPage() {
       );
 
       const nextAccount: StoredAccount = {
+        createdAt: payload.user.created_at ?? "",
         email: currentEmail,
         name: currentName,
         password: "",
@@ -107,6 +111,8 @@ export default function LoginPage() {
       if (accountIndex >= 0) {
         accounts[accountIndex] = {
           ...accounts[accountIndex],
+          password: "",
+          createdAt: payload.user.created_at ?? accounts[accountIndex].createdAt ?? "",
           email: currentEmail,
           name: currentName,
         };
@@ -126,64 +132,66 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#F7F5F0] text-[#17130F]">
-      <header className="flex h-16 items-center border-b border-[#DDD8CF] px-5 sm:px-8">
-        <Link href="/" className="text-2xl font-black uppercase tracking-[0.18em]">
-          HAL CINEMA
-        </Link>
-      </header>
+    <div className="min-h-screen bg-[var(--page-bg)] text-[var(--text-primary)]">
+      <CampaignHeader />
 
-      <section className="flex min-h-[calc(100vh-64px)] items-center justify-center px-5 py-12">
-        <div className="w-full max-w-[368px]">
-          <p className="mb-5 text-center text-xl font-bold">ログイン</p>
+      <main className="cinema-container flex justify-center py-10">
+        <div className="w-full max-w-[460px]">
+          <h1 className="mb-6 text-center text-[32px] font-bold">ログイン</h1>
 
-          <div className="overflow-hidden rounded-[6px] border border-[#D6D2CA] bg-white">
-            <div className="border-b border-[#E4E0D8] px-7 py-8 text-center">
-              <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-[#8B8073]">
+          <div className="overflow-hidden rounded-[6px] border border-[var(--border-soft)] bg-[var(--surface-bg)]">
+            <div className="border-b border-[var(--border-soft)] px-7 py-8 text-center">
+              <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--text-muted)]">
                 HAL CINEMA MEMBER
               </p>
-              <p className="mt-3 text-sm leading-6 text-[#5F574F]">
-                登録済みのメールアドレスでマイページへ進みます。
+              <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
+                メールアドレスとパスワードを入力してください。
               </p>
             </div>
 
-            <form className="px-7 py-7" onSubmit={handleSubmit}>
+            <form method="post" action="/api/cinema/login" className="px-7 py-7" onSubmit={handleSubmit} aria-busy={isSubmitting}>
               <div>
-                <label className="mb-2 block text-sm font-bold text-[#17130F]">
+                <label htmlFor="login-email" className="mb-2 block text-sm font-bold text-[var(--text-primary)]">
                   メールアドレス
                 </label>
                 <input
                   type="email"
                   name="email"
+                  id="login-email"
+                  autoComplete="email"
+                  required
                   value={form.email}
                   onChange={handleChange}
                   placeholder="mail@example.com"
-                  className="h-11 w-full rounded-[4px] border border-[#D8D4CC] bg-white px-3 text-sm text-[#17130F] outline-none transition placeholder:text-[#A09A92] focus:border-[#17130F]"
+                  className="h-11 w-full rounded-[4px] border border-[var(--border-soft)] bg-[var(--surface-bg)] px-3 text-sm text-[var(--text-primary)] outline-none transition placeholder:text-[var(--text-muted)] focus:border-[var(--border-strong)]"
                 />
               </div>
 
               <div className="mt-5">
-                <label className="mb-2 block text-sm font-bold text-[#17130F]">
+                <label htmlFor="login-password" className="mb-2 block text-sm font-bold text-[var(--text-primary)]">
                   パスワード
                 </label>
                 <input
                   type="password"
                   name="password"
+                  id="login-password"
+                  autoComplete="current-password"
+                  required
                   value={form.password}
                   onChange={handleChange}
-                  placeholder="password"
-                  className="h-11 w-full rounded-[4px] border border-[#D8D4CC] bg-white px-3 text-sm text-[#17130F] outline-none transition placeholder:text-[#A09A92] focus:border-[#17130F]"
+                  placeholder="パスワードを入力"
+                  className="h-11 w-full rounded-[4px] border border-[var(--border-soft)] bg-[var(--surface-bg)] px-3 text-sm text-[var(--text-primary)] outline-none transition placeholder:text-[var(--text-muted)] focus:border-[var(--border-strong)]"
                 />
               </div>
 
               {errorMessage ? (
-                <p className="mt-4 text-sm font-medium leading-6 text-[#9A3A24]">
+                <p role="alert" className="mt-4 text-sm font-medium leading-6 text-[var(--danger)]">
                   {errorMessage}
                 </p>
               ) : null}
 
               {isSubmitting ? (
-                <p className="mt-4 text-sm text-[#6E665D]" aria-live="polite">
+                <p className="mt-4 text-sm text-[var(--text-secondary)]" aria-live="polite">
                   ログイン中です...
                 </p>
               ) : null}
@@ -191,23 +199,23 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="mt-7 h-11 w-full rounded-[4px] bg-[#25201B] text-sm font-bold text-white transition hover:bg-[#46382F] disabled:bg-[#CCC8C1] disabled:text-[#756D63]"
+                className="mt-7 h-11 w-full rounded-[4px] bg-[var(--button-bg)] text-sm font-bold text-white transition hover:bg-[var(--button-hover)] disabled:bg-[var(--disabled-bg)] disabled:text-[var(--text-muted)]"
               >
                 {isSubmitting ? "送信中..." : "ログイン"}
               </button>
             </form>
 
-            <div className="border-t border-[#E4E0D8] px-7 py-5 text-center">
+            <div className="border-t border-[var(--border-soft)] px-7 py-5 text-center">
               <Link
                 href="/register"
-                className="text-sm font-bold text-[#6A625A] underline underline-offset-4 transition hover:text-[#17130F]"
+                className="text-sm font-bold text-[var(--text-secondary)] underline underline-offset-4 transition hover:text-[var(--text-primary)]"
               >
                 会員登録はこちら
               </Link>
             </div>
           </div>
         </div>
-      </section>
-    </main>
+      </main>
+    </div>
   );
 }

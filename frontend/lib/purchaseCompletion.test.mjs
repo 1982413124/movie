@@ -27,7 +27,7 @@ test("formats multiple selected seats into purchase completion details", () => {
 
   assert.equal(details.orderNum, "ORD-260518-4837");
   assert.equal(details.purchaseDatetime, "2026/05/18 21:30");
-  assert.equal(details.movieTitle, "映画のタイトル");
+  assert.equal(details.movieTitle, "SPIDER MAN");
   assert.equal(details.screeningDatetime, "本日 18:20");
   assert.equal(details.screenName, "スクリーン 3");
   assert.equal(details.theaterName, "HAL CINEMA 名古屋栄");
@@ -36,6 +36,7 @@ test("formats multiple selected seats into purchase completion details", () => {
   assert.equal(details.totalPrice, 2800);
   assert.equal(details.payMethod, "クレジットカード");
   assert.equal(details.payNum, "PAY-8472-1593");
+  assert.equal(details.mailGuide, "購入内容はマイページの購入履歴から確認できます。");
 });
 
 test("adds optional food details to purchase completion details", () => {

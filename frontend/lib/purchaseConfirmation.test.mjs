@@ -19,7 +19,7 @@ test("builds a confirmation summary from the seat reservation draft", () => {
     totalPrice: 2800,
   });
 
-  assert.equal(summary.movieTitle, "映画のタイトル");
+  assert.equal(summary.movieTitle, "SPIDER MAN");
   assert.equal(summary.theaterName, "HAL CINEMA 名古屋栄");
   assert.equal(summary.screeningDatetime, "本日 18:20");
   assert.equal(summary.screenName, "スクリーン 3");

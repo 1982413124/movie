@@ -115,7 +115,9 @@ test("createReservation returns conflict details for 409 responses", async () =>
     { movieId: "movie-001", screeningId: "scr-1820", seatIds: ["C-4"] },
     {
       apiBaseUrl: "http://backend.test",
-      fetchImpl: async () => ({
+      fetchImpl: async (url) => url.endsWith("/session")
+        ? { ok: true, json: async () => ({ csrf_token: "csrf" }) }
+        : ({
         ok: false,
         status: 409,
         json: async () => ({ conflict_seats: ["C-4"] }),
@@ -149,6 +151,7 @@ test("createReservation sends payment method with the order payload", async () =
       apiBaseUrl: "http://backend.test",
       paymentMethod: "qr-pay",
       fetchImpl: async (url, options) => {
+        if (url.endsWith("/session")) return { ok: true, json: async () => ({ csrf_token: "csrf" }) };
         calls.push({ url, options });
         return {
           ok: true,
@@ -166,13 +169,10 @@ test("seat selection and confirmation screens are wired to reservation APIs", ()
   const seatSelectionSource = readFileSync(resolve(appDir, "seats/SeatSelectionClient.jsx"), "utf8");
   const confirmSource = readFileSync(resolve(appDir, "comfirm/ConfirmClient.jsx"), "utf8");
 
-  assert.match(seatSelectionSource, /fetchReservedSeats/);
-  assert.match(seatSelectionSource, /movieTitle: movieDetail\.title/);
-  assert.match(seatSelectionSource, /movieDurationMinutes: movieDetail\.durationMinutes/);
-  assert.match(seatSelectionSource, /screenId: selectedScreening\.screenId/);
-  assert.match(seatSelectionSource, /screeningDate: selectedScreening\.dateId/);
-  assert.match(seatSelectionSource, /createSeatMap\(screeningId, apiReservedSeatIds\)/);
-  assert.match(seatSelectionSource, /countAvailableSeats\(screeningId, apiReservedSeatIds\)/);
+  assert.match(seatSelectionSource, /cinemaApi\(`screenings\//);
+  assert.match(seatSelectionSource, /buildCatalogScreeningDraft\(toScreening\(latest.showing\), latest.movie/);
+  assert.match(seatSelectionSource, /seatLabels: available.map/);
+  assert.doesNotMatch(seatSelectionSource, /createSeatMap|findScreening|movieDetail\.title/);
   assert.match(confirmSource, /createReservation/);
   assert.match(confirmSource, /response\.conflict/);
   assert.match(confirmSource, /409|すでに予約/);

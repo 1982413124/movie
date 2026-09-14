@@ -24,26 +24,38 @@ export function buildPurchaseCompletion(draft, options = {}) {
   const foodItems = normalizeFoodItems(draft?.foodItems);
   const foodTotalPrice =
     draft?.foodTotalPrice ?? foodItems.reduce((total, item) => total + item.lineTotal, 0);
-  const totalPrice = draft?.totalPrice ?? ticketTotalPrice + foodTotalPrice;
+  const totalPrice = options.pricing?.total_price ?? draft?.totalPrice ?? ticketTotalPrice + foodTotalPrice;
 
   return {
     completeTitle: "ご購入が完了しました",
     completeMessage: "ご利用ありがとうございました。",
-    mailGuide: "ご登録のメールアドレスに購入完了メールを送信しました。",
+    mailGuide: options.pricing?.email_status === "queued"
+      ? "予約確認メールの送信を受け付けました。購入内容はマイページでも確認できます。"
+      : "購入内容はマイページの購入履歴から確認できます。",
     orderNum: options.orderNum ?? createOrderNum(now),
     purchaseDatetime: formatPurchaseDatetime(now),
-    movieTitle: movieDetail.title,
-    posterLabel: movieDetail.title,
-    screeningDatetime: `${screening.dateLabel} ${draft?.screeningTime ?? screening.label}`,
+    movieTitle: options.pricing?.movie_title ?? draft?.movieTitle ?? movieDetail.title,
+    posterLabel: draft?.movieTitle ?? movieDetail.title,
+    screeningDatetime: `${draft?.screeningDate ?? screening.dateLabel} ${draft?.screeningTime ?? screening.label}`,
+    showStartAt: draft?.screeningDate && (draft?.screeningTime ?? screening.label)
+      ? `${draft.screeningDate}T${draft.screeningTime ?? screening.label}:00+09:00`
+      : "",
     screenName: draft?.screenName ?? screening.screenName,
-    theaterName: screening.theaterName,
-    seatNum: formatSeatNumbers(seatIds),
+    theaterName: draft?.theaterName ?? screening.theaterName,
+    seatNum: formatSeatNumbers(draft?.seatLabels ?? seatIds),
     ticketNum,
     ticketTypes,
     ticketSummary: formatTicketTypeSummary(ticketTypes, ticketNum),
-    ticketTotalPrice,
+    ticketTotalPrice: options.pricing?.ticket_total_price ?? ticketTotalPrice,
     foodItems,
-    foodTotalPrice,
+    foodTotalPrice: options.pricing?.food_total_price ?? foodTotalPrice,
+    ...(options.pricing ? {
+      subtotalAmount: options.pricing.subtotal_amount,
+      couponCode: options.pricing.coupon_code,
+      couponDiscountAmount: options.pricing.coupon_discount_amount,
+      pointsUsed: options.pricing.points_used,
+      pointsEarned: options.pricing.points_earned,
+    } : {}),
     totalPrice,
     payMethod: options.payMethod ?? defaultPaymentMethod,
     payNum: options.payNum ?? createPaymentNum(now, seatIds),

@@ -49,18 +49,8 @@ test("screenings are selectable by date and screen", () => {
   assert.ok(filtered.every((screening) => screening.capacity === 200));
 });
 
-test("movie detail page exposes date, screen, and showtime selectors before seats", () => {
+test("booking entry keeps the common stepper and delegates the interactive selector", () => {
   const source = readFileSync(resolve(appDir, "movie-detail/page.tsx"), "utf8");
-
-  assert.match(source, /selectedDateId/);
-  assert.match(source, /selectedScreenId/);
-  assert.match(source, /selectedScreeningId/);
-  assert.match(source, /screeningDates\.map/);
-  assert.match(source, /theaterScreens\.map/);
-  assert.match(source, /getScreeningsForDateAndScreen/);
-  assert.match(source, /ticketTypes\.map/);
-  assert.match(source, /window\.sessionStorage\.setItem\("movieReservationDraft"/);
-  assert.match(source, /router\.push\("\/seats"\)/);
-  assert.match(source, /スクリーン数/);
-  assert.match(source, /全体で1050名/);
+  assert.match(source, /ReservationStepper currentStep=\{1\}/);
+  assert.match(source, /BookingScreen/);
 });

@@ -1,12 +1,14 @@
+import { addCinemaDays, cinemaDateParts, cinemaToday, formatCinemaDate, isDateId, screeningEnd } from "./cinemaDate.mjs";
+
 export const movieDetail = {
   id: "movie-001",
-  title: "映画のタイトル",
-  subtitle: "サブタイトル",
-  genre: "ジャンル",
-  durationMinutes: 124,
-  ageRating: "G",
+  title: "SPIDER MAN",
+  subtitle: "街を守るヒーローの新たな戦い",
+  genre: "Action",
+  durationMinutes: 120,
+  ageRating: "PG12",
   synopsis:
-    "映画のあらすじがここに入る",
+    "大切な人と街を守るため、若きヒーローが新たな脅威に立ち向かう。",
 };
 
 export const ticketTypes = [
@@ -83,64 +85,25 @@ export const theaterScreens = [
   },
 ];
 
-const weekdayLabels = ["日", "月", "火", "水", "木", "金", "土"];
+// The existing published schedule covers today and the next five cinema days.
+export const bookingWindowDays = 6;
 
 export function createScreeningDates(now = new Date()) {
-  const startDate = createLocalDate(now);
-
-  return Array.from({ length: 6 }, (_, dateIndex) => {
-    const date = addDays(startDate, dateIndex);
-    const month = date.getMonth() + 1;
-    const day = date.getDate();
-    const dayLabel = weekdayLabels[date.getDay()];
-    const shortLabel = `${month}/${day}`;
-
+  const today = cinemaToday(now);
+  return Array.from({ length: bookingWindowDays }, (_, index) => {
+    const id = addCinemaDays(today, index);
+    const { month, day, dayLabel, weekday } = cinemaDateParts(id);
     return {
-      id: formatDateId(date),
-      label: `${shortLabel}(${dayLabel})`,
-      shortLabel,
+      id,
+      label: formatCinemaDate(id),
+      shortLabel: month + "/" + day,
       dayLabel,
-      caption: createScreeningDateCaption(dateIndex, date),
+      caption: index === 0 ? "本日" : index === 1 ? "明日" : weekday === 0 || weekday === 6 ? "週末" : "通常上映",
     };
   });
 }
 
 export const screeningDates = createScreeningDates();
-
-function createLocalDate(value) {
-  const date = value instanceof Date ? value : new Date(value);
-  const source = Number.isNaN(date.getTime()) ? new Date() : date;
-
-  return new Date(source.getFullYear(), source.getMonth(), source.getDate());
-}
-
-function addDays(date, days) {
-  const nextDate = new Date(date);
-  nextDate.setDate(date.getDate() + days);
-
-  return nextDate;
-}
-
-function formatDateId(date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-}
-
-function createScreeningDateCaption(dateIndex, date) {
-  if (dateIndex === 0) {
-    return "本日";
-  }
-
-  if (dateIndex === 1) {
-    return "明日";
-  }
-
-  const day = date.getDay();
-  return day === 0 || day === 6 ? "週末" : "通常上映";
-}
 
 const baseTimesBySize = {
   large: ["10:10", "13:40", "18:20", "20:50"],
@@ -148,23 +111,33 @@ const baseTimesBySize = {
   small: ["09:30", "14:20", "18:00"],
 };
 
-export const screenings = screeningDates.flatMap((date, dateIndex) =>
-  theaterScreens.flatMap((screen, screenIndex) =>
-    baseTimesBySize[screen.size].map((time, timeIndex) => ({
-      id: createScreeningId(dateIndex, screen.id, time),
-      label: time,
-      dateId: date.id,
-      dateLabel: dateIndex === 0 ? "本日" : date.label,
-      screenId: screen.id,
-      screenName: screen.name,
-      screenSize: screen.sizeLabel,
-      theaterName: "HAL CINEMA 名古屋栄",
-      capacity: screen.capacity,
-      price: ticketTypes[0].price,
-      bookingLevel: createBookingLevel(dateIndex, screenIndex, timeIndex),
-    })),
-  ),
-);
+function createScreening(dateId, screen, time) {
+  return {
+    id: "scr-" + dateId + "-" + screen.id.replace("screen-", "s") + "-" + time.replace(":", ""),
+    movieId: movieDetail.id,
+    label: time,
+    startTime: time,
+    ...screeningEnd(time, movieDetail.durationMinutes),
+    dateId,
+    dateLabel: formatCinemaDate(dateId),
+    screenId: screen.id,
+    screenName: screen.name,
+    screenSize: screen.sizeLabel,
+    theaterName: "HAL CINEMA 名古屋栄",
+    capacity: screen.capacity,
+    price: ticketTypes[0].price,
+  };
+}
+
+export function createScreenings(now = new Date()) {
+  return createScreeningDates(now).flatMap((date) =>
+    theaterScreens.flatMap((screen) =>
+      baseTimesBySize[screen.size].map((time) => createScreening(date.id, screen, time)),
+    ),
+  );
+}
+
+export const screenings = createScreenings();
 
 const reservedSeatsByScreening = {
   "scr-1820": [
@@ -241,26 +214,6 @@ const reservedSeatsByScreening = {
   ],
 };
 
-function createScreeningId(dateIndex, screenId, time) {
-  if (dateIndex === 0 && screenId === "screen-3" && time === "18:20") {
-    return "scr-1820";
-  }
-
-  if (dateIndex === 0 && screenId === "screen-1" && time === "20:50") {
-    return "scr-2050";
-  }
-
-  if (dateIndex === 0 && screenId === "screen-5" && time === "23:15") {
-    return "scr-2315";
-  }
-
-  return `scr-${dateIndex + 1}-${screenId.replace("screen-", "s")}-${time.replace(":", "")}`;
-}
-
-function createBookingLevel(dateIndex, screenIndex, timeIndex) {
-  return (dateIndex * 13 + screenIndex * 7 + timeIndex * 11) % 42;
-}
-
 function getRowLabels(count) {
   return Array.from({ length: count }, (_, index) =>
     String.fromCharCode("A".charCodeAt(0) + index),
@@ -280,17 +233,36 @@ export function findScreen(screenId) {
 }
 
 export function findScreening(screeningId) {
-  return screenings.find((screening) => screening.id === screeningId);
+  if (typeof screeningId !== "string") return undefined;
+  const stable = screeningId.match(/^scr-(\d{4}-\d{2}-\d{2})-s(\d+)-(\d{2})(\d{2})$/);
+  if (stable && isDateId(stable[1])) {
+    const screen = findScreen("screen-" + stable[2]);
+    const time = stable[3] + ":" + stable[4];
+    return screen && baseTimesBySize[screen.size].includes(time)
+      ? createScreening(stable[1], screen, time)
+      : undefined;
+  }
+
+  // Read old drafts; all new selections use date-scoped IDs.
+  const legacySpecial = { "scr-1820": ["screen-3", "18:20"], "scr-2050": ["screen-1", "20:50"], "scr-2315": ["screen-5", "23:15"] };
+  const special = legacySpecial[screeningId];
+  if (special) return { ...createScreening(cinemaToday(), findScreen(special[0]), special[1]), id: screeningId, dateLabel: "本日" };
+  const legacy = screeningId.match(/^scr-(\d+)-s(\d+)-(\d{2})(\d{2})$/);
+  if (!legacy) return undefined;
+  const date = createScreeningDates()[Number(legacy[1]) - 1];
+  const screen = findScreen("screen-" + legacy[2]);
+  const time = legacy[3] + ":" + legacy[4];
+  return date && screen && baseTimesBySize[screen.size].includes(time)
+    ? { ...createScreening(date.id, screen, time), id: screeningId }
+    : undefined;
 }
 
 export function getScreeningsForDate(dateId) {
-  return screenings.filter((screening) => screening.dateId === dateId);
+  return createScreenings().filter((screening) => screening.dateId === dateId);
 }
 
 export function getScreeningsForDateAndScreen(dateId, screenId) {
-  return screenings.filter(
-    (screening) => screening.dateId === dateId && screening.screenId === screenId,
-  );
+  return getScreeningsForDate(dateId).filter((screening) => screening.screenId === screenId);
 }
 
 function createReservedSeatSet(screeningId, apiReservedSeatIds = []) {

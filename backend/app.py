@@ -1,15 +1,44 @@
-﻿from datetime import date, datetime, timedelta, timezone
+﻿import os
+from pathlib import Path
+from datetime import date, datetime, timedelta, timezone
 
-from flask import Flask, jsonify, request
+from flask import Flask, g, jsonify, request
 from flask_cors import CORS
 from database.db import db_conn
 from psycopg import errors
-from werkzeug.security import generate_password_hash, check_password_hash
+from admin_auth import auth
+from member_auth import member_auth, member_required
+from reservation_policy import cancellation_info
+from movie_routes import movies
+from schedule_routes import schedule
+from benefit_routes import benefits
+from booking_benefits import BenefitError, integer, price_purchase, apply_points, reverse_points, point_balance
+from reservation_mail import email_address, enqueue_reservation_mail
 
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/api/(?!admin).*": {"origins": "*"}})
+app.config["UPLOAD_DIRECTORY"] = os.getenv("UPLOAD_DIRECTORY", str(Path(__file__).with_name("uploads")))
+app.config["ADMIN_COOKIE_SECURE"] = os.getenv("ADMIN_COOKIE_SECURE", "false" if os.getenv("FLASK_ENV") == "development" else "true").lower() == "true"
+app.register_blueprint(auth)
+app.register_blueprint(member_auth)
+app.register_blueprint(movies)
+app.register_blueprint(schedule)
+app.register_blueprint(benefits)
 DEFAULT_THEATER_NAME = "HAL CINEMA 名古屋栄"
+
+
+@app.errorhandler(BenefitError)
+def benefit_error(exc):
+    return jsonify({"status": "error", "message": str(exc), "code": exc.code}), exc.status
+
+
+@app.after_request
+def private_reservations(response):
+    if request.path.startswith("/api/reservations"):
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+    return response
 
 @app.get("/health")
 def health():
@@ -31,41 +60,6 @@ def health_db():
                 row = cursor.fetchone()
 
         return jsonify({"status": "ok", "db": row[0]})
-
-    except Exception as exc:
-        return jsonify({"status": "error", "message": str(exc)}), 500
-
-
-@app.get("/api/movies")
-def get_movies():
-    """
-    moviesテーブルの一覧を返すAPI。
-    """
-    try:
-        with db_conn() as connection:
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    """
-                    SELECT id, title, genre, duration_minutes, age_rating, release_date
-                    FROM movies
-                    ORDER BY id;
-                    """
-                )
-                rows = cursor.fetchall()
-
-        return jsonify(
-            [
-                {
-                    "id": row[0],
-                    "title": row[1],
-                    "genre": row[2],
-                    "duration_minutes": row[3],
-                    "age_rating": row[4],
-                    "release_date": row[5].isoformat() if row[5] else None,
-                }
-                for row in rows
-            ]
-        )
 
     except Exception as exc:
         return jsonify({"status": "error", "message": str(exc)}), 500
@@ -239,109 +233,6 @@ def split_seat_label(seat_id):
     return row_name, to_non_negative_int(seat_number_text, 0)
 
 
-def ensure_purchase_masters(
-    cursor,
-    *,
-    movie_id,
-    movie_title,
-    movie_duration_minutes,
-    theater_name,
-    screen_id,
-    screen_name,
-    screen_capacity,
-    showing_id,
-    show_date,
-    start_time,
-    end_time,
-    seat_ids,
-    ticket_types,
-    food_items,
-):
-    """
-    暫定処理。静的フロントとDBマスタの移行期間だけ、存在しない最小マスタを補う。
-    既存マスタはフロント値で上書きしない。本来はseedか管理者画面から登録する。
-    """
-    cursor.execute(
-        """
-        INSERT INTO movies (id, title, duration_minutes)
-        VALUES (%s, %s, %s)
-        ON CONFLICT (id) DO NOTHING;
-        """,
-        (movie_id, movie_title, movie_duration_minutes),
-    )
-
-    cursor.execute(
-        """
-        SELECT id
-        FROM theaters
-        WHERE theater_name = %s;
-        """,
-        (theater_name,),
-    )
-    theater_row = cursor.fetchone()
-
-    if theater_row:
-        theater_id = theater_row[0]
-    else:
-        cursor.execute(
-            """
-            INSERT INTO theaters (theater_name)
-            VALUES (%s)
-            RETURNING id;
-            """,
-            (theater_name,),
-        )
-        theater_id = cursor.fetchone()[0]
-
-    cursor.execute(
-        """
-        INSERT INTO screens (id, theater_id, name, seat_count)
-        VALUES (%s, %s, %s, %s)
-        ON CONFLICT (id) DO NOTHING;
-        """,
-        (screen_id, theater_id, screen_name, screen_capacity),
-    )
-
-    cursor.execute(
-        """
-        INSERT INTO showings (id, movie_id, screen_id, show_date, start_time, end_time)
-        VALUES (%s, %s, %s, %s, %s, %s)
-        ON CONFLICT (id) DO NOTHING;
-        """,
-        (showing_id, movie_id, screen_id, show_date, start_time, end_time),
-    )
-
-    for seat_id in seat_ids:
-        row_name, seat_number = split_seat_label(seat_id)
-        cursor.execute(
-            """
-            INSERT INTO seats (id, screen_id, row_name, seat_number, seat_label)
-            VALUES (%s, %s, %s, %s, %s)
-            ON CONFLICT (id) DO NOTHING;
-            """,
-            (seat_id, screen_id, row_name, seat_number, seat_id),
-        )
-
-    for ticket_type in ticket_types:
-        cursor.execute(
-            """
-            INSERT INTO ticket_types (id, label, current_price)
-            VALUES (%s, %s, %s)
-            ON CONFLICT (id) DO NOTHING;
-            """,
-            (ticket_type["ticket_type_id"], ticket_type["label"], ticket_type["unit_price"]),
-        )
-
-    for food_item in food_items:
-        cursor.execute(
-            """
-            INSERT INTO foods (id, name, current_price)
-            VALUES (%s, %s, %s)
-            ON CONFLICT (id) DO NOTHING;
-            """,
-            (food_item["food_id"], food_item["name"], food_item["unit_price"]),
-        )
-
 def format_time_value(value):
     if hasattr(value, "strftime"):
         return value.strftime("%H:%M")
@@ -364,7 +255,8 @@ def unique_values(values):
 def load_purchase_master_snapshot(cursor, *, showing_id, requested_movie_id, seat_ids, ticket_types, food_items):
     cursor.execute(
         """
-        SELECT sh.movie_id, m.title, sh.screen_id, sc.name, sh.start_time
+        SELECT sh.movie_id, m.title, sh.screen_id, sc.name, sh.start_time,
+               (sh.show_date + sh.start_time) <= (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Tokyo') AS started
         FROM showings sh
         JOIN movies m
           ON m.id = sh.movie_id
@@ -379,7 +271,9 @@ def load_purchase_master_snapshot(cursor, *, showing_id, requested_movie_id, sea
     if not showing_row:
         return None, "上映回が見つかりません。"
 
-    showing_movie_id, movie_title, showing_screen_id, screen_name, showing_time = showing_row
+    showing_movie_id, movie_title, showing_screen_id, screen_name, showing_time, started = showing_row
+    if started:
+        return None, "上映が始まった回は予約できません。"
     if requested_movie_id and requested_movie_id != showing_movie_id:
         return None, "上映回と映画が一致していません。"
 
@@ -503,6 +397,39 @@ def append_ticket_type(ticket_types, row):
     ticket_types[key]["quantity"] += 1
 
 
+@app.get("/api/screenings/availability")
+def get_screening_availability():
+    """Read the active reserved seats for a day's screenings in one DB query."""
+    screening_ids = list(dict.fromkeys(
+        value.strip() for value in request.args.get("ids", "").split(",") if value.strip()
+    ))
+    if not screening_ids or len(screening_ids) > 64 or any(len(value) > 100 for value in screening_ids):
+        return jsonify({"message": "1〜64件の上映回IDを指定してください。"}), 400
+
+    try:
+        with db_conn() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT rs.showing_id, rs.seat_id
+                    FROM reservation_seats rs
+                    JOIN orders o ON o.id = rs.order_id
+                    WHERE rs.showing_id = ANY(%s)
+                      AND rs.released_at IS NULL
+                      AND o.order_status IN ('pending', 'paid')
+                    ORDER BY rs.showing_id, rs.seat_id;
+                    """,
+                    (screening_ids,),
+                )
+                rows = cursor.fetchall()
+        reserved = {screening_id: [] for screening_id in screening_ids}
+        for screening_id, seat_id in rows:
+            reserved[screening_id].append(seat_id)
+        return jsonify({"reserved_seats_by_screening": reserved})
+    except Exception:
+        return jsonify({"message": "空席情報を取得できませんでした。"}), 503
+
+
 @app.get("/api/screenings/<screening_id>/reserved-seats")
 def get_reserved_seats(screening_id):
     """
@@ -545,27 +472,25 @@ def get_reserved_seats(screening_id):
 
 
 @app.get("/api/reservations")
+@member_required
 def get_reservations():
     """
     ログインユーザーの予約・購入履歴を返すAPI。
     レスポンス名は既存フロントに合わせ、DB上はordersを中心に読む。
     """
-    user_email = str(request.args.get("user_email", "")).strip().lower()
-
-    if not user_email:
-        return jsonify({"status": "error", "message": "user_email is required"}), 400
 
     try:
         with db_conn() as connection:
             with connection.cursor() as cursor:
                 cursor.execute(
                     """
-                    SELECT id, user_email, total_amount, order_status, created_at
+                    SELECT id, user_email, total_amount, order_status, created_at,
+                        subtotal_amount, coupon_code, coupon_discount_amount, points_used, points_earned, order_num
                     FROM orders
-                    WHERE user_email = %s
+                    WHERE user_id = %s
                     ORDER BY created_at DESC, id DESC;
                     """,
-                    (user_email,),
+                    (g.member["id"],),
                 )
                 order_rows = cursor.fetchall()
                 order_ids = [row[0] for row in order_rows]
@@ -582,14 +507,17 @@ def get_reservations():
                             rs.movie_title_at_purchase,
                             rs.showing_id,
                             rs.screen_name,
-                            rs.showing_time,
+                            sh.start_time::text,
                             rs.seat_id,
                             rs.ticket_type_id,
                             rs.ticket_type_label,
-                            rs.price_at_purchase
+                            rs.price_at_purchase,
+                            sh.show_date::text,
+                            COALESCE(st.seat_label, rs.seat_id)
                         FROM reservation_seats rs
                         JOIN showings sh
                           ON sh.id = rs.showing_id
+                        LEFT JOIN seats st ON st.id = rs.seat_id
                         WHERE rs.order_id = ANY(%s)
                         ORDER BY rs.order_id, rs.id;
                         """,
@@ -607,6 +535,8 @@ def get_reservations():
                                 "ticket_type_id": row[7],
                                 "ticket_type_label": row[8],
                                 "price_at_purchase": row[9],
+                                "screening_date": row[10],
+                                "seat_label": row[11],
                             }
                         )
 
@@ -660,6 +590,9 @@ def get_reservations():
                     "id": order_id,
                     "user_email": row[1],
                     "movie_id": first_seat.get("movie_id"),
+                    "movie_title": first_seat.get("movie_title_at_purchase"),
+                    "screening_date": first_seat.get("screening_date"),
+                    "show_date": first_seat.get("screening_date"),
                     "screening_id": first_seat.get("showing_id"),
                     "screen_name": first_seat.get("screen_name"),
                     "screening_time": first_seat.get("showing_time"),
@@ -667,129 +600,141 @@ def get_reservations():
                     "ticket_total_price": sum(item["price_at_purchase"] for item in seat_rows),
                     "food_total_price": sum(item["subtotal"] for item in food_items),
                     "total_price": row[2],
+                    "subtotal_amount": row[5],
+                    "coupon_code": row[6],
+                    "coupon_discount_amount": row[7],
+                    "points_used": row[8],
+                    "points_earned": row[9],
+                    "order_num": row[10],
                     "reservation_status": row[3],
                     "payment_status": payments_by_order.get(order_id, "unpaid"),
                     "created_at": row[4].isoformat() if row[4] else None,
                     "seats": [item["seat_id"] for item in seat_rows],
+                    "seat_labels": [item["seat_label"] for item in seat_rows],
                     "ticket_types": list(ticket_types.values()),
                     "food_items": food_items,
+                    "refund_mode": "simulation",
+                    **cancellation_info(row[3], [
+                        (seat["screening_date"], seat["showing_time"]) for seat in seat_rows
+                    ]),
                 }
             )
 
         return jsonify({"status": "ok", "reservations": reservations})
 
-    except Exception as exc:
-        return jsonify({"status": "error", "message": str(exc)}), 500
+    except Exception:
+        app.logger.exception("Reservation history lookup failed")
+        return jsonify({"status": "error", "message": "予約履歴を取得できませんでした。"}), 503
 
 
 @app.patch("/api/reservations/<int:reservation_id>/cancel")
+@member_required
 def cancel_reservation(reservation_id):
-    """
-    注文をキャンセルし、確保していた座席を再予約可能にするAPI。
-    """
-    payload = request.get_json(silent=True) or {}
-    user_email = str(payload.get("user_email", "")).strip().lower()
-
-    if not user_email:
-        return jsonify({"status": "error", "message": "user_email is required"}), 400
-
+    """Keep purchase history; release seats and reverse simulated payments atomically."""
     try:
-        with db_conn() as connection:
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    """
-                    SELECT id, order_status
-                    FROM orders
-                    WHERE id = %s
-                      AND user_email = %s;
-                    """,
-                    (reservation_id, user_email),
-                )
-                order_row = cursor.fetchone()
+        with db_conn() as connection, connection.cursor() as cursor:
+            # Serialize retries, including requests from other tabs/workers.
+            cursor.execute("""SELECT id, order_status, cancelled_at FROM orders
+                WHERE id = %s AND user_id = %s FOR UPDATE""", (reservation_id, g.member["id"]))
+            order = cursor.fetchone()
+            if not order:
+                return jsonify({"status": "error", "message": "予約が見つかりません。"}), 404
 
-                if not order_row:
-                    return jsonify({"status": "error", "message": "reservation not found"}), 404
+            released_seats = []
+            if order[1] != "cancelled":
+                # Read current showings under a lock, not client-submitted times.
+                cursor.execute("""SELECT sh.show_date, sh.start_time FROM reservation_seats rs
+                    JOIN showings sh ON sh.id = rs.showing_id
+                    WHERE rs.order_id = %s FOR SHARE OF sh""", (reservation_id,))
+                eligibility = cancellation_info(order[1], cursor.fetchall())
+                if not eligibility["can_cancel"]:
+                    return jsonify({"status": "error", "message": eligibility["cancel_reason"],
+                                    **eligibility}), 409
 
-                cursor.execute(
-                    """
-                    UPDATE orders
-                    SET order_status = 'cancelled',
-                        cancelled_at = CURRENT_TIMESTAMP,
-                        updated_at = CURRENT_TIMESTAMP
-                    WHERE id = %s
-                    RETURNING id, order_status, cancelled_at;
-                    """,
-                    (reservation_id,),
-                )
-                updated_row = cursor.fetchone()
-
-                cursor.execute(
-                    """
-                    UPDATE payments
-                    SET payment_status = 'refunded',
-                        updated_at = CURRENT_TIMESTAMP
-                    WHERE order_id = %s
-                      AND payment_status = 'paid'
-                    RETURNING payment_status;
-                    """,
-                    (reservation_id,),
-                )
-                refunded_payment_rows = cursor.fetchall()
-                payment_status = refunded_payment_rows[-1][0] if refunded_payment_rows else None
-
-                cursor.execute(
-                    """
-                    UPDATE reservation_seats
-                    SET released_at = CURRENT_TIMESTAMP,
-                        updated_at = CURRENT_TIMESTAMP
-                    WHERE order_id = %s
-                      AND released_at IS NULL
-                    RETURNING showing_id, seat_id;
-                    """,
-                    (reservation_id,),
-                )
+                cursor.execute("""UPDATE orders SET order_status = 'cancelled',
+                    cancelled_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = %s RETURNING id, order_status, cancelled_at""", (reservation_id,))
+                order = cursor.fetchone()
+                # The application currently only creates simulated payments (no gateway charge).
+                # An external provider must supply a durable, idempotent refund flow before use.
+                cursor.execute("""UPDATE payments SET payment_status = 'refunded', updated_at = CURRENT_TIMESTAMP
+                    WHERE order_id = %s AND payment_status = 'paid'""", (reservation_id,))
+                cursor.execute("""UPDATE reservation_seats SET released_at = CURRENT_TIMESTAMP,
+                    updated_at = CURRENT_TIMESTAMP WHERE order_id = %s AND released_at IS NULL
+                    RETURNING showing_id, seat_id""", (reservation_id,))
                 released_seats = [row[1] for row in cursor.fetchall()]
+                reverse_points(cursor, g.member["id"], reservation_id)
+                enqueue_reservation_mail(cursor, reservation_id, "CANCELLED")
 
-        return jsonify(
-            {
-                "status": "ok",
-                "reservation_id": updated_row[0],
-                "reservation_status": updated_row[1],
-                "payment_status": payment_status,
-                "cancelled_at": updated_row[2].isoformat() if updated_row[2] else None,
-                "released_seats": released_seats,
-            }
-        )
+            balance = point_balance(cursor, g.member["id"])
 
-    except Exception as exc:
-        return jsonify({"status": "error", "message": str(exc)}), 500
+            cursor.execute("""SELECT order_id, payment_method, payment_amount, payment_status, paid_at
+                FROM payments WHERE order_id = ANY(%s) ORDER BY order_id, id""", ([reservation_id],))
+            payments = cursor.fetchall()
+            payment_status = payments[-1][3] if payments else "unpaid"
+            refunded_amount = sum(row[2] for row in payments if row[3] == "refunded")
+
+        return jsonify({"status": "ok", "message": "キャンセル完了。座席を解放しました。",
+                        "reservation_id": order[0], "reservation_status": order[1],
+                        "payment_status": payment_status, "refund_mode": "simulation",
+                        "refunded_amount": refunded_amount,
+                        "point_balance": balance,
+                        "cancelled_at": order[2].isoformat() if order[2] else None,
+                        "released_seats": released_seats})
+    except Exception:
+        app.logger.exception("Reservation cancellation failed")
+        return jsonify({"status": "error", "message": "キャンセルできませんでした。時間をおいて再試行してください。"}), 503
+
+
+@app.post("/api/reservations/quote")
+@member_required(optional=True)
+def quote_reservation():
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        raise BenefitError("予約内容を確認してください。")
+    seats = normalize_seat_ids(payload.get("seat_ids"))
+    tickets = normalize_ticket_types(payload.get("ticket_types"), len(seats), 0)
+    if not seats or sum_ticket_quantities(tickets) != len(seats):
+        raise BenefitError("座席と券種の枚数を確認してください。")
+    try:
+        with db_conn() as connection, connection.cursor() as cursor:
+            snapshot, message = load_purchase_master_snapshot(cursor,
+                showing_id=str(payload.get("screening_id", "")), requested_movie_id=str(payload.get("movie_id", "")),
+                seat_ids=seats, ticket_types=tickets, food_items=normalize_food_items(payload.get("food_items")))
+            if message:
+                raise BenefitError(message)
+            ticket_total = sum_ticket_prices(snapshot["ticket_types"])
+            food_total = sum_food_prices(snapshot["food_items"])
+            pricing = price_purchase(cursor, ticket_total + food_total, g.member["id"] if g.member else None, payload)
+        return jsonify({"status": "ok", **pricing, "ticket_total_price": ticket_total,
+                        "food_total_price": food_total, "member": g.member is not None})
+    except BenefitError:
+        raise
+    except Exception:
+        app.logger.exception("Reservation quote failed")
+        return jsonify({"message": "料金を確認できませんでした。再試行してください。"}), 503
 
 
 @app.post("/api/reservations")
+@member_required(optional=True)
 def create_reservation():
     """
     座席予約を確定するAPI。
     既存フロントの入力をorders、reservation_seats、food_order_details、paymentsへ分けて保存する。
     """
     payload = request.get_json(silent=True) or {}
+    if not isinstance(payload, dict):
+        raise BenefitError("予約内容を確認してください。")
     showing_id = str(payload.get("screening_id", "")).strip()
     movie_id = str(payload.get("movie_id", "")).strip()
     seat_ids = normalize_seat_ids(payload.get("seat_ids"))
     user_email = str(payload.get("user_email", "")).strip().lower() or None
-    movie_title = str(payload.get("movie_title") or payload.get("movieTitle") or movie_id).strip()
-    movie_duration_minutes = to_non_negative_int(
-        payload.get("movie_duration_minutes") or payload.get("movieDurationMinutes"),
-        120,
-    ) or 120
-    screen_name = str(payload.get("screen_name", "")).strip() or None
-    screen_id = str(payload.get("screen_id") or payload.get("screenId") or derive_screen_id(screen_name)).strip()
-    screen_name = screen_name or screen_id
-    screen_capacity = to_non_negative_int(payload.get("screen_capacity") or payload.get("screenCapacity"), len(seat_ids))
-    screen_capacity = max(screen_capacity, len(seat_ids), 1)
-    theater_name = str(payload.get("theater_name") or payload.get("theaterName") or DEFAULT_THEATER_NAME).strip()
-    show_date = normalize_show_date(payload.get("screening_date") or payload.get("show_date") or payload.get("dateId"))
-    showing_time = str(payload.get("screening_time", "")).strip() or "00:00"
-    showing_end_time = str(payload.get("end_time") or payload.get("endTime") or "").strip() or add_minutes_to_time(showing_time, movie_duration_minutes)
+    if user_email and not g.member:
+        return jsonify({"status": "error", "message": "予約するにはログインし直してください。"}), 401
+    if g.member:
+        user_email = g.member["email"]
+    elif payload.get("contact_email"):
+        user_email = email_address(str(payload["contact_email"]).strip())
     payment_method = str(payload.get("payment_method", "")).strip() or "unknown"
     requested_ticket_count = to_non_negative_int(payload.get("ticket_count") or len(seat_ids))
     requested_ticket_total_price = to_non_negative_int(payload.get("ticket_total_price") or 0)
@@ -866,39 +811,6 @@ def create_reservation():
                     food_items=food_items,
                 )
 
-                temporary_seed_messages = {
-                    "上映回が見つかりません。",
-                    "選択した座席が見つかりません。",
-                    "券種が見つかりません。",
-                    "フード商品が見つかりません。",
-                }
-                if validation_message in temporary_seed_messages:
-                    ensure_purchase_masters(
-                        cursor,
-                        movie_id=movie_id,
-                        movie_title=movie_title,
-                        movie_duration_minutes=movie_duration_minutes,
-                        theater_name=theater_name,
-                        screen_id=screen_id,
-                        screen_name=screen_name,
-                        screen_capacity=screen_capacity,
-                        showing_id=showing_id,
-                        show_date=show_date,
-                        start_time=showing_time,
-                        end_time=showing_end_time,
-                        seat_ids=seat_ids,
-                        ticket_types=ticket_types,
-                        food_items=food_items,
-                    )
-                    master_snapshot, validation_message = load_purchase_master_snapshot(
-                        cursor,
-                        showing_id=showing_id,
-                        requested_movie_id=movie_id,
-                        seat_ids=seat_ids,
-                        ticket_types=ticket_types,
-                        food_items=food_items,
-                    )
-
                 if validation_message:
                     return jsonify({"status": "error", "message": validation_message}), 400
 
@@ -912,7 +824,14 @@ def create_reservation():
                 food_total_price = sum_food_prices(food_items)
                 total_price = ticket_total_price + food_total_price
 
-                user_id = find_user_id_by_email(cursor, user_email)
+                user_id = g.member["id"] if g.member else None
+                pricing = price_purchase(cursor, total_price, user_id, payload, lock=True)
+                total_price = pricing["total_price"]
+                if payment_method == "points" and total_price:
+                    raise BenefitError("ポイントを入力して適用し、残額のお支払い方法を選んでください。", "payment_method")
+                if "expected_total" in payload and integer(payload["expected_total"], "確認金額") != total_price:
+                    raise BenefitError("料金が更新されました。内訳を再確認してから予約してください。", "price_changed", 409)
+                order_num = create_order_num()
                 cursor.execute(
                     """
                     INSERT INTO orders (
@@ -920,12 +839,13 @@ def create_reservation():
                         user_email,
                         order_num,
                         total_amount,
-                        order_status
+                        order_status, subtotal_amount, coupon_id, coupon_code, coupon_discount_amount, points_used, points_earned
                     )
-                    VALUES (%s, %s, %s, %s, %s)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     RETURNING id, created_at;
                     """,
-                    (user_id, user_email, create_order_num(), total_price, "paid"),
+                    (user_id, user_email, order_num, total_price, "paid", pricing["subtotal_amount"], pricing["coupon_id"],
+                     pricing["coupon_code"], pricing["coupon_discount_amount"], pricing["points_used"], pricing["points_earned"]),
                 )
                 order_row = cursor.fetchone()
                 order_id = order_row[0]
@@ -997,12 +917,23 @@ def create_reservation():
                     """,
                     (order_id, payment_method, total_price, "paid"),
                 )
+                balance = apply_points(cursor, user_id, order_id, pricing)
+                email_status = enqueue_reservation_mail(cursor, order_id, "CONFIRMED")
 
         return (
             jsonify(
                 {
                     "status": "ok",
                     "reservation_id": order_id,
+                    **pricing,
+                    "point_balance": balance,
+                    "email_status": email_status,
+                    "order_num": order_num,
+                    "movie_title": movie_title_at_purchase,
+                    "ticket_total_price": ticket_total_price,
+                    "food_items": food_items,
+                    "food_total_price": food_total_price,
+                    "total_price": total_price,
                     "screening_id": showing_id,
                     "reserved_seats": seat_ids,
                     "ticket_types": ticket_types,
@@ -1012,6 +943,8 @@ def create_reservation():
             201,
         )
 
+    except BenefitError:
+        raise
     except errors.UniqueViolation:
         return (
             jsonify(
@@ -1023,121 +956,9 @@ def create_reservation():
             ),
             409,
         )
-    except Exception as exc:
-        return jsonify({"status": "error", "message": str(exc)}), 500
-
-
-@app.post("/api/register")
-def register():
-    """
-    ユーザー新規登録API。
-    """
-    payload = request.get_json(silent=True) or request.form.to_dict() or {}
-
-    name = str(payload.get("name", "")).strip()
-    email = str(payload.get("email", "")).strip().lower()
-    password = str(payload.get("password", "")).strip()
-
-    if not name or not email or not password:
-        return (
-            jsonify({"status": "error", "message": "名前とメールアドレスとパスワードは必須です"}),
-            400,
-        )
-
-    try:
-        with db_conn() as conn:
-            with conn.cursor() as cur:
-                cur.execute("SELECT 1 FROM users WHERE email = %s;", (email,))
-                if cur.fetchone():
-                    return (
-                        jsonify({"status": "error", "message": "このメールアドレスは既に登録されています"}),
-                        409,
-                    )
-
-                hashed_password = generate_password_hash(password)
-                cur.execute(
-                    """
-                    INSERT INTO users (name, email, password)
-                    VALUES (%s, %s, %s)
-                    RETURNING id, name, email, created_at
-                    """,
-                    (name, email, hashed_password),
-                )
-                user_row = cur.fetchone()
-        return (
-            jsonify(
-                {
-                    "status": "ok",
-                    "user": {
-                        "id": user_row[0],
-                        "name": user_row[1],
-                        "email": user_row[2],
-                        "created_at": user_row[3].isoformat() if user_row[3] else None,
-                    },
-                }
-            ),
-            201,
-        )
-
-    except Exception as exc:
-        return jsonify({"status": "error", "message": str(exc)}), 500
-
-
-@app.post("/api/login")
-def login():
-    """
-    ログインAPI。
-    """
-    payload = request.get_json(silent=True) or request.form.to_dict() or {}
-
-    email = str(payload.get("email", "")).strip().lower()
-    password = str(payload.get("password", ""))
-
-    if not email or not password:
-        return (
-            jsonify({"status": "error", "message": "メールアドレスとパスワードは必須です"}),
-            400,
-        )
-    try:
-        with db_conn() as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    SELECT id, name, email, password, created_at
-                    FROM users
-                    WHERE email = %s;
-                    """,
-                    (email,),
-                )
-                row = cur.fetchone()
-
-        if not row:
-            return (
-                jsonify({"status": "error", "message": "メールアドレスまたはパスワードが違います"}),
-                401,
-            )
-
-        stored_password_hash = row[3]
-        if not check_password_hash(stored_password_hash, password):
-            return (
-                jsonify({"status": "error", "message": "メールアドレスまたはパスワードが違います"}),
-                401,
-            )
-
-        return jsonify(
-            {
-                "status": "ok",
-                "user": {
-                    "id": row[0],
-                    "name": row[1],
-                    "email": row[2],
-                    "created_at": row[4].isoformat() if row[4] else None,
-                },
-            }
-        ), 200
-
-    except Exception as exc:
-        return jsonify({"status": "error", "message": str(exc)}), 500
+    except Exception:
+        app.logger.exception("Reservation purchase failed")
+        return jsonify({"status": "error", "message": "予約を確定できませんでした。時間をおいて再試行してください。"}), 503
 
 
 if __name__ == "__main__":

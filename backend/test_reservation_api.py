@@ -1,6 +1,6 @@
 ﻿import sys
 import unittest
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import patch
 
@@ -33,6 +33,7 @@ class FakeDatabase:
         self.released_seats = set()
         self.fail_on = fail_on
         self.last_connection = None
+        self.point_balance = 0
         self.movie_masters = {
             "movie-001": {"title": "映画のタイトル", "duration_minutes": 124},
         }
@@ -108,6 +109,21 @@ class FakeCursor:
         if self.database.fail_on and normalized.startswith(self.database.fail_on):
             raise RuntimeError("forced database failure")
 
+        if normalized.startswith("insert into point_accounts") or normalized.startswith("insert into point_transactions"):
+            self.row = None
+            self.rows = []
+            return
+        if normalized.startswith("select balance from point_accounts"):
+            self.row = (self.database.point_balance,)
+            self.rows = []
+            return
+        if normalized.startswith("update point_accounts"):
+            self.database.point_balance = params[0]
+            return
+        if normalized.startswith("select points_used, points_earned from orders"):
+            self.row = (0, 0)  # Historical fixtures predate point accrual.
+            return
+
         if normalized.startswith("select id from users"):
             email = params[0]
             self.row = (7,) if email == "test@example.com" else None
@@ -133,6 +149,7 @@ class FakeCursor:
                     showing["screen_id"],
                     screen.get("name"),
                     showing["start_time"],
+                    showing.get("started", False),
                 )
             self.rows = []
             return
@@ -330,7 +347,8 @@ class FakeCursor:
             return
 
         if normalized.startswith("select id, order_status") and "from orders" in normalized:
-            order_id, email = params
+            order_id, user_id = params
+            email = "test@example.com" if user_id == 7 else "other@example.com"
             order = next(
                 (
                     item
@@ -339,7 +357,7 @@ class FakeCursor:
                 ),
                 None,
             )
-            self.row = (order["id"], order["order_status"]) if order else None
+            self.row = (order["id"], order["order_status"], order.get("cancelled_at")) if order else None
             self.rows = []
             return
 
@@ -349,7 +367,7 @@ class FakeCursor:
             return
 
         if normalized.startswith("select") and "from orders" in normalized:
-            email = params[0] if params else None
+            email = "test@example.com" if params[0] == 7 else "other@example.com"
             orders = [
                 order
                 for order in self.database.orders
@@ -362,10 +380,21 @@ class FakeCursor:
                     order["total_amount"],
                     order["order_status"],
                     order["created_at"],
+                    order.get("subtotal_amount", order["total_amount"]),
+                    order.get("coupon_code"), order.get("coupon_discount_amount", 0),
+                    order.get("points_used", 0), order.get("points_earned", 0),
+                    order.get("order_num", str(order["id"])),
                 )
                 for order in orders
             ]
             self.row = None
+            return
+
+        if normalized.startswith("select sh.show_date, sh.start_time"):
+            order = next(item for item in self.database.orders if item["id"] == params[0])
+            self.rows = [(self.database.showing_masters[seat["showing_id"]]["show_date"],
+                          self.database.showing_masters[seat["showing_id"]]["start_time"])
+                         for seat in order["reservation_seats"]]
             return
 
         if "from reservation_seats" in normalized and "join showings" in normalized:
@@ -391,6 +420,8 @@ class FakeCursor:
                             seat["ticket_type_id"],
                             seat["ticket_type_label"],
                             seat["price_at_purchase"],
+                            showing.get("show_date"),
+                            seat.get("seat_label", seat["seat_id"]),
                         )
                     )
             self.rows = rows
@@ -524,7 +555,16 @@ class FakeCursor:
 class ReservationApiTest(unittest.TestCase):
     def setUp(self):
         app_module.app.config.update(TESTING=True)
+        # Outbox SQL/Resend delivery is covered against real PostgreSQL in test_booking_benefits.
+        self.enterContext(patch.object(app_module, "enqueue_reservation_mail", return_value="queued"))
         self.client = app_module.app.test_client()
+        self.client.environ_base.update(HTTP_ORIGIN="http://localhost:3000", HTTP_X_CSRF_TOKEN="unit-csrf")
+        member = patch("member_auth.load_member", return_value={"id": 7, "name": "Test", "email": "test@example.com", "csrf_token": "unit-csrf"})
+        member.start()
+        self.addCleanup(member.stop)
+        clock = patch("reservation_policy.now_jst", return_value=datetime(2026, 6, 30, tzinfo=timezone(timedelta(hours=9))))
+        clock.start()
+        self.addCleanup(clock.stop)
 
     def test_get_reserved_seats_returns_showing_scoped_reserved_seats(self):
         fake_db = FakeDatabase(
@@ -760,7 +800,7 @@ class ReservationApiTest(unittest.TestCase):
                 },
             )
 
-        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response.status_code, 503)
         self.assertTrue(fake_db.last_connection.rolled_back)
     def test_get_reservations_returns_user_scoped_purchase_history(self):
         fake_db = FakeDatabase(
@@ -846,16 +886,31 @@ class ReservationApiTest(unittest.TestCase):
                         "user_email": "test@example.com",
                         "movie_id": "movie-001",
                         "screening_id": "scr-1820",
+                        "movie_title": "映画のタイトル",
+                        "screening_date": "2026-07-03",
+                        "show_date": "2026-07-03",
+                        "show_start_at": "2026-07-03T18:20:00+09:00",
+                        "can_cancel": True,
+                        "cancel_reason": None,
+                        "cancel_deadline": "2026-07-03T17:20:00+09:00",
+                        "refund_mode": "simulation",
                         "screen_name": "スクリーン 3",
                         "screening_time": "18:20",
                         "ticket_count": 2,
                         "ticket_total_price": 2800,
                         "food_total_price": 980,
                         "total_price": 4580,
+                        "subtotal_amount": 4580,
+                        "coupon_code": None,
+                        "coupon_discount_amount": 0,
+                        "points_used": 0,
+                        "points_earned": 0,
+                        "order_num": "101",
                         "reservation_status": "paid",
                         "payment_status": "paid",
                         "created_at": "2026-06-30T12:00:00",
                         "seats": ["C-4", "C-5"],
+                        "seat_labels": ["C-4", "C-5"],
                         "ticket_types": [
                             {
                                 "ticket_type_id": "general",

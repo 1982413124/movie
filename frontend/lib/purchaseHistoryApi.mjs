@@ -5,11 +5,7 @@ import {
   normalizeTicketTypes,
 } from "./seatSelection.mjs";
 
-const defaultApiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:5000";
-
-function getApiBaseUrl(apiBaseUrl = defaultApiBaseUrl) {
-  return String(apiBaseUrl ?? "").replace(/\/$/, "");
-}
+import { memberFetch, MemberApiError } from "./member-api.mjs";
 
 function normalizeSeatLabels(value) {
   if (!Array.isArray(value)) {
@@ -83,7 +79,11 @@ function formatPurchasedAt(value) {
   }).format(date);
 }
 
-function resolveMovieTitle(movieId) {
+function resolveMovieTitle(movieId, purchasedTitle) {
+  if (purchasedTitle) {
+    return String(purchasedTitle);
+  }
+
   if (movieId === movieDetail.id) {
     return movieDetail.title;
   }
@@ -93,10 +93,30 @@ function resolveMovieTitle(movieId) {
 
 function resolveShowtime(item) {
   const screening = findScreening(item?.screening_id);
-  const dateLabel = screening?.dateLabel ?? "";
-  const timeLabel = item?.screening_time ?? screening?.label ?? "";
+  const dateLabel = item?.show_date ?? item?.screening_date ?? screening?.dateLabel ?? "";
+  const timeLabel = String(item?.screening_time ?? screening?.label ?? "").slice(0, 5);
 
   return [dateLabel, timeLabel].filter(Boolean).join(" ") || "-";
+}
+
+function resolveShowDate(item) {
+  const value = String(item?.show_date ?? item?.screening_date ?? "").trim();
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return value;
+  }
+
+  return findScreening(item?.screening_id)?.dateId ?? "";
+}
+
+function resolveShowStartAt(item) {
+  const showDate = resolveShowDate(item);
+  const screening = findScreening(item?.screening_id);
+  const time = String(item?.screening_time ?? screening?.label ?? "").trim();
+
+  return showDate && /^\d{2}:\d{2}/.test(time)
+    ? `${showDate}T${time.slice(0, 5)}:00+09:00`
+    : "";
 }
 
 export function normalizeReservationHistoryResponse(payload) {
@@ -105,7 +125,7 @@ export function normalizeReservationHistoryResponse(payload) {
   }
 
   return payload.reservations.map((item) => {
-    const seats = normalizeSeatLabels(item?.seats);
+    const seats = normalizeSeatLabels(item?.seat_labels ?? item?.seats);
     const ticketTypes = normalizeTicketTypes(item?.ticket_types);
     const foodItems = normalizeFoodItems(item?.food_items);
     const ticketCount = Number(
@@ -115,8 +135,12 @@ export function normalizeReservationHistoryResponse(payload) {
     return {
       id: String(item?.id ?? ""),
       purchasedAt: formatPurchasedAt(item?.created_at),
-      movieTitle: resolveMovieTitle(item?.movie_id),
+      purchasedAtRaw: String(item?.created_at ?? "").trim(),
+      movieId: item?.movie_id ? String(item.movie_id) : "",
+      movieTitle: resolveMovieTitle(item?.movie_id, item?.movie_title),
       screeningId: item?.screening_id ? String(item.screening_id) : "",
+      showDate: resolveShowDate(item),
+      showStartAt: item?.show_start_at ?? resolveShowStartAt(item),
       showtime: resolveShowtime(item),
       screen: item?.screen_name ?? findScreening(item?.screening_id)?.screenName ?? "-",
       seats,
@@ -125,77 +149,57 @@ export function normalizeReservationHistoryResponse(payload) {
       ticketSummary: formatTicketTypeSummary(ticketTypes, ticketCount),
       foodItems,
       totalPrice: Number(item?.total_price ?? 0),
+      ...(item?.subtotal_amount === undefined ? {} : {
+        subtotalAmount: Number(item.subtotal_amount),
+        ticketTotalPrice: Number(item.ticket_total_price ?? 0),
+        couponCode: item.coupon_code ?? "",
+        couponDiscountAmount: Number(item.coupon_discount_amount ?? 0),
+        pointsUsed: Number(item.points_used ?? 0),
+        pointsEarned: Number(item.points_earned ?? 0),
+        orderNum: item.order_num ?? String(item.id),
+      }),
       status: normalizeStatus(item?.reservation_status),
+      orderStatus: String(item?.reservation_status ?? "").trim().toLowerCase(),
       paymentStatus: String(item?.payment_status ?? "").trim().toLowerCase() || "unpaid",
       posterUrl: "",
+      canCancel: item?.can_cancel,
+      cancelDeadline: item?.cancel_deadline ?? "",
+      cancelReason: item?.cancel_reason ?? "",
+      refundMode: item?.refund_mode ?? "",
+
     };
   });
 }
 
-export async function fetchReservationHistories(
-  userEmail,
-  { apiBaseUrl = defaultApiBaseUrl, fetchImpl = fetch } = {},
-) {
-  const normalizedEmail = String(userEmail ?? "").trim().toLowerCase();
-
-  if (!normalizedEmail) {
-    return [];
-  }
-
-  const response = await fetchImpl(
-    `${getApiBaseUrl(apiBaseUrl)}/api/reservations?user_email=${encodeURIComponent(
-      normalizedEmail,
-    )}`,
-  );
-
-  if (!response.ok) {
-    throw new Error("failed_to_fetch_reservation_histories");
-  }
-
-  return normalizeReservationHistoryResponse(await response.json());
+export async function fetchReservationHistories(userEmail, options = {}) {
+  if (!String(userEmail ?? "").trim()) return [];
+  const response = await memberFetch("reservations", {}, options);
+  const payload = await safeReadJson(response);
+  if (!response.ok) throw new MemberApiError(payload.message ?? "予約履歴を取得できませんでした。", response.status);
+  return normalizeReservationHistoryResponse(payload);
 }
 
-export async function cancelReservation(
-  reservationId,
-  userEmail,
-  { apiBaseUrl = defaultApiBaseUrl, fetchImpl = fetch } = {},
-) {
-  const normalizedId = String(reservationId ?? "").trim();
-  const normalizedEmail = String(userEmail ?? "").trim().toLowerCase();
-
-  if (!normalizedId || !normalizedEmail) {
-    return { ok: false, message: "cancel_reservation_missing_input" };
-  }
-
-  const response = await fetchImpl(
-    `${getApiBaseUrl(apiBaseUrl)}/api/reservations/${encodeURIComponent(normalizedId)}/cancel`,
-    {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ user_email: normalizedEmail }),
-    },
-  );
-  const payload = await safeReadJson(response);
-
-  if (response.ok) {
+export async function cancelReservation(reservationId, userEmail, options = {}) {
+  const id = String(reservationId ?? "").trim();
+  if (!id) return { ok: false, message: "予約を選択してください。" };
+  try {
+    const response = await memberFetch(`reservations/${encodeURIComponent(id)}/cancel`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" }, body: "{}",
+    }, options);
+    const payload = await safeReadJson(response);
+    if (!response.ok) return { ok: false, message: payload.message ?? "キャンセルできませんでした。", httpStatus: response.status };
     return {
-      ok: true,
-      status: normalizeStatus(payload?.reservation_status ?? "canceled"),
+      ok: true, status: normalizeStatus(payload.reservation_status),
+      orderStatus: payload.reservation_status, paymentStatus: payload.payment_status,
+      refundMode: payload.refund_mode, refundedAmount: payload.refunded_amount,
+      message: payload.message ?? "キャンセル完了。",
     };
+  } catch (error) {
+    if (error instanceof MemberApiError) return { ok: false, message: error.message, httpStatus: error.status };
+    throw error;
   }
-
-  return {
-    ok: false,
-    message: payload?.message ?? "cancel_reservation_failed",
-  };
 }
 
 async function safeReadJson(response) {
-  try {
-    return await response.json();
-  } catch {
-    return {};
-  }
+  try { return await response.json(); } catch { return {}; }
 }

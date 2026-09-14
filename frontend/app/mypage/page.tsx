@@ -1,20 +1,38 @@
 "use client";
 
+import { toast } from "@/lib/toast-store.mjs";
+import { useToastError } from "@/lib/use-toast-error";
+
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type ChangeEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 
 import CampaignHeader from "../components/CampaignHeader";
-import type { FoodHistory, TicketHistory, TicketTypeHistory } from "../../lib/reservationHistoryTypes";
+import PointsPanel from "./PointsPanel";
+import type { FoodHistory, TicketHistory } from "../../lib/reservationHistoryTypes";
 import {
-  getCurrentAccount,
+  storeMemberAccount,
   logoutAccount,
   updateCurrentAccount,
 } from "../../lib/authStorage.mjs";
-import { cancelReservation, fetchReservationHistories } from "../../lib/purchaseHistoryApi.mjs";
-import { movieDetail } from "../../lib/seatSelection.mjs";
-import { createReservationSeatDisplay } from "../../lib/reservationSeatDisplay.mjs";
+import {
+  cancelReservation,
+  fetchReservationHistories,
+} from "../../lib/purchaseHistoryApi.mjs";
+import {
+  canCancelReservation,
+  findNextReservation,
+  formatFoodSummary,
+  getFoodPickupDetails,
+  getReservationDisplayStatus,
+} from "../../lib/reservationExperience.mjs";
 
-type MenuKey = "reservations" | "history" | "profile" | "settings" | "logout";
+import { readMemberSession, signOutMember, isMemberAuthError } from "../../lib/member-api.mjs";
+import { cancellationReason, formatCancellationDeadline } from "../../lib/reservationCancellation.mjs";
+
+type MenuKey = "reservations" | "history" | "points" | "profile" | "settings" | "logout";
+type ViewMenuKey = Exclude<MenuKey, "logout">;
+type HistoryState = "idle" | "loading" | "ready" | "error";
 type StatusTone = "error" | "success";
 
 type ProfileForm = {
@@ -28,19 +46,20 @@ type Account = ProfileForm & {
   password: string;
 };
 
-type MenuItem = {
-  key: MenuKey;
-  label: string;
-  meta: string;
-};
-
-const MENU_ITEMS: MenuItem[] = [
-  { key: "reservations", label: "予約履歴", meta: "Reservations" },
+const MENU_ITEMS: { key: MenuKey; label: string; meta: string }[] = [
+  { key: "reservations", label: "次の予約", meta: "Next" },
   { key: "history", label: "購入履歴", meta: "History" },
+  { key: "points", label: "ポイント", meta: "Points" },
   { key: "profile", label: "プロフィール", meta: "Profile" },
   { key: "settings", label: "設定", meta: "Settings" },
   { key: "logout", label: "ログアウト", meta: "Logout" },
 ];
+
+const VIEW_MENU_KEYS: ViewMenuKey[] = ["reservations", "history", "points", "profile", "settings"];
+
+function isViewMenuKey(value: string | null): value is ViewMenuKey {
+  return Boolean(value && VIEW_MENU_KEYS.includes(value as ViewMenuKey));
+}
 
 const PROFILE_FIELDS: {
   name: keyof ProfileForm;
@@ -49,9 +68,9 @@ const PROFILE_FIELDS: {
   type: string;
 }[] = [
   { name: "name", label: "名前", placeholder: "名前を入力", type: "text" },
-  { name: "nickname", label: "ニックネーム", placeholder: "ユーザー名を入力", type: "text" },
-  { name: "email", label: "Email", placeholder: "メールアドレスを入力", type: "email" },
-  { name: "phone", label: "電話番号", placeholder: "番号を入力", type: "tel" },
+  { name: "nickname", label: "ニックネーム", placeholder: "表示名を入力", type: "text" },
+  { name: "email", label: "メールアドレス", placeholder: "メールアドレスを入力", type: "email" },
+  { name: "phone", label: "電話番号", placeholder: "電話番号を入力", type: "tel" },
 ];
 
 const emptyForm: ProfileForm = {
@@ -82,814 +101,634 @@ function formatPrice(price: number): string {
   }).format(price);
 }
 
-function getSeatColumn(seat: string): number {
-  const match = seat.match(/\d+/);
-  return match ? Number(match[0]) : 0;
+function paymentLabel(history: TicketHistory): string {
+  if (history.paymentStatus === "refunded") {
+    return history.refundMode === "simulation" ? "支払い取消（テスト決済）" : "返金済み";
+  }
+  return ({ paid: "支払い済み", unpaid: "未払い", failed: "支払い失敗" } as Record<string, string>)[history.paymentStatus ?? ""] ?? "確認中";
 }
 
-function getSeatRow(seat: string): string {
-  return seat.charAt(0).toUpperCase();
+function getFoodTotal(items: FoodHistory[] = []): number {
+  return items.reduce((total, item) => total + item.subtotal, 0);
 }
 
-function formatSeatArea(seats: string[]): string {
-  const firstSeat = seats[0];
+function StatusBadge({ history }: { history: TicketHistory }) {
+  const status = getReservationDisplayStatus(history);
+  const isCanceled = status === "キャンセル済み" || status === "返金済み";
 
-  if (!firstSeat) {
-    return "-";
-  }
-
-  return seats.length > 1
-    ? `${getSeatRow(firstSeat)}列 ${getSeatColumn(firstSeat)}番から`
-    : `${getSeatRow(firstSeat)}列 ${getSeatColumn(firstSeat)}番`;
-}
-
-function formatPaymentStatus(value = ""): string {
-  const status = value.trim().toLowerCase();
-
-  if (status === "paid") {
-    return "支払い済み";
-  }
-
-  if (status === "failed") {
-    return "支払い失敗";
-  }
-
-  if (status === "refunded") {
-    return "返金済み";
-  }
-
-  return status === "unpaid" ? "未払い" : value || "-";
-}
-function OverviewMetric({ label, value, helper }: { label: string; value: string; helper: string }) {
   return (
-    <div className="border border-[#D6CCBC] bg-[#F8F4EC] p-4">
-      <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#8A6034]">
-        {label}
-      </p>
-      <p className="mt-3 text-2xl font-bold text-[#21160F]">{value}</p>
-      <p className="mt-2 text-xs leading-5 text-[#7C6F61]">{helper}</p>
-    </div>
+    <span
+      className={`inline-flex w-fit border px-3 py-1 text-xs font-bold ${
+        isCanceled
+          ? "border-[var(--danger)]/35 bg-[var(--selection-soft)] text-[var(--danger)]"
+          : "border-[var(--success)]/35 bg-[var(--success)]/7 text-[var(--success)]"
+      }`}
+    >
+      {status}
+    </span>
   );
 }
 
-function SeatMiniMap({ seats, screeningId }: { seats: string[]; screeningId?: string }) {
-  const display = createReservationSeatDisplay(screeningId, seats);
-  const gridTemplateColumns = `26px repeat(${display.columns.length}, 34px)`;
-
-  return (
-    <div className="border border-[#CFC4B4] bg-[#EFE8DC] p-4">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3 text-[10px] font-bold uppercase tracking-[0.2em] text-[#8A6034]">
-        <span>{display.screenName}</span>
-        <span>{display.capacity} Seats</span>
-      </div>
-      <div className="max-h-[360px] overflow-x-auto overflow-y-auto pb-2">
-        <div className="min-w-max pr-2">
-          <div className="mx-auto mb-4 h-1.5 w-64 max-w-[60%] bg-[#2B2119]" />
-          <div
-            className="mb-2 grid gap-x-1 text-center font-mono text-[10px] text-[#8A6034]"
-            style={{ gridTemplateColumns }}
-          >
-            <span />
-            {display.columns.map((column) => (
-              <span key={column}>{column}</span>
-            ))}
-          </div>
-          <div className="grid gap-y-1.5">
-            {display.rows.map((row) => (
-              <div
-                key={row.row}
-                className="grid items-center gap-x-1"
-                style={{ gridTemplateColumns }}
-              >
-                <span className="font-mono text-[11px] font-bold text-[#8A6034]">
-                  {row.row}
-                </span>
-                {row.seats.map((seat) => (
-                  <span
-                    key={seat.id}
-                    className={`h-6 border text-[0px] ${
-                      seat.isSelected
-                        ? "seat-pill border-[#2B2119] bg-[#2B2119]"
-                        : "border-[#D6CCBC] bg-[#FBF8F1]"
-                    }`}
-                    aria-label={seat.id}
-                    title={seat.id}
-                  >
-                    {seat.id}
-                  </span>
-                ))}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-function ReservationStatusPanel({
-  histories,
-  notice = "",
-  onShowHistory,
+function HistoryStatePanel({
+  state,
+  onRetry,
 }: {
-  histories: TicketHistory[];
-  notice?: string;
-  onShowHistory: () => void;
+  state: HistoryState;
+  onRetry: () => void;
 }) {
-  const latestReservation = histories[0];
-  const totalSeatCount = histories.reduce((total, history) => total + history.seats.length, 0);
-  const totalPrice = histories.reduce((total, history) => total + history.totalPrice, 0);
-
-  if (!latestReservation) {
+  if (state === "loading" || state === "idle") {
     return (
-      <section className="border-y border-[#D6CCBC] bg-[#FBF8F1]/72 px-5 py-10 sm:px-8 lg:px-10">
-        <p className="text-sm text-[#6F6254]">{notice || "予約情報はまだありません。"}</p>
-      </section>
+      <div aria-live="polite" className="rounded-lg grid gap-4 border border-[var(--border-soft)] bg-[var(--surface-bg)] p-6">
+        <span className="cinema-skeleton h-5 w-36" />
+        <span className="cinema-skeleton h-10 w-3/4" />
+        <span className="cinema-skeleton h-20 w-full" />
+        <span className="sr-only">予約情報を読み込んでいます。</span>
+      </div>
     );
   }
 
+  if (state === "error") {
+    return (
+      <div role="alert" className="rounded-lg border border-[var(--danger)] bg-[var(--surface-bg)] p-6">
+        <h2 className="text-xl font-black text-[var(--text-primary)]">予約情報を取得できませんでした</h2>
+        <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
+          通信状態を確認して、もう一度読み込んでください。
+        </p>
+        <button
+          type="button"
+          onClick={onRetry}
+          className="mt-5 min-h-11 border border-[var(--border-strong)] px-5 text-sm font-bold text-[var(--text-primary)] hover:bg-[var(--button-hover)] hover:text-white"
+        >
+          もう一度読み込む
+        </button>
+      </div>
+    );
+  }
+
+  return null;
+}
+
+function NextReservationPanel({
+  histories,
+  historyState,
+  notice,
+  onCancel,
+  onOpenDetails,
+  onRetry,
+}: {
+  histories: TicketHistory[];
+  historyState: HistoryState;
+  notice: string;
+  onCancel: (history: TicketHistory) => void;
+  onOpenDetails: (history: TicketHistory) => void;
+  onRetry: () => void;
+}) {
+  if (historyState !== "ready") {
+    return <HistoryStatePanel state={historyState} onRetry={onRetry} />;
+  }
+
+  const nextReservation = findNextReservation(histories);
+
   return (
-    <section className="border-y border-[#D6CCBC] bg-[#FBF8F1]/72">
-      <div className="grid gap-8 border-b border-[#D6CCBC] px-5 py-7 sm:px-8 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:px-10">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.34em] text-[#8A6034]">
-            Reservation History
-          </p>
-          <h2 className="mt-4 text-3xl font-bold tracking-normal text-[#21160F]">
-            予約履歴
-          </h2>
-        </div>
-        <p className="max-w-2xl text-sm leading-7 text-[#6F6254]">
-          直近の上映日時、スクリーン、予約した座席をまとめて確認できます。座席はスクリーン位置と合わせて見やすくしています。
+    <section>
+      <div className="mb-6">
+        <p className="text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">Next Reservation</p>
+        <h2 className="mt-3 text-3xl font-black text-[var(--text-primary)]">次の予約</h2>
+        <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
+          次に観る映画と、上映前に受け取るフードをここで確認できます。
         </p>
       </div>
 
-      <div className="grid gap-7 px-5 py-8 sm:px-8 xl:grid-cols-[minmax(0,1.2fr)_360px] lg:px-10 lg:py-10">
-        <article className="border border-[#CFC4B4] bg-[#F8F4EC] p-5 sm:p-6">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+      {notice ? (
+        <p role="status" className="mb-5 border border-[var(--success)]/30 bg-[var(--success)]/6 p-4 text-sm font-bold text-[var(--success)]">
+          {notice}
+        </p>
+      ) : null}
+
+      <div className="grid gap-6">
+        {nextReservation ? (
+          <NextReservationCard
+            history={nextReservation}
+            onCancel={() => onCancel(nextReservation)}
+            onOpenDetails={() => onOpenDetails(nextReservation)}
+          />
+        ) : (
+          <div className="rounded-lg grid min-h-80 place-items-center border border-[var(--border-soft)] bg-[var(--surface-bg)] p-8 text-center">
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-[#8A6034]">
-                Next Booking
+              <p className="cinema-label">Empty</p>
+              <h3 className="mt-3 text-2xl font-black text-[var(--text-primary)]">次の予約はありません</h3>
+              <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
+                上映中の作品から、次に観る映画を探せます。
               </p>
-              <h3 className="mt-4 text-2xl font-bold text-[#21160F]">
-                {latestReservation.movieTitle}
-              </h3>
-              <p className="mt-3 text-sm leading-6 text-[#6F6254]">
-                {latestReservation.showtime}
-              </p>
-              <p className="mt-1 text-sm font-bold text-[#4C4035]">
-                {latestReservation.screen}
-              </p>
-            </div>
-            <div className="w-full border-y border-[#D6CCBC] py-4 lg:w-56 lg:border-y-0 lg:border-l lg:py-0 lg:pl-6">
-              <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#8A6034]">
-                Status
-              </p>
-              <p className="mt-2 text-2xl font-bold text-[#21160F]">
-                {latestReservation.status}
-              </p>
-              <p className="mt-1 text-xs text-[#7C6F61]">
-                {latestReservation.ticketCount}枚 / {formatPrice(latestReservation.totalPrice)}
-              </p>
+              <Link
+                href="/movie-now"
+                className="mt-6 inline-flex min-h-12 items-center justify-center bg-[var(--button-bg)] px-6 text-sm font-bold text-white hover:bg-[var(--button-hover)]"
+              >
+                映画を探す
+              </Link>
             </div>
           </div>
-
-          <div className="mt-7 border-t border-[#D6CCBC] pt-6">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#8A6034]">
-                  Seats
-                </p>
-                <p className="mt-2 text-sm text-[#6F6254]">予約した座席</p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {latestReservation.seats.map((seat) => (
-                  <span
-                    key={seat}
-                    className="seat-pill inline-flex h-10 min-w-12 items-center justify-center border border-[#2B2119] bg-[#2B2119] px-3 text-sm font-bold text-[#FFF8E8]"
-                  >
-                    {seat}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            <div className="mt-5">
-              <SeatMiniMap seats={latestReservation.seats} screeningId={latestReservation.screeningId} />
-            </div>
-          </div>
-        </article>
-
-        <aside className="grid gap-4 sm:grid-cols-3 xl:grid-cols-1">
-          <OverviewMetric label="購入件数" value={`${histories.length}件`} helper="保存されている履歴" />
-          <OverviewMetric label="予約座席" value={`${totalSeatCount}席`} helper="全履歴の座席数" />
-          <OverviewMetric label="累計金額" value={formatPrice(totalPrice)} helper="チケット合計" />
-          <button
-            type="button"
-            onClick={onShowHistory}
-            className="inline-flex h-12 items-center justify-center border border-[#2B2119] bg-[#2B2119] px-5 text-sm font-bold text-[#FFF8E8] transition hover:bg-[#4A3426] sm:col-span-3 xl:col-span-1"
-          >
-            購入履歴を見る
-          </button>
-        </aside>
+        )}
       </div>
     </section>
+  );
+}
+
+function NextReservationCard({
+  history,
+  onCancel,
+  onOpenDetails,
+}: {
+  history: TicketHistory;
+  onCancel: () => void;
+  onOpenDetails: () => void;
+}) {
+  const pickup = getFoodPickupDetails(history);
+
+  return (
+    <article className="rounded-lg border border-[var(--border-soft)] bg-[var(--surface-bg)] p-6 shadow-sm sm:p-8">
+      <div className="flex flex-col gap-4 border-b border-[var(--border-soft)] pb-6 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="cinema-label">Your Next Movie</p>
+          <h3 className="mt-3 text-3xl font-black leading-tight text-[var(--text-primary)]">{history.movieTitle}</h3>
+        </div>
+        <StatusBadge history={history} />
+      </div>
+
+      <dl className="mt-6 grid gap-4 sm:grid-cols-2">
+        <DetailCell label="上映日時" value={history.showtime} />
+        <DetailCell label="スクリーン" value={history.screen} />
+        <DetailCell label="座席" value={history.seats.join(", ") || "-"} />
+        <DetailCell label="チケット" value={`${history.ticketCount}枚 / ${formatPrice(history.totalPrice)}`} />
+      </dl>
+
+      <div className="mt-6 border-l-4 border-[var(--danger)] bg-[var(--selection-soft)] p-4">
+        <p className="text-xs font-bold uppercase tracking-wide text-[var(--danger)]">Food Pre-Order</p>
+        <p className="mt-2 text-sm font-bold text-[var(--text-primary)]">{formatFoodSummary(history.foodItems)}</p>
+        {pickup ? (
+          <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+            {pickup.timeLabel} / {pickup.locationLabel}
+          </p>
+        ) : (
+          <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">フード注文はありません。</p>
+        )}
+      </div>
+
+      <p className="mt-5 text-xs leading-5 text-[var(--text-muted)]">
+        キャンセルは上映開始の1時間前まで可能です。チケット・フードを取り消し、座席を解放します。
+      </p>
+      <div className="mt-5 grid gap-3 sm:grid-cols-2">
+        <button
+          type="button"
+          onClick={onOpenDetails}
+          className="min-h-12 bg-[var(--button-bg)] px-5 text-sm font-bold text-white hover:bg-[var(--button-hover)]"
+        >
+          予約詳細を見る
+        </button>
+        <button
+          type="button"
+          disabled={!canCancelReservation(history)}
+          onClick={onCancel}
+          className="min-h-12 border border-[var(--danger)] px-5 text-sm font-bold text-[var(--danger)] enabled:hover:bg-[var(--button-hover)] enabled:hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
+        >
+          予約をキャンセル
+        </button>
+      </div>
+    </article>
   );
 }
 
 function PurchaseHistoryPanel({
-  cancelingReservationId = "",
   histories,
-  notice = "",
-  onCancelReservationRequest,
-  setSelectedHistoryId,
+  historyState,
+  notice,
+  onCancel,
+  onOpenDetails,
+  onRetry,
 }: {
-  cancelingReservationId?: string;
   histories: TicketHistory[];
-  notice?: string;
-  onCancelReservationRequest: (reservationId: string) => void;
-  setSelectedHistoryId: (historyId: string) => void;
+  historyState: HistoryState;
+  notice: string;
+  onCancel: (history: TicketHistory) => void;
+  onOpenDetails: (history: TicketHistory) => void;
+  onRetry: () => void;
 }) {
+  if (historyState !== "ready") {
+    return <HistoryStatePanel state={historyState} onRetry={onRetry} />;
+  }
+
   return (
-    <section className="border-y border-[#D6CCBC] bg-[#FBF8F1]/72">
-      <div className="grid gap-8 border-b border-[#D6CCBC] px-5 py-7 sm:px-8 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:px-10">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.34em] text-[#8A6034]">
-            Purchase History
-          </p>
-          <h2 className="mt-4 text-3xl font-bold tracking-normal text-[#21160F]">
-            購入履歴
-          </h2>
-        </div>
-        <p className="max-w-2xl text-sm leading-7 text-[#6F6254]">
-          購入日時、上映回、座席、合計金額を一覧で確認できます。
+    <section>
+      <div className="mb-6">
+        <p className="text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">Purchase History</p>
+        <h2 className="mt-3 text-3xl font-black text-[var(--text-primary)]">購入履歴</h2>
+        <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
+          支払い状況、座席、フード注文を予約ごとに確認できます。
         </p>
       </div>
 
-      <div className="px-5 py-8 sm:px-8 lg:px-10 lg:py-10">
-        {histories.length === 0 ? (
-          <p className="text-sm leading-7 text-[#6F6254]">
-            {notice || "購入履歴はまだありません。"}
-          </p>
-        ) : (
-          <div className="grid gap-4">
-            {histories.map((history) => (
-              <article
-                key={history.id}
-                className="grid gap-5 border border-[#CFC4B4] bg-[#F8F4EC] p-5 md:grid-cols-[minmax(0,1fr)_220px] md:items-stretch"
-              >
+      {notice ? (
+        <p role="status" className="mb-5 border border-[var(--success)]/30 bg-[var(--success)]/6 p-4 text-sm font-bold text-[var(--success)]">
+          {notice}
+        </p>
+      ) : null}
+
+      {histories.length === 0 ? (
+        <div className="rounded-lg border border-[var(--border-soft)] bg-[var(--surface-bg)] p-8 text-center">
+          <h3 className="text-xl font-black text-[var(--text-primary)]">購入履歴はまだありません</h3>
+          <Link href="/movie-now" className="mt-5 inline-flex min-h-11 items-center bg-[var(--button-bg)] px-5 text-sm font-bold text-white">
+            上映中の映画を見る
+          </Link>
+        </div>
+      ) : (
+        <div className="grid gap-4">
+          {histories.map((history) => (
+            <article key={history.id} className="rounded-lg border border-[var(--border-soft)] bg-[var(--surface-bg)] p-5 sm:p-6">
+              <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_220px]">
                 <div className="min-w-0">
-                  <div className="flex flex-col gap-3 border-b border-[#D6CCBC] pb-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                      <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#8A6034]">
-                        購入日時
-                      </p>
-                      <p className="mt-2 text-sm font-bold text-[#4C4035]">{history.purchasedAt}</p>
+                      <p className="text-xs text-[var(--text-muted)]">購入日時 {history.purchasedAt}</p>
+                      <h3 className="mt-2 text-2xl font-black text-[var(--text-primary)]">{history.movieTitle}</h3>
                     </div>
-                    <span className="inline-flex w-fit border border-[#2B2119] px-3 py-1 text-xs font-bold text-[#2B2119]">
-                      {history.status}
-                    </span>
+                    <StatusBadge history={history} />
                   </div>
-
-                  <h3 className="mt-5 text-2xl font-bold text-[#21160F]">{history.movieTitle}</h3>
-                  <p className="mt-3 text-sm leading-6 text-[#6F6254]">{history.showtime}</p>
-                  <p className="mt-1 text-sm font-bold text-[#4C4035]">{history.screen}</p>
-
-                  <div className="mt-5 flex flex-wrap items-center gap-2">
-                    <span className="mr-2 text-xs font-bold uppercase tracking-[0.2em] text-[#8A6034]">
-                      座席
-                    </span>
-                    {history.seats.map((seat) => (
-                      <span
-                        key={seat}
-                        className="seat-pill inline-flex h-8 min-w-10 items-center justify-center border border-[#2B2119] px-3 text-xs font-bold text-[#2B2119]"
-                      >
-                        {seat}
-                      </span>
-                    ))}
-                  </div>
+                  <p className="mt-4 text-sm font-semibold text-[var(--text-secondary)]">
+                    {history.showtime} / {history.screen}
+                  </p>
+                  <dl className="mt-5 grid gap-3 border-t border-[var(--border-soft)] pt-4 sm:grid-cols-2">
+                    <DetailCell label="座席" value={history.seats.join(", ") || "-"} />
+                    <DetailCell label="フード" value={formatFoodSummary(history.foodItems)} />
+                  </dl>
                 </div>
 
-                <div className="grid border-t border-[#D6CCBC] pt-4 md:border-l md:border-t-0 md:pl-5 md:pt-0">
-                  <dl className="grid gap-4 self-center">
-                    <div>
-                      <dt className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#8A6034]">
-                        Tickets
-                      </dt>
-                      <dd className="mt-2 text-xl font-bold text-[#21160F]">{history.ticketCount}枚</dd>
-                    </div>
-                    <div>
-                      <dt className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#8A6034]">
-                        合計金額
-                      </dt>
-                      <dd className="mt-2 text-2xl font-bold text-[#21160F]">
-                        {formatPrice(history.totalPrice)}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#8A6034]">
-                        Seat Area
-                      </dt>
-                      <dd className="mt-2 text-sm font-bold text-[#4C4035]">
-                        {formatSeatArea(history.seats)}
-                      </dd>
-                    </div>
+                <div className="flex flex-col justify-between border-t border-[var(--border-soft)] pt-5 lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0">
+                  <div>
+                    <p className="text-xs font-bold text-[var(--text-muted)]">合計金額</p>
+                    <p className="mt-2 text-2xl font-black text-[var(--text-primary)]">{formatPrice(history.totalPrice)}</p>
+                  </div>
+                  <div className="mt-5 grid gap-2">
                     <button
                       type="button"
-                      onClick={() => setSelectedHistoryId(history.id)}
-                      className="mt-2 inline-flex h-11 items-center justify-center border border-[#2B2119] bg-[#2B2119] px-4 text-sm font-bold text-[#FFF8E8] transition hover:bg-[#4A3426]"
+                      onClick={() => onOpenDetails(history)}
+                      className="min-h-11 bg-[var(--button-bg)] px-4 text-sm font-bold text-white hover:bg-[var(--button-hover)]"
                     >
                       詳細を見る
                     </button>
-                    {history.status === "キャンセル済み" ? null : (
+                    {canCancelReservation(history) ? (
                       <button
                         type="button"
-                        onClick={() => onCancelReservationRequest(history.id)}
-                        disabled={cancelingReservationId === history.id}
-                        className="mt-2 inline-flex h-11 items-center justify-center border border-[#9A3A24] px-4 text-sm font-bold text-[#9A3A24] transition hover:bg-[#F4E7DE] disabled:cursor-not-allowed disabled:opacity-50"
+                        onClick={() => onCancel(history)}
+                        className="min-h-11 border border-[var(--danger)] px-4 text-sm font-bold text-[var(--danger)] enabled:hover:bg-[var(--button-hover)] enabled:hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
                       >
-                        {cancelingReservationId === history.id ? "キャンセル中" : "予約をキャンセル"}
+                        予約をキャンセル
                       </button>
-                    )}
-                  </dl>
+                    ) : null}
+                  </div>
                 </div>
-              </article>
-            ))}
-          </div>
-        )}
-      </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
-function PurchaseHistoryDetailPanel({
-  cancelingReservationId = "",
+
+function ReservationDetailPanel({
   history,
-  onBackToHistory,
-  onCancelReservationRequest,
-  onShowReservations,
+  notice,
+  onBack,
+  onCancel,
 }: {
-  cancelingReservationId?: string;
   history: TicketHistory;
-  onBackToHistory: () => void;
-  onCancelReservationRequest: (reservationId: string) => void;
-  onShowReservations: () => void;
+  notice: string;
+  onBack: () => void;
+  onCancel: (history: TicketHistory) => void;
 }) {
-  const ticketTypes = history.ticketTypes ?? [];
   const foodItems = history.foodItems ?? [];
-  const foodCount = foodItems.reduce((total, item) => total + item.quantity, 0);
-  const foodTotal = foodItems.reduce((total, item) => total + item.subtotal, 0);
+  const foodTotal = getFoodTotal(foodItems);
+  const ticketTotal = history.ticketTotalPrice ?? Math.max(0, (history.subtotalAmount ?? history.totalPrice) - foodTotal);
+  const pickup = getFoodPickupDetails(history);
 
   return (
-    <section className="border-y border-[#D6CCBC] bg-[#FBF8F1]/72">
-      <div className="grid gap-6 border-b border-[#D6CCBC] px-5 py-7 sm:px-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start lg:px-10">
+    <section className="rounded-lg border border-[var(--border-soft)] bg-[var(--surface-bg)] p-6 sm:p-8">
+      <div className="flex flex-col gap-5 border-b border-[var(--border-soft)] pb-6 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.34em] text-[#8A6034]">
-            Purchase Detail
-          </p>
-          <h2 className="mt-4 text-3xl font-bold tracking-normal text-[#21160F]">
-            購入詳細
-          </h2>
-          <p className="mt-4 max-w-2xl text-sm leading-7 text-[#6F6254]">
-            映画、座席表、券種、購入したフードをこのページ内で確認できます。
-          </p>
+          <p className="cinema-label">Reservation Detail</p>
+          <h2 className="mt-3 text-3xl font-black text-[var(--text-primary)]">{history.movieTitle}</h2>
+          <p className="mt-3 break-all text-sm text-[var(--text-secondary)]">予約番号 {history.orderNum ?? history.id}</p>
         </div>
-        <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
-          <button
-            type="button"
-            onClick={onBackToHistory}
-            className="inline-flex h-11 items-center justify-center border border-[#2B2119] px-5 text-sm font-bold text-[#2B2119] transition hover:bg-[#EFE8DC]"
-          >
-            購入履歴へ戻る
-          </button>
-          <button
-            type="button"
-            onClick={onShowReservations}
-            className="inline-flex h-11 items-center justify-center border border-[#8A6034] px-5 text-sm font-bold text-[#8A6034] transition hover:bg-[#EFE8DC]"
-          >
-            予約履歴を見る
-          </button>
+        <StatusBadge history={history} />
+      </div>
+
+      {notice && <p role="status" className="mt-6 border border-[var(--border-soft)] bg-[var(--surface-muted)] p-4 text-sm font-bold">{notice}</p>}
+      <dl className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <DetailCell label="上映日時" value={history.showtime} />
+        <DetailCell label="スクリーン" value={history.screen} />
+        <DetailCell label="座席" value={history.seats.join(", ") || "-"} />
+        <DetailCell label="券種" value={history.ticketSummary || `${history.ticketCount}枚`} />
+        <DetailCell label="購入日時" value={history.purchasedAt} />
+        <DetailCell label="支払い" value={paymentLabel(history)} />
+      </dl>
+
+      <div className="mt-8 grid gap-6 lg:grid-cols-2">
+        <div className="border border-[var(--border-soft)] bg-[var(--surface-muted)] p-5">
+          <h3 className="text-lg font-black text-[var(--text-primary)]">料金内訳</h3>
+          <dl className="mt-4 divide-y divide-[var(--border-soft)] border-y border-[var(--border-soft)]">
+            <PriceRow label="チケット小計" value={formatPrice(ticketTotal)} />
+            <PriceRow label="フード小計" value={formatPrice(foodTotal)} />
+            <PriceRow label="割引前金額" value={formatPrice(history.subtotalAmount ?? history.totalPrice)} />
+            <PriceRow label={history.couponCode ? `クーポン（${history.couponCode}）` : "クーポン割引"} value={`−${formatPrice(history.couponDiscountAmount ?? 0)}`} />
+            <PriceRow label="ポイント利用" value={`−${formatPrice(history.pointsUsed ?? 0)}`} />
+            <PriceRow label="最終支払額" value={formatPrice(history.totalPrice)} strong />
+            <PriceRow label={history.orderStatus === "cancelled" ? "獲得ポイント（取消済み）" : "獲得ポイント"} value={`${history.pointsEarned ?? 0} pt`} />
+            {history.orderStatus === "cancelled" && <PriceRow label="返還ポイント" value={`${history.pointsUsed ?? 0} pt`} />}
+          </dl>
+        </div>
+        <div className="border border-[var(--border-soft)] bg-[var(--surface-muted)] p-5">
+          <h3 className="text-lg font-black text-[var(--text-primary)]">フード注文</h3>
+          <p className="mt-4 text-sm font-bold text-[var(--text-secondary)]">{formatFoodSummary(foodItems)}</p>
+          {history.orderStatus === "cancelled" ? (
+            <p className="mt-3 text-sm text-[var(--text-secondary)]">フード注文もキャンセル済みです。</p>
+          ) : pickup ? (
+            <dl className="mt-4 space-y-3 border-t border-[var(--border-soft)] pt-4">
+              <DetailCell label="受取時間" value={pickup.timeLabel} />
+              <DetailCell label="受取場所" value={pickup.locationLabel} />
+            </dl>
+          ) : (
+            <p className="mt-3 text-sm text-[var(--text-secondary)]">フード注文はありません。</p>
+          )}
         </div>
       </div>
 
-      <div className="grid gap-7 px-5 py-8 sm:px-8 xl:grid-cols-[minmax(0,1fr)_320px] lg:px-10 lg:py-10">
-        <div className="min-w-0 space-y-6">
-          <article className="border border-[#CFC4B4] bg-[#F8F4EC] p-5 sm:p-6">
-            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_240px] lg:items-start">
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-[#8A6034]">
-                  Movie
-                </p>
-                <h3 className="mt-4 text-3xl font-bold leading-tight text-[#21160F]">
-                  {history.movieTitle || movieDetail.title}
-                </h3>
-                <p className="mt-4 text-sm font-bold leading-7 text-[#4C4035]">
-                  {history.showtime}
-                  <br />
-                  {history.screen}
-                </p>
-              </div>
-              <dl className="grid gap-4 border-t border-[#D6CCBC] pt-5 text-sm lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
-                <DetailMetric label="Status" value={history.status} />
-                <DetailMetric label="購入日時" value={history.purchasedAt} />
-                <DetailMetric label="予約番号" value={history.id} />
-                <DetailMetric label="支払い" value={formatPaymentStatus(history.paymentStatus)} />
-              </dl>
-            </div>
-
-            <div className="mt-7 border-t border-[#D6CCBC] pt-6">
-              <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#8A6034]">
-                映画詳細
-              </p>
-              <div className="mt-4 flex flex-wrap gap-2 text-xs font-bold text-[#4C4035]">
-                <span className="border border-[#CFC4B4] px-3 py-2">{movieDetail.genre}</span>
-                <span className="border border-[#CFC4B4] px-3 py-2">{movieDetail.durationMinutes}分</span>
-                <span className="border border-[#CFC4B4] px-3 py-2">{movieDetail.ageRating}</span>
-              </div>
-              <p className="mt-4 max-w-3xl text-sm leading-7 text-[#6F6254]">
-                {movieDetail.synopsis}
-              </p>
-            </div>
-          </article>
-
-          <section className="border border-[#CFC4B4] bg-[#F8F4EC] p-5 sm:p-6">
-            <div className="flex flex-col gap-4 border-b border-[#D6CCBC] pb-5 md:flex-row md:items-end md:justify-between">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#8A6034]">
-                  Seats
-                </p>
-                <h3 className="mt-3 text-2xl font-bold text-[#21160F]">座席表</h3>
-                <p className="mt-2 text-sm text-[#6F6254]">購入した座席</p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {history.seats.length > 0 ? (
-                  history.seats.map((seat) => (
-                    <span
-                      key={seat}
-                      className="seat-pill inline-flex h-10 min-w-12 items-center justify-center border border-[#2B2119] bg-[#2B2119] px-3 text-sm font-bold text-[#FFF8E8]"
-                    >
-                      {seat}
-                    </span>
-                  ))
-                ) : (
-                  <span className="text-sm font-bold text-[#7C6F61]">座席なし</span>
-                )}
-              </div>
-            </div>
-            <div className="mt-5">
-              <SeatMiniMap seats={history.seats} screeningId={history.screeningId} />
-            </div>
-          </section>
-
-          <div className="grid gap-6 lg:grid-cols-2">
-            <TicketTypeBreakdown
-              ticketCount={history.ticketCount}
-              ticketSummary={history.ticketSummary}
-              ticketTypes={ticketTypes}
-            />
-            <FoodBreakdown foodItems={foodItems} />
-          </div>
-        </div>
-
-        <aside className="grid gap-4 self-start sm:grid-cols-3 xl:sticky xl:top-28 xl:grid-cols-1">
-          <OverviewMetric label="Tickets" value={`${history.ticketCount}枚`} helper="購入したチケット" />
-          <OverviewMetric label="Seat Area" value={formatSeatArea(history.seats)} helper="購入した座席" />
-          <OverviewMetric label="Food" value={`${foodCount}点`} helper={`フード合計 ${formatPrice(foodTotal)}`} />
-          <div className="border border-[#CFC4B4] bg-[#F8F4EC] p-5 sm:col-span-3 xl:col-span-1">
-            <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#8A6034]">
-              合計金額
-            </p>
-            <p className="mt-4 text-3xl font-bold text-[#21160F]">{formatPrice(history.totalPrice)}</p>
-            <p className="mt-2 text-xs leading-5 text-[#7C6F61]">税込</p>
-            {history.status === "キャンセル済み" ? null : (
-              <button
-                type="button"
-                onClick={() => onCancelReservationRequest(history.id)}
-                disabled={cancelingReservationId === history.id}
-                className="mt-6 inline-flex h-11 w-full items-center justify-center border border-[#9A3A24] px-4 text-sm font-bold text-[#9A3A24] transition hover:bg-[#F4E7DE] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {cancelingReservationId === history.id ? "キャンセル中" : "予約をキャンセル"}
-              </button>
-            )}
-          </div>
-        </aside>
+      <div className="mt-7 text-sm leading-7 text-[var(--text-secondary)]">
+        <p>キャンセル期限：{formatCancellationDeadline(history)}（上映開始の1時間前）</p>
+        {cancellationReason(history) && <p>{cancellationReason(history)}</p>}
+      </div>
+      <div className="mt-7 flex flex-col gap-3 border-t border-[var(--border-soft)] pt-6 sm:flex-row sm:justify-between">
+        <button
+          type="button"
+          onClick={onBack}
+          className="min-h-11 border border-[var(--border-strong)] px-5 text-sm font-bold text-[var(--text-primary)] hover:bg-[var(--surface-muted)]"
+        >
+          購入履歴へ戻る
+        </button>
+        {history.orderStatus !== "cancelled" ? (
+          <button
+            type="button"
+            disabled={!canCancelReservation(history)}
+            onClick={() => onCancel(history)}
+            className="min-h-11 border border-[var(--danger)] px-5 text-sm font-bold text-[var(--danger)] enabled:hover:bg-[var(--button-hover)] enabled:hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
+          >
+            予約をキャンセル
+          </button>
+        ) : null}
       </div>
     </section>
   );
 }
 
-function DetailMetric({ label, value }: { label: string; value: string }) {
+function DetailCell({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#8A6034]">
-        {label}
-      </dt>
-      <dd className="mt-2 break-words font-bold text-[#21160F]">{value}</dd>
+      <dt className="text-[10px] font-bold uppercase tracking-wide text-[var(--text-muted)]">{label}</dt>
+      <dd className="mt-1 break-words text-sm font-bold leading-6 text-[var(--text-primary)]">{value}</dd>
     </div>
   );
 }
 
-function TicketTypeBreakdown({
-  ticketCount,
-  ticketSummary = "",
-  ticketTypes,
+function PriceRow({ label, value, strong = false }: { label: string; value: string; strong?: boolean }) {
+  return (
+    <div className="flex items-center justify-between gap-4 py-4">
+      <dt className="text-sm text-[var(--text-secondary)]">{label}</dt>
+      <dd className={strong ? "text-xl font-black text-[var(--text-primary)]" : "font-bold text-[var(--text-primary)]"}>{value}</dd>
+    </div>
+  );
+}
+
+function ProfilePanel({ account }: { account: Account }) {
+  const nickname = account.nickname?.trim() || account.email.split("@")[0];
+
+  return (
+    <section>
+      <p className="text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">Profile</p>
+      <h2 className="mt-3 text-3xl font-black text-[var(--text-primary)]">プロフィール</h2>
+      <dl className="rounded-lg mt-7 divide-y divide-[var(--border-soft)] border-y border-[var(--border-soft)] bg-[var(--surface-bg)] px-5 sm:px-7">
+        <ProfileRow label="名前" value={account.name || "未設定"} />
+        <ProfileRow label="ニックネーム" value={nickname || "未設定"} />
+        <ProfileRow label="メールアドレス" value={account.email} />
+        <ProfileRow label="電話番号" value={account.phone || "未設定"} />
+      </dl>
+    </section>
+  );
+}
+
+function ProfileRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="grid gap-2 py-5 sm:grid-cols-[180px_1fr]">
+      <dt className="text-xs font-bold text-[var(--text-muted)]">{label}</dt>
+      <dd className="break-all font-bold text-[var(--text-primary)]">{value}</dd>
+    </div>
+  );
+}
+
+function SettingsPanel({
+  form,
+  onChange,
+  onSave,
+  statusMessage,
+  statusTone,
 }: {
-  ticketCount: number;
-  ticketSummary?: string;
-  ticketTypes: TicketTypeHistory[];
+  form: ProfileForm;
+  onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  onSave: () => void;
+  statusMessage: string;
+  statusTone: StatusTone;
 }) {
   return (
-    <section className="border border-[#CFC4B4] bg-[#F8F4EC] p-5">
-      <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#8A6034]">
-        Tickets
-      </p>
-      <h3 className="mt-3 text-2xl font-bold text-[#21160F]">券種</h3>
-      <div className="mt-5 grid gap-3">
-        {ticketTypes.length > 0 ? (
-          ticketTypes.map((ticketType) => (
-            <BreakdownRow
-              key={ticketType.ticketTypeId}
-              label={ticketType.label}
-              meta={`${ticketType.quantity}枚 x ${formatPrice(ticketType.unitPrice)}`}
-              value={formatPrice(ticketType.quantity * ticketType.unitPrice)}
-            />
-          ))
-        ) : (
-          <BreakdownRow
-            label={ticketSummary || `一般 ${ticketCount}枚`}
-            meta="購入履歴の保存値"
-            value={`${ticketCount}枚`}
-          />
-        )}
-      </div>
+    <section>
+      <p className="text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">Account Settings</p>
+      <h2 className="mt-3 text-3xl font-black text-[var(--text-primary)]">設定</h2>
+      <form
+        className="rounded-lg mt-7 border border-[var(--border-soft)] bg-[var(--surface-bg)] p-5 sm:p-7"
+        onSubmit={(event) => {
+          event.preventDefault();
+          onSave();
+        }}
+      >
+        <div className="grid gap-6 md:grid-cols-2">
+          {PROFILE_FIELDS.map((field) => (
+            <label key={field.name}>
+              <span className="block text-xs font-bold text-[var(--text-muted)]">{field.label}</span>
+              <input
+                type={field.type}
+                name={field.name}
+                value={form[field.name]}
+                onChange={onChange}
+                placeholder={field.placeholder}
+                required={field.name === "name" || field.name === "email"}
+                className="rounded-lg mt-2 min-h-12 w-full border border-[var(--border-soft)] bg-[var(--surface-bg)] px-4 text-[var(--text-primary)] outline-none focus:border-[var(--danger)] focus:ring-2 focus:ring-[var(--danger)]/20"
+              />
+            </label>
+          ))}
+        </div>
+        <p
+          aria-live="polite"
+          className={`mt-5 min-h-5 text-sm font-bold ${statusTone === "error" ? "text-[var(--danger)]" : "text-[var(--success)]"}`}
+        >
+          {statusMessage}
+        </p>
+        <button type="submit" className="mt-5 min-h-12 bg-[var(--button-bg)] px-8 text-sm font-bold text-white hover:bg-[var(--button-hover)]">
+          変更を保存
+        </button>
+      </form>
     </section>
   );
 }
 
-function FoodBreakdown({ foodItems }: { foodItems: FoodHistory[] }) {
-  return (
-    <section className="border border-[#CFC4B4] bg-[#F8F4EC] p-5">
-      <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#8A6034]">
-        Food
-      </p>
-      <h3 className="mt-3 text-2xl font-bold text-[#21160F]">購入したフード</h3>
-      <p className="mt-2 text-sm text-[#6F6254]">フード明細</p>
-      <div className="mt-5 grid gap-3">
-        {foodItems.length > 0 ? (
-          foodItems.map((item, index) => (
-            <BreakdownRow
-              key={`${item.foodId}-${index}`}
-              label={item.name}
-              meta={`${item.quantity}点 x ${formatPrice(item.unitPrice)}`}
-              value={formatPrice(item.subtotal)}
-            />
-          ))
-        ) : (
-          <p className="border-t border-[#D6CCBC] pt-4 text-sm font-bold text-[#7C6F61]">
-            購入したフードはありません。
-          </p>
-        )}
-      </div>
-    </section>
-  );
-}
-
-function BreakdownRow({ label, meta, value }: { label: string; meta: string; value: string }) {
-  return (
-    <div className="grid gap-2 border-t border-[#D6CCBC] pt-4 sm:grid-cols-[1fr_auto] sm:items-end">
-      <div>
-        <p className="font-bold text-[#21160F]">{label}</p>
-        <p className="mt-1 text-xs font-bold text-[#7C6F61]">{meta}</p>
-      </div>
-      <p className="font-mono text-lg font-bold text-[#21160F]">{value}</p>
-    </div>
-  );
-}
 function CancelReservationModal({
   history,
-  onCancel,
+  isSubmitting,
+  error,
+  onClose,
   onConfirm,
 }: {
   history: TicketHistory;
-  onCancel: () => void;
+  isSubmitting: boolean;
+  error: string;
+  onClose: () => void;
   onConfirm: () => void;
 }) {
+  const dialog = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const previousFocus = document.activeElement as HTMLElement | null;
+    dialog.current?.querySelector<HTMLButtonElement>("button")?.focus();
+    const trapFocus = (event: KeyboardEvent) => {
+      if (event.key !== "Tab") return;
+      const buttons = Array.from(dialog.current?.querySelectorAll<HTMLButtonElement>("button:not(:disabled)") ?? []);
+      const first = buttons[0];
+      const last = buttons[buttons.length - 1];
+      if (!first) { event.preventDefault(); dialog.current?.focus(); return; }
+      if (event.shiftKey && (document.activeElement === first || document.activeElement === dialog.current)) {
+        event.preventDefault(); last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault(); first.focus();
+      }
+    };
+    document.addEventListener("keydown", trapFocus);
+    return () => { document.removeEventListener("keydown", trapFocus); previousFocus?.focus(); };
+  }, []);
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1C0800]/60 px-4 py-8">
-      <div
+    <div className="fixed inset-0 z-[80] grid place-items-center overflow-y-auto bg-[var(--overlay)] px-4 py-8">
+      <section
+        ref={dialog}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
-        aria-labelledby="cancel-reservation-title"
-        className="w-full max-w-lg border border-[#D6CCBC] bg-[#FBF8F1] p-6 shadow-[0_28px_90px_rgba(28,8,0,0.28)]"
+        aria-labelledby="cancel-title"
+        className="rounded-lg w-full max-w-lg border border-[var(--border-soft)] bg-[var(--surface-bg)] p-6 shadow-sm sm:p-8"
       >
-        <p className="text-[10px] font-bold uppercase tracking-[0.32em] text-[#8A6034]">
-          Cancel Reservation
-        </p>
-        <h2 id="cancel-reservation-title" className="mt-4 text-2xl font-bold text-[#21160F]">
-          本当にキャンセルしますか？
+        <p className="cinema-label">Cancel Reservation</p>
+        <h2 id="cancel-title" className="mt-3 text-2xl font-black text-[var(--text-primary)]">
+          この予約をキャンセルしますか？
         </h2>
-        <p className="mt-3 text-sm leading-7 text-[#6F6254]">
-          キャンセルすると、この予約の座席は空席に戻ります。
+        <p className="mt-4 text-sm leading-7 text-[var(--text-secondary)]">
+          上映開始の1時間前までキャンセルできます。チケットと同時に注文したフードも取り消し、座席を解放します。この操作は元に戻せません。
         </p>
-
-        <dl className="mt-6 grid gap-4 border-y border-[#D6CCBC] py-5 text-sm">
-          <div className="grid gap-1 sm:grid-cols-[120px_1fr]">
-            <dt className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#8A6034]">
-              Movie
-            </dt>
-            <dd className="font-bold text-[#21160F]">{history.movieTitle}</dd>
-          </div>
-          <div className="grid gap-1 sm:grid-cols-[120px_1fr]">
-            <dt className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#8A6034]">
-              Showtime
-            </dt>
-            <dd className="text-[#4C4035]">{history.showtime}</dd>
-          </div>
-          <div className="grid gap-1 sm:grid-cols-[120px_1fr]">
-            <dt className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#8A6034]">
-              Seats
-            </dt>
-            <dd className="font-bold text-[#4C4035]">{history.seats.join(", ")}</dd>
-          </div>
-          <div className="grid gap-1 sm:grid-cols-[120px_1fr]">
-            <dt className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#8A6034]">
-              Total
-            </dt>
-            <dd className="font-bold text-[#21160F]">{formatPrice(history.totalPrice)}</dd>
-          </div>
+        <dl className="mt-6 space-y-4 border-y border-[var(--border-soft)] py-5">
+          <DetailCell label="作品" value={history.movieTitle} />
+          <DetailCell label="上映日時" value={history.showtime} />
+          <DetailCell label="座席" value={history.seats.join(", ") || "-"} />
+          <DetailCell label="取消対象額" value={formatPrice(history.totalPrice)} />
+          <DetailCell label="キャンセル期限" value={formatCancellationDeadline(history)} />
         </dl>
-
+        {history.refundMode === "simulation" && <p className="mt-4 text-xs leading-6 text-[var(--text-secondary)]">テスト決済のため、実際の請求・返金は発生しません。</p>}
+        {!canCancelReservation(history) && <p role="status" className="mt-4 text-sm">{cancellationReason(history)}</p>}
+        {error && <p role="alert" className="mt-4 text-sm font-bold text-[var(--danger)]">{error}</p>}
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
           <button
             type="button"
-            onClick={onCancel}
-            className="inline-flex h-12 items-center justify-center border border-[#2B2119] px-5 text-sm font-bold text-[#2B2119] transition hover:bg-[#EFE8DC]"
+            onClick={onClose}
+            disabled={isSubmitting}
+            className="min-h-12 border border-[var(--border-strong)] px-5 text-sm font-bold text-[var(--text-primary)] disabled:opacity-50"
           >
             戻る
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className="inline-flex h-12 items-center justify-center bg-[#E82020] px-5 text-sm font-bold text-white transition hover:bg-[#C01818]"
+            disabled={isSubmitting || !canCancelReservation(history)}
+            className="min-h-12 bg-[var(--button-bg)] px-5 text-sm font-bold text-white hover:bg-[var(--button-hover)] disabled:cursor-wait disabled:opacity-60"
           >
-            キャンセルする
+            {isSubmitting ? "キャンセル処理中..." : "キャンセルを確定"}
           </button>
         </div>
-      </div>
+      </section>
     </div>
-  );
-}
-
-function ProfilePanel({ displayName, displayEmail, displayNickname }: {
-  displayName: string;
-  displayEmail: string;
-  displayNickname: string;
-}) {
-  return (
-    <section className="border-y border-[#D6CCBC] bg-[#FBF8F1]/72">
-      <div className="grid gap-8 border-b border-[#D6CCBC] px-5 py-7 sm:px-8 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:px-10">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.34em] text-[#8A6034]">
-            Profile
-          </p>
-          <h2 className="mt-4 text-3xl font-bold tracking-normal text-[#21160F]">
-            プロフィール
-          </h2>
-        </div>
-        <p className="max-w-2xl text-sm leading-7 text-[#6F6254]">
-          アカウントの基本情報です。変更は設定メニューから行えます。
-        </p>
-      </div>
-
-      <dl className="grid gap-0 px-5 py-8 sm:px-8 lg:px-10 lg:py-10">
-        {[
-          ["Name", displayName],
-          ["Email", displayEmail],
-          ["User", displayNickname],
-        ].map(([label, value]) => (
-          <div key={label} className="grid gap-2 border-b border-[#D6CCBC] py-5 sm:grid-cols-[180px_1fr]">
-            <dt className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#8A6034]">
-              {label}
-            </dt>
-            <dd className="break-all text-base font-bold text-[#21160F]">{value}</dd>
-          </div>
-        ))}
-      </dl>
-    </section>
-  );
-}
-
-function SettingsPanel({
-  form,
-  statusMessage,
-  statusTone,
-  onChange,
-  onSave,
-}: {
-  form: ProfileForm;
-  statusMessage: string;
-  statusTone: StatusTone;
-  onChange: (event: ChangeEvent<HTMLInputElement>) => void;
-  onSave: () => void;
-}) {
-  return (
-    <section className="min-w-0 border-y border-[#D6CCBC] bg-[#FBF8F1]/64">
-      <div className="grid gap-8 border-b border-[#D6CCBC] px-5 py-7 sm:px-8 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:px-10">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.34em] text-[#8A6034]">
-            Account Settings
-          </p>
-          <h2 className="mt-4 text-3xl font-bold tracking-normal text-[#21160F]">
-            設定
-          </h2>
-        </div>
-        <p className="max-w-2xl text-sm leading-7 text-[#6F6254]">
-          名前、ニックネーム、メールアドレス、電話番号を編集できます。変更後は保存してください。
-        </p>
-      </div>
-
-      <div className="px-5 py-8 sm:px-8 lg:px-10 lg:py-10">
-        <form
-          className="min-w-0"
-          onSubmit={(event) => {
-            event.preventDefault();
-            onSave();
-          }}
-        >
-          <div className="grid gap-x-8 gap-y-7 md:grid-cols-2">
-            {PROFILE_FIELDS.map((field) => (
-              <label key={field.name} className="block">
-                <span className="block text-xs font-bold uppercase tracking-[0.22em] text-[#8A6034]">
-                  {field.label}
-                </span>
-                <input
-                  type={field.type}
-                  name={field.name}
-                  value={form[field.name]}
-                  onChange={onChange}
-                  placeholder={field.placeholder}
-                  className="mt-3 w-full border-0 border-b border-[#BCAF9D] bg-transparent px-0 py-3 text-base font-medium text-[#21160F] outline-none transition placeholder:text-[#A69A8A] focus:border-[#2B2119]"
-                />
-              </label>
-            ))}
-          </div>
-
-          <div className="mt-8 min-h-6">
-            {statusMessage ? (
-              <p
-                className={`text-sm font-bold ${
-                  statusTone === "success" ? "text-[#33613B]" : "text-[#9A3A24]"
-                }`}
-              >
-                {statusMessage}
-              </p>
-            ) : null}
-          </div>
-
-          <div className="mt-7 flex flex-col gap-3 border-t border-[#D6CCBC] pt-7 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs leading-6 text-[#7C6F61]">
-              名前とメールアドレスは必須です。
-            </p>
-            <button
-              type="submit"
-              className="inline-flex h-12 items-center justify-center bg-[#2B2119] px-10 text-sm font-bold text-[#FFF8E8] transition hover:bg-[#4A3426] sm:min-w-[190px]"
-            >
-              保存
-            </button>
-          </div>
-        </form>
-      </div>
-    </section>
   );
 }
 
 export default function MyPage() {
   const router = useRouter();
+  const [authError, setAuthError] = useState("");
+  const [authRetry, setAuthRetry] = useState(0);
+  const [, refreshClock] = useState(0);
+  const cancelLock = useRef(false);
   const [activeMenu, setActiveMenu] = useState<MenuKey>("reservations");
   const [currentAccount, setCurrentAccount] = useState<Account | null | undefined>(undefined);
   const [form, setForm] = useState<ProfileForm>(emptyForm);
+  const [histories, setHistories] = useState<TicketHistory[]>([]);
+  const [historyState, setHistoryState] = useState<HistoryState>("idle");
+  const [historyNotice, setHistoryNotice] = useState("");
+  const [retryKey, setRetryKey] = useState(0);
+  const [selectedHistoryId, setSelectedHistoryId] = useState("");
+  const [cancelError, setCancelError] = useState("");
+  const [pendingCancelId, setPendingCancelId] = useState("");
+  const [cancelingReservationId, setCancelingReservationId] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
   const [statusTone, setStatusTone] = useState<StatusTone>("success");
-  const [histories, setHistories] = useState<TicketHistory[]>([]);
-  const [historyNotice, setHistoryNotice] = useState("予約情報を読み込んでいます。");
-  const [cancelingReservationId, setCancelingReservationId] = useState("");
-  const [pendingCancelReservationId, setPendingCancelReservationId] = useState("");
-  const [selectedHistoryId, setSelectedHistoryId] = useState("");
+  useToastError(authError || cancelError || (statusTone === "error" ? statusMessage : "")
+    || (historyState === "error" ? "予約履歴を取得できませんでした。もう一度お試しください。" : ""));
 
   useEffect(() => {
     const frameId = window.requestAnimationFrame(() => {
-      const account = getCurrentAccount(window.localStorage) as Account | null;
+      const view = new URLSearchParams(window.location.search).get("view");
 
-      if (!account) {
-        setCurrentAccount(null);
-        router.replace("/login");
-        return;
+      if (isViewMenuKey(view)) {
+        setActiveMenu(view);
       }
-
-      setCurrentAccount(account);
-      setForm(toProfileForm(account));
     });
 
     return () => window.cancelAnimationFrame(frameId);
-  }, [router]);
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    readMemberSession().then(({ user }) => {
+      if (!active) return;
+      const account = storeMemberAccount(window.localStorage, user) as Account;
+      setCurrentAccount(account);
+      setForm(toProfileForm(account));
+      setAuthError("");
+    }).catch((error) => {
+      if (!active) return;
+      if (isMemberAuthError(error)) {
+        logoutAccount(window.localStorage);
+        setCurrentAccount(null);
+        router.replace("/login");
+      } else {
+        setAuthError("ログイン情報を確認できませんでした。もう一度お試しください。");
+      }
+    });
+    return () => { active = false; };
+  }, [router, authRetry]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => refreshClock((value) => value + 1), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
 
   useEffect(() => {
     if (!currentAccount?.email) {
@@ -898,19 +737,24 @@ export default function MyPage() {
 
     let isActive = true;
     const frameId = window.requestAnimationFrame(() => {
-      setHistoryNotice("予約情報を読み込んでいます。");
+      setHistoryState("loading");
+      setHistoryNotice("");
 
       fetchReservationHistories(currentAccount.email)
         .then((items: TicketHistory[]) => {
           if (isActive) {
             setHistories(items);
-            setHistoryNotice("");
+            setHistoryState("ready");
           }
         })
-        .catch(() => {
+        .catch((error) => {
           if (isActive) {
-            setHistories([]);
-            setHistoryNotice("予約情報を取得できませんでした。");
+            if (isMemberAuthError(error)) {
+              logoutAccount(window.localStorage);
+              router.replace("/login");
+              return;
+            }
+            setHistoryState("error");
           }
         });
     });
@@ -919,33 +763,54 @@ export default function MyPage() {
       isActive = false;
       window.cancelAnimationFrame(frameId);
     };
-  }, [currentAccount?.email]);
+  }, [currentAccount?.email, retryKey, router]);
 
-  const handleCancelReservationRequest = (reservationId: string) => {
-    setPendingCancelReservationId(reservationId);
-  };
-
-  const handleDismissCancelReservation = () => {
-    if (!cancelingReservationId) {
-      setPendingCancelReservationId("");
-    }
-  };
-
-  const handleConfirmCancelReservation = () => {
-    if (!pendingCancelReservationId) {
+  useEffect(() => {
+    if (!pendingCancelId) {
       return;
     }
 
-    const reservationId = pendingCancelReservationId;
-    setPendingCancelReservationId("");
-    void handleCancelReservation(reservationId);
+    const previousOverflow = document.body.style.overflow;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !cancelingReservationId) {
+        setPendingCancelId("");
+      }
+    };
+
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [cancelingReservationId, pendingCancelId]);
+
+  const selectedHistory = histories.find((history) => history.id === selectedHistoryId) ?? null;
+  const pendingCancelHistory = histories.find((history) => history.id === pendingCancelId) ?? null;
+
+  const handleOpenDetails = (history: TicketHistory) => {
+    setHistoryNotice("");
+    setSelectedHistoryId(history.id);
+    setActiveMenu("history");
   };
 
-  const handleCancelReservation = async (reservationId: string) => {
-    if (!currentAccount?.email || cancelingReservationId) {
+  const handleCancelRequest = (history: TicketHistory) => {
+    if (canCancelReservation(history)) {
+      setCancelError("");
+      setHistoryNotice("");
+      setPendingCancelId(history.id);
+    }
+  };
+
+  const handleConfirmCancel = async () => {
+    if (!pendingCancelHistory || !currentAccount?.email || cancelLock.current) {
       return;
     }
 
+    setCancelError("");
+    const reservationId = pendingCancelHistory.id;
+    cancelLock.current = true;
     setCancelingReservationId(reservationId);
     setHistoryNotice("");
 
@@ -953,74 +818,105 @@ export default function MyPage() {
       const result = await cancelReservation(reservationId, currentAccount.email);
 
       if (!result.ok) {
-        setHistoryNotice("予約のキャンセルに失敗しました。");
+        setCancelError(result.message || "キャンセルできませんでした。");
+        toast.error(result.message || "キャンセルできませんでした。");
+        if (result.httpStatus === 401) {
+          logoutAccount(window.localStorage);
+          router.replace("/login");
+        }
         return;
       }
 
-      const canceledStatus = result.status || "キャンセル済み";
       setHistories((currentHistories) =>
         currentHistories.map((history) =>
           history.id === reservationId
-            ? { ...history, status: canceledStatus }
+            ? {
+                ...history,
+                status: "キャンセル済み",
+                orderStatus: result.orderStatus,
+                paymentStatus: result.paymentStatus,
+                refundMode: result.refundMode,
+                canCancel: false,
+                cancelReason: "キャンセル済みです。",
+              }
             : history,
         ),
       );
-      setHistoryNotice("予約をキャンセルしました。");
+      setPendingCancelId("");
+      toast.event("reservation.cancelled");
+      setHistoryNotice(result.refundMode === "simulation" && result.refundedAmount > 0
+        ? "キャンセル完了。座席を解放し、テスト決済の支払いを取り消しました。"
+        : "キャンセル完了。座席を解放しました。");
     } catch {
-      setHistoryNotice("予約のキャンセルに失敗しました。");
+      setCancelError("通信を確認できませんでした。もう一度お試しください。再送しても取消処理は重複しません。");
     } finally {
+      cancelLock.current = false;
       setCancelingReservationId("");
     }
   };
+
+  const handleMenuClick = async (menuKey: MenuKey) => {
+    if (menuKey === "logout") {
+      try { await signOutMember(); }
+      catch { setHistoryNotice("ログアウトできませんでした。もう一度お試しください。"); toast.error("ログアウトできませんでした。もう一度お試しください。"); return; }
+      logoutAccount(window.localStorage);
+      setCurrentAccount(null);
+      router.replace("/");
+      return;
+    }
+
+    setSelectedHistoryId("");
+    setActiveMenu(menuKey);
+    window.history.replaceState(null, "", `/mypage?view=${menuKey}`);
+  };
+
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
     setForm((currentForm) => ({ ...currentForm, [name]: value }));
     setStatusMessage("");
   };
 
-  const handleLogout = () => {
-    logoutAccount(window.localStorage);
-    setCurrentAccount(null);
-    setForm(emptyForm);
-    setStatusMessage("");
-    setActiveMenu("reservations");
-    setSelectedHistoryId("");
-    router.replace("/");
-  };
-
-  const handleMenuClick = (menuKey: MenuKey) => {
-    if (menuKey === "logout") {
-      handleLogout();
-      return;
-    }
-
-    setSelectedHistoryId("");
-    setActiveMenu(menuKey);
-  };
-
   const handleSave = () => {
-    const result = updateCurrentAccount(window.localStorage, form) as
-      | { ok: true; account: Account }
-      | { ok: false; message: string };
+    try {
+      const result = updateCurrentAccount(window.localStorage, form) as
+        | { ok: true; account: Account }
+        | { ok: false; message: string };
 
-    if (!result.ok) {
+      if (!result.ok) {
+        setStatusTone("error");
+        setStatusMessage(result.message);
+        toast.error(result.message);
+        return;
+      }
+
+      setCurrentAccount(result.account);
+      setForm(toProfileForm(result.account));
+      setStatusTone("success");
+      setStatusMessage("変更を保存しました。");
+      toast.event("profile.updated");
+    } catch {
       setStatusTone("error");
-      setStatusMessage(result.message);
-      return;
+      setStatusMessage("会員情報を保存できませんでした。ブラウザの保存設定を確認してください。");
     }
-
-    setCurrentAccount(result.account);
-    setForm(toProfileForm(result.account));
-    setStatusTone("success");
-    setStatusMessage("保存しました。");
   };
+
+  if (authError && currentAccount === undefined) {
+    return <div className="min-h-screen"><CampaignHeader /><main className="mx-auto max-w-xl px-6 py-20">
+      <p role="alert">{authError}</p>
+      <button type="button" className="mt-6 min-h-12 border px-6" onClick={() => setAuthRetry((value) => value + 1)}>再試行</button>
+    </main></div>;
+  }
 
   if (currentAccount === undefined) {
     return (
-      <div className="min-h-screen bg-[#F4F0E7] font-sans text-[#21160F]">
+      <div className="min-h-screen bg-[var(--page-bg)] text-[var(--text-primary)]">
         <CampaignHeader />
-        <main className="mx-auto flex min-h-[calc(100vh-97px)] max-w-3xl items-center justify-center px-6 py-10">
-          <p className="text-sm text-[#6F6254]">読み込み中...</p>
+        <main className="mx-auto grid min-h-[70vh] max-w-3xl place-items-center px-6 py-10">
+          <div className="w-full space-y-4" aria-label="マイページを読み込み中">
+            <div className="cinema-skeleton h-6 w-40" />
+            <div className="cinema-skeleton h-16 w-3/4" />
+            <div className="cinema-skeleton h-48 w-full" />
+          </div>
         </main>
       </div>
     );
@@ -1030,188 +926,119 @@ export default function MyPage() {
     return null;
   }
 
-  const displayName = form.name || currentAccount.name || "ゲスト";
-  const displayEmail = form.email || currentAccount.email;
-  const displayNickname = `@${
-    form.nickname.trim() ||
-    currentAccount.nickname?.trim() ||
-    displayEmail.split("@")[0] ||
-    "user"
-  }`;
+  const displayName = form.name || currentAccount.name || "メンバー";
 
-  const pendingCancelHistory = pendingCancelReservationId
-    ? histories.find((history) => history.id === pendingCancelReservationId) ?? null
-    : null;
-  const selectedHistory = selectedHistoryId
-    ? histories.find((history) => history.id === selectedHistoryId) ?? null
-    : null;
-
-  const activePanel = (() => {
-    if (activeMenu === "reservations") {
-      return (
-        <ReservationStatusPanel
-          histories={histories}
-          notice={historyNotice}
-          onShowHistory={() => {
-            setSelectedHistoryId("");
-            setActiveMenu("history");
-          }}
-        />
-      );
-    }
-
-    if (activeMenu === "history") {
-      if (selectedHistory) {
-        return (
-          <PurchaseHistoryDetailPanel
-            cancelingReservationId={cancelingReservationId}
-            history={selectedHistory}
-            onBackToHistory={() => setSelectedHistoryId("")}
-            onCancelReservationRequest={handleCancelReservationRequest}
-            onShowReservations={() => {
-              setSelectedHistoryId("");
-              setActiveMenu("reservations");
-            }}
-          />
-        );
-      }
-
-      return (
-        <PurchaseHistoryPanel
-          cancelingReservationId={cancelingReservationId}
-          histories={histories}
-          notice={historyNotice}
-          onCancelReservationRequest={handleCancelReservationRequest}
-          setSelectedHistoryId={setSelectedHistoryId}
-        />
-      );
-    }
-
-    if (activeMenu === "profile") {
-      return (
-        <ProfilePanel
-          displayName={displayName}
-          displayEmail={displayEmail}
-          displayNickname={displayNickname}
-        />
-      );
-    }
-
-    if (activeMenu === "settings") {
-      return (
-        <SettingsPanel
-          form={form}
-          statusMessage={statusMessage}
-          statusTone={statusTone}
-          onChange={handleChange}
-          onSave={handleSave}
-        />
-      );
-    }
-
-    return null;
-  })();
+  let activePanel;
+  if (activeMenu === "reservations") {
+    activePanel = (
+      <NextReservationPanel
+        histories={histories}
+        historyState={historyState}
+        notice={historyNotice}
+        onCancel={handleCancelRequest}
+        onOpenDetails={handleOpenDetails}
+        onRetry={() => setRetryKey((value) => value + 1)}
+      />
+    );
+  } else if (activeMenu === "history") {
+    activePanel = selectedHistory ? (
+      <ReservationDetailPanel
+        history={selectedHistory}
+        notice={historyNotice}
+        onBack={() => setSelectedHistoryId("")}
+        onCancel={handleCancelRequest}
+      />
+    ) : (
+      <PurchaseHistoryPanel
+        histories={histories}
+        historyState={historyState}
+        notice={historyNotice}
+        onCancel={handleCancelRequest}
+        onOpenDetails={handleOpenDetails}
+        onRetry={() => setRetryKey((value) => value + 1)}
+      />
+    );
+  } else if (activeMenu === "points") {
+    activePanel = <PointsPanel />;
+  } else if (activeMenu === "profile") {
+    activePanel = <ProfilePanel account={currentAccount} />;
+  } else {
+    activePanel = (
+      <SettingsPanel
+        form={form}
+        onChange={handleChange}
+        onSave={handleSave}
+        statusMessage={statusMessage}
+        statusTone={statusTone}
+      />
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-[#F4F0E7] font-sans text-[#21160F]">
+    <div className="min-h-screen bg-[var(--page-bg)] text-[var(--text-primary)]">
       <CampaignHeader />
-
-      <main className="mx-auto max-w-[1540px] px-4 py-8 sm:px-6 lg:px-10 lg:py-12">
-        <section className="border-b border-[#D6CCBC] pb-9">
-          <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_360px] xl:items-end">
-            <div className="max-w-4xl">
-              <p className="text-xs font-bold uppercase tracking-[0.34em] text-[#8A6034]">
-                HAL CINEMA MEMBER
-              </p>
-              <h1 className="mt-5 text-6xl font-black leading-none tracking-normal text-[#21160F] sm:text-7xl lg:text-8xl xl:text-9xl">
-                MY PAGE
-              </h1>
-              <p className="mt-5 max-w-2xl text-sm leading-7 text-[#6F6254] sm:text-base">
-                予約履歴、購入履歴、プロフィール情報をまとめて確認できます。
-              </p>
-            </div>
-
-            <dl className="grid gap-4 border-y border-[#D6CCBC] py-5 text-sm text-[#4C4035]">
-              <div className="flex items-center justify-between gap-5">
-                <dt className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#8A6034]">
-                  Name
-                </dt>
-                <dd className="font-bold">{displayName}</dd>
-              </div>
-              <div className="flex items-center justify-between gap-5">
-                <dt className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#8A6034]">
-                  Mail
-                </dt>
-                <dd className="break-all text-right">{displayEmail}</dd>
-              </div>
-              <div className="flex items-center justify-between gap-5">
-                <dt className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#8A6034]">
-                  User
-                </dt>
-                <dd>{displayNickname}</dd>
-              </div>
-            </dl>
+      <main className="cinema-container cinema-page">
+        <header className="grid gap-6 border-b border-[var(--border-soft)] pb-6 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-center">
+          <div>
+            <p className="cinema-label">HAL CINEMA MEMBER</p>
+            <h1 className="cinema-page-title mt-3    text-[var(--text-primary)]">マイページ</h1>
+            <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--text-secondary)]">
+              次の予約、フードの受取案内、購入履歴をひとつの場所で確認できます。
+            </p>
           </div>
-        </section>
+          <div className="rounded-lg border border-[var(--border-soft)] bg-[var(--surface-bg)] px-5 py-4">
+            <p className="text-xs text-[var(--text-muted)]">ログイン中</p>
+            <p className="mt-1 font-black text-[var(--text-primary)]">{displayName}</p>
+            <p className="mt-1 break-all text-sm text-[var(--text-secondary)]">{currentAccount.email}</p>
+          </div>
+        </header>
 
-        <div className="mt-8 grid gap-8 lg:grid-cols-[74px_minmax(0,1fr)]">
-          <aside className="group/mypage-nav h-fit overflow-hidden border-y border-[#D6CCBC] bg-[#FBF8F1]/72 transition-[width] duration-300 lg:sticky lg:top-28 lg:w-[74px] lg:hover:w-[248px]">
-            <div className="flex gap-2 overflow-x-auto p-2 lg:block lg:space-y-2 lg:overflow-hidden lg:p-3">
-              <div className="hidden h-12 items-center gap-3 px-1 lg:flex">
-                <span className="grid h-10 w-10 shrink-0 place-items-center border border-[#2B2119] text-xs font-bold uppercase">
-                  M
-                </span>
-                <span className="max-w-0 overflow-hidden whitespace-nowrap text-[10px] font-bold uppercase tracking-[0.32em] text-[#8A6034] opacity-0 transition-all duration-300 group-hover/mypage-nav:max-w-[140px] group-hover/mypage-nav:opacity-100">
-                  Menu
-                </span>
-              </div>
-
+        <div className="mt-7 grid min-w-0 grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[220px_minmax(0,1fr)]">
+          <nav
+            aria-label="マイページメニュー"
+            className="rounded-lg h-fit min-w-0 max-w-full border-y border-[var(--border-soft)] bg-[var(--surface-bg)] p-2 lg:sticky lg:top-28"
+          >
+            <div className="flex w-full max-w-full gap-2 overflow-x-auto lg:grid">
               {MENU_ITEMS.map((item, index) => {
                 const isActive = activeMenu === item.key;
-
                 return (
                   <button
                     key={item.key}
                     type="button"
                     onClick={() => handleMenuClick(item.key)}
-                    className={`flex min-w-[152px] items-center gap-3 border px-3 py-3 text-left transition lg:w-[220px] lg:min-w-0 ${
+                    aria-current={isActive ? "page" : undefined}
+                    className={`flex min-w-[156px] items-center gap-3 px-3 py-3 text-left transition lg:min-w-0 ${
                       isActive
-                        ? "border-[#2B2119] bg-[#2B2119] text-[#FFF8E8]"
-                        : "border-transparent text-[#6F6254] hover:border-[#C7BBA9] hover:bg-[#EFE8DC]"
+                        ? "bg-[var(--selection-soft)] text-[var(--accent)] ring-1 ring-inset ring-[var(--selection-border)]"
+                        : "text-[var(--text-secondary)] hover:bg-[var(--surface-muted)]"
                     }`}
                   >
-                    <span
-                      className={`grid h-8 w-8 shrink-0 place-items-center border text-xs font-bold ${
-                        isActive ? "border-[#FFF8E8]/35" : "border-[#C7BBA9]"
-                      }`}
-                    >
-                      {String(index + 1).padStart(2, "0")}
-                    </span>
-                    <span className="min-w-0 lg:max-w-0 lg:overflow-hidden lg:opacity-0 lg:transition-all lg:duration-300 lg:group-hover/mypage-nav:max-w-[150px] lg:group-hover/mypage-nav:opacity-100">
-                      <span className="block whitespace-nowrap text-sm font-bold">{item.label}</span>
-                      <span
-                        className={`mt-1 block whitespace-nowrap text-[10px] uppercase tracking-[0.22em] ${
-                          isActive ? "text-[#D8CBB9]" : "text-[#9A8268]"
-                        }`}
-                      >
-                        {item.meta}
-                      </span>
+                    <span className="font-mono text-xs opacity-65">{String(index + 1).padStart(2, "0")}</span>
+                    <span>
+                      <span className="block text-sm font-bold">{item.label}</span>
+                      <span className="mt-0.5 block text-[10px] uppercase tracking-[0.18em] opacity-65">{item.meta}</span>
                     </span>
                   </button>
                 );
               })}
             </div>
-          </aside>
+          </nav>
 
-          <div className="min-w-0">{activePanel}</div>
+          <div key={activeMenu} className="cinema-feedback min-w-0">{!["history", "reservations"].includes(activeMenu) && historyNotice && <p role="alert" className="mb-4">{historyNotice}</p>}{activePanel}</div>
         </div>
       </main>
 
       {pendingCancelHistory ? (
         <CancelReservationModal
           history={pendingCancelHistory}
-          onCancel={handleDismissCancelReservation}
-          onConfirm={handleConfirmCancelReservation}
+          isSubmitting={cancelingReservationId === pendingCancelHistory.id}
+          error={cancelError}
+          onClose={() => {
+            if (!cancelingReservationId) {
+              setPendingCancelId("");
+            }
+          }}
+          onConfirm={handleConfirmCancel}
         />
       ) : null}
     </div>

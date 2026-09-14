@@ -1,3 +1,4 @@
+import panelStyles from "../components/BookingSidePanel.module.css";
 import Link from "next/link";
 import { formatPrice } from "../seats/formatters";
 
@@ -9,24 +10,25 @@ export default function PaymentPanel({
   onSelect,
   selectedMethodId,
   totalPrice,
+  ready = true,
 }) {
   return (
-    <aside className="border border-[#1C0800]/14 bg-white p-6 shadow-[0_18px_60px_rgba(28,8,0,0.08)]">
+    <aside className={"rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-bg)] p-6 shadow-sm md:sticky md:top-28 md:h-fit" + " " + panelStyles.panel}>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-[10px] font-black uppercase tracking-[0.32em] text-[#8C5D2A]">
+          <p className="text-[10px] font-black uppercase tracking-wide text-[var(--text-muted)]">
             支払い
           </p>
-          <h1 className="mt-2 text-2xl font-black uppercase text-[#1C0800]">
-            お支払い方法を選択
-          </h1>
+          <h2 className="mt-2 text-xl   uppercase text-[var(--text-primary)]">
+            {ready && totalPrice === 0 ? "お支払いはありません" : "お支払い方法を選択"}
+          </h2>
         </div>
-        <p className="font-mono text-lg font-semibold text-[#1C0800]">
+        <p className="font-mono text-lg font-semibold text-[var(--text-primary)]">
           {formatPrice(totalPrice)}
         </p>
       </div>
 
-      <div className="mt-6 grid gap-3 sm:grid-cols-2">
+      {totalPrice > 0 && <div className="mt-6 grid gap-3 sm:grid-cols-2">
         {methods.map((method) => (
           <PaymentMethodButton
             key={method.id}
@@ -35,29 +37,30 @@ export default function PaymentPanel({
             onSelect={onSelect}
           />
         ))}
-      </div>
+      </div>}
 
       <p
         aria-live="polite"
         className={`mt-4 min-h-5 text-sm ${
-            error ? "text-[#C01818]" : "text-[#8C5D2A]"
+            error ? "text-[var(--danger)]" : "text-[var(--text-muted)]"
         }`}
       >
-        {error || "決済前に購入内容と支払い方法を確認してください。"}
+        {error || (!ready ? "割引を適用して料金を確認してください。" : "購入内容と最終支払額を確認してください。")}
       </p>
 
       <button
         type="button"
-        disabled={isSubmitting}
+        disabled={isSubmitting || !ready}
+        aria-busy={isSubmitting}
         onClick={onConfirm}
         className="mt-4 w-full bg-[var(--button-bg)] px-5 py-4 text-sm font-black uppercase tracking-[0.16em] text-[var(--button-text)] transition-colors hover:bg-[var(--button-hover)] disabled:cursor-wait disabled:opacity-60"
       >
-        {isSubmitting ? "確定中..." : "確認"}
+        {isSubmitting ? "予約処理中..." : totalPrice === 0 ? "予約を確定する" : "予約を確定して支払う"}
       </button>
 
       <Link
         href="/food"
-        className="mt-3 block w-full border border-[#1C0800]/18 px-5 py-4 text-center text-sm font-semibold text-[#5C3010] transition-colors hover:bg-[#FFF8E1]"
+        className="mt-3 block w-full border border-[var(--border-subtle)] px-5 py-4 text-center text-sm font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-muted)]"
       >
         フード選択へ戻る
       </Link>
@@ -75,19 +78,19 @@ function PaymentMethodButton({ isSelected, method, onSelect }) {
         "min-h-24 border p-4 text-left transition-colors",
         isSelected
           ? "border-[var(--selection-border)] bg-[var(--selection-bg)] text-[var(--selection-text)]"
-          : "border-[#1C0800]/14 bg-white hover:bg-[#FFF8E1]",
+          : "border-[var(--border-subtle)] bg-[var(--surface-bg)] hover:bg-[var(--surface-muted)]",
       ].join(" ")}
     >
       <span
         className={`block text-sm font-semibold ${
-          isSelected ? "text-[var(--selection-text)]" : "text-[#1C0800]"
+          isSelected ? "text-[var(--selection-text)]" : "text-[var(--text-primary)]"
         }`}
       >
         {method.label}
       </span>
       <span
         className={`mt-2 block text-xs leading-5 ${
-          isSelected ? "text-[var(--selection-text)]" : "text-[#8C5D2A]"
+          isSelected ? "text-[var(--selection-text)]" : "text-[var(--text-muted)]"
         }`}
       >
         {method.description}

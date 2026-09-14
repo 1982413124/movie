@@ -57,12 +57,15 @@ export function buildPurchaseConfirmation(draft) {
     draft?.foodTotalPrice ?? foodItems.reduce((total, item) => total + item.lineTotal, 0);
 
   return {
-    movieTitle: movieDetail.title,
-    posterLabel: movieDetail.title,
-    theaterName: screening.theaterName,
-    screeningDatetime: `${screening.dateLabel} ${draft?.screeningTime ?? screening.label}`,
+    movieTitle: draft?.movieTitle ?? movieDetail.title,
+    posterLabel: draft?.movieTitle ?? movieDetail.title,
+    theaterName: draft?.theaterName ?? screening.theaterName,
+    screeningDatetime: `${draft?.screeningDate ?? screening.dateLabel} ${draft?.screeningTime ?? screening.label}`,
+    showStartAt: draft?.screeningDate && (draft?.screeningTime ?? screening.label)
+      ? `${draft.screeningDate}T${draft.screeningTime ?? screening.label}:00+09:00`
+      : "",
     screenName: draft?.screenName ?? screening.screenName,
-    seatNum: formatSeatNumbers(seatIds),
+    seatNum: formatSeatNumbers(draft?.seatLabels ?? seatIds),
     ticketNum,
     ticketTypes,
     ticketSummary: formatTicketTypeSummary(ticketTypes, ticketNum),

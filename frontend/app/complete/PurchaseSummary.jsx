@@ -1,21 +1,24 @@
+import Image from "next/image";
+import { getFoodPickupWindow } from "@/lib/reservationExperience.mjs";
 import { formatPrice } from "../seats/formatters";
 
 export default function PurchaseSummary({ details }) {
   const hasFood = details.foodItems?.length > 0;
+  const pickup = getFoodPickupWindow(details.showStartAt);
 
   return (
-    <section className="overflow-hidden border border-[#1C0800]/14 bg-white shadow-[0_18px_60px_rgba(28,8,0,0.08)]">
-      <div className="grid gap-5 border-b border-[#1C0800]/14 p-6 md:grid-cols-[150px_minmax(0,1fr)]">
+    <section className="rounded-lg overflow-hidden border border-[var(--border-subtle)] bg-[var(--surface-bg)] shadow-sm">
+      <div className="grid gap-5 border-b border-[var(--border-subtle)] p-6 md:grid-cols-[150px_minmax(0,1fr)]">
         <Poster title={details.posterLabel} />
         <div className="flex flex-col justify-between gap-6">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.32em] text-[#8C5D2A]">
+            <p className="text-[10px] font-black uppercase tracking-wide text-[var(--text-muted)]">
               チケット
             </p>
-            <h2 className="mt-2 text-2xl font-black uppercase text-[#1C0800]">
+            <h2 className="mt-2 text-2xl font-black uppercase text-[var(--text-primary)]">
               {details.movieTitle}
             </h2>
-            <p className="mt-3 text-sm text-[#8C5D2A]">
+            <p className="mt-3 text-sm text-[var(--text-muted)]">
               入場時にこの内容を確認できるよう、購入履歴にも保存されます。
             </p>
           </div>
@@ -32,14 +35,24 @@ export default function PurchaseSummary({ details }) {
         <DetailRow label="上映館" value={details.theaterName} />
         <DetailRow label="枚数" value={`${details.ticketNum}枚`} />
         <DetailRow label="券種" value={details.ticketSummary} />
+        <DetailRow label="チケット小計" value={`${formatPrice(details.ticketTotalPrice)}（税込）`} />
+        <DetailRow label="フード小計" value={`${formatPrice(details.foodTotalPrice)}（税込）`} />
         {hasFood ? (
           <>
-            <DetailRow label="チケット小計" value={`${formatPrice(details.ticketTotalPrice)}（税込）`} />
-            <DetailRow label="フード小計" value={`${formatPrice(details.foodTotalPrice)}（税込）`} />
             <FoodDetailRow items={details.foodItems} />
+            <DetailRow label="受取時間" value={pickup.timeLabel} />
+            <DetailRow label="受取場所" value={pickup.locationLabel} />
           </>
-        ) : null}
-        <DetailRow label="合計金額" value={`${formatPrice(details.totalPrice)}（税込）`} />
+        ) : (
+          <DetailRow label="フード明細" value="注文なし" wide />
+        )}
+        {details.subtotalAmount !== undefined && <>
+          <DetailRow label="割引前金額" value={formatPrice(details.subtotalAmount)} />
+          <DetailRow label="クーポン割引" value={`−${formatPrice(details.couponDiscountAmount ?? 0)}`} />
+          <DetailRow label="ポイント利用" value={`−${formatPrice(details.pointsUsed ?? 0)}`} />
+          <DetailRow label="獲得ポイント" value={`${details.pointsEarned ?? 0} pt`} />
+        </>}
+        <DetailRow label="最終支払額" value={`${formatPrice(details.totalPrice)}（税込）`} />
         <DetailRow label="支払い方法" value={details.payMethod} />
         <DetailRow label="決済番号" value={details.payNum} wide />
       </dl>
@@ -49,13 +62,13 @@ export default function PurchaseSummary({ details }) {
 
 function FoodDetailRow({ items }) {
   return (
-    <div className="border-t border-[#1C0800]/10 py-4 md:col-span-2">
-      <dt className="text-sm text-[#8C5D2A]">フード明細</dt>
+    <div className="border-t border-[var(--border-subtle)] py-4 md:col-span-2">
+      <dt className="text-sm text-[var(--text-muted)]">フード明細</dt>
       <dd className="mt-3 grid gap-2">
         {items.map((item) => (
           <div key={item.id} className="flex justify-between gap-4 text-sm">
-            <span className="text-[#5C3010]">{item.name} x {item.quantity}</span>
-            <span className="font-semibold text-[#1C0800]">{formatPrice(item.lineTotal)}</span>
+            <span className="text-[var(--text-secondary)]">{item.name} x {item.quantity}</span>
+            <span className="font-semibold text-[var(--text-primary)]">{formatPrice(item.lineTotal)}</span>
           </div>
         ))}
       </dd>
@@ -65,25 +78,24 @@ function FoodDetailRow({ items }) {
 
 function Poster({ title }) {
   return (
-    <div
-      aria-label="ポスター画像"
-      className="aspect-[3/4] border border-[#1C0800]/18 bg-[#FFE9A0] p-4 text-[#5C3010]"
-    >
-      <div className="flex h-full flex-col justify-end">
-        <p className="text-[11px] font-semibold text-[#8C5D2A]">
-          MOVIE
-        </p>
-        <p className="mt-2 text-xl font-semibold leading-tight text-[#1C0800]">{title}</p>
-      </div>
+    <div className="relative aspect-[3/4] overflow-hidden border border-[var(--border-subtle)] bg-[var(--surface-muted)]">
+      <Image
+        src="/images/man.jpg"
+          loading="eager"
+        alt={`${title}のポスター`}
+        fill
+        sizes="150px"
+        className="object-cover"
+      />
     </div>
   );
 }
 
 function MiniMetric({ label, value }) {
   return (
-    <div className="border-t border-[#1C0800]/14 pt-3">
-      <p className="text-[10px] font-black uppercase tracking-[0.26em] text-[#8C5D2A]">{label}</p>
-      <p className="mt-1 font-semibold text-[#1C0800]">{value}</p>
+    <div className="border-t border-[var(--border-subtle)] pt-3">
+      <p className="text-[10px] font-black uppercase tracking-wide text-[var(--text-muted)]">{label}</p>
+      <p className="mt-1 font-semibold text-[var(--text-primary)]">{value}</p>
     </div>
   );
 }
@@ -91,12 +103,12 @@ function MiniMetric({ label, value }) {
 function DetailRow({ label, value, wide = false }) {
   return (
     <div
-      className={`flex items-center justify-between gap-4 border-t border-[#1C0800]/10 py-4 ${
+      className={`flex items-center justify-between gap-4 border-t border-[var(--border-subtle)] py-4 ${
         wide ? "md:col-span-2" : ""
       }`}
     >
-      <dt className="text-sm text-[#8C5D2A]">{label}</dt>
-      <dd className="text-right font-semibold text-[#1C0800]">{value}</dd>
+      <dt className="text-sm text-[var(--text-muted)]">{label}</dt>
+      <dd className="text-right font-semibold text-[var(--text-primary)]">{value}</dd>
     </div>
   );
 }
