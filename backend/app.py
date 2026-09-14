@@ -14,6 +14,7 @@ from schedule_routes import schedule
 from benefit_routes import benefits
 from booking_benefits import BenefitError, integer, price_purchase, apply_points, reverse_points, point_balance
 from reservation_mail import email_address, enqueue_reservation_mail
+from seat_holds import holds, consume_holds, lock_showing
 
 
 app = Flask(__name__)
@@ -25,6 +26,7 @@ app.register_blueprint(member_auth)
 app.register_blueprint(movies)
 app.register_blueprint(schedule)
 app.register_blueprint(benefits)
+app.register_blueprint(holds)
 DEFAULT_THEATER_NAME = "HAL CINEMA 名古屋栄"
 
 
@@ -417,9 +419,12 @@ def get_screening_availability():
                     WHERE rs.showing_id = ANY(%s)
                       AND rs.released_at IS NULL
                       AND o.order_status IN ('pending', 'paid')
-                    ORDER BY rs.showing_id, rs.seat_id;
+                    UNION
+                    SELECT h.showing_id, h.seat_id FROM seat_holds h
+                    WHERE h.showing_id = ANY(%s) AND h.expires_at > clock_timestamp()
+                    ORDER BY showing_id, seat_id;
                     """,
-                    (screening_ids,),
+                    (screening_ids, screening_ids),
                 )
                 rows = cursor.fetchall()
         reserved = {screening_id: [] for screening_id in screening_ids}
@@ -825,12 +830,14 @@ def create_reservation():
                 total_price = ticket_total_price + food_total_price
 
                 user_id = g.member["id"] if g.member else None
+                lock_showing(cursor, showing_id)
                 pricing = price_purchase(cursor, total_price, user_id, payload, lock=True)
                 total_price = pricing["total_price"]
                 if payment_method == "points" and total_price:
                     raise BenefitError("ポイントを入力して適用し、残額のお支払い方法を選んでください。", "payment_method")
                 if "expected_total" in payload and integer(payload["expected_total"], "確認金額") != total_price:
                     raise BenefitError("料金が更新されました。内訳を再確認してから予約してください。", "price_changed", 409)
+                consume_holds(cursor, showing_id, seat_ids)
                 order_num = create_order_num()
                 cursor.execute(
                     """

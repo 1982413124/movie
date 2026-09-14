@@ -40,6 +40,8 @@ def list_showings(movie_id=None):
             (SELECT count(*) FROM reservation_seats rs JOIN orders o ON o.id = rs.order_id
                 WHERE rs.showing_id = sh.id AND rs.released_at IS NULL
                 AND o.order_status IN ('pending', 'paid')) AS reserved_count,
+            (SELECT count(*) FROM seat_holds h WHERE h.showing_id = sh.id
+                AND h.expires_at > clock_timestamp()) AS held_count,
             EXISTS (SELECT 1 FROM reservation_seats rs WHERE rs.showing_id = sh.id) AS has_reservations
             FROM showings sh JOIN movies m ON m.id = sh.movie_id
             JOIN screens sc ON sc.id = sh.screen_id JOIN theaters t ON t.id = sc.theater_id

@@ -3,6 +3,7 @@ export default function SeatMap({
   selectedSeatIds,
   selectedScreening,
   onSeatClick,
+  disabled = false,
 }) {
   const columns = seatRows[0]?.seats.map((seat) => seat.column) ?? [];
   const seatGridStyle = { "--seat-columns": columns.length };
@@ -43,6 +44,7 @@ export default function SeatMap({
                   selectedSeatIds={selectedSeatIds}
                   onSeatClick={onSeatClick}
                   seatGridStyle={seatGridStyle}
+                  disabled={disabled}
                 />
               ))}
             </div>
@@ -65,9 +67,10 @@ function SeatMapHeader({ selectedScreening }) {
         </p>
       </div>
 
-      <div className="flex gap-4 text-xs text-[var(--text-muted)]">
+      <div className="flex flex-wrap gap-4 text-xs text-[var(--text-muted)]">
         <LegendChip label="利用可能" className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-bg)]" />
         <LegendChip label="予約済み" className="bg-[var(--disabled-bg)]" />
+        <LegendChip label="仮押さえ中" className="border border-amber-400 bg-amber-100" />
         <LegendChip
           label="選択中"
           className="bg-[var(--selection-bg)] ring-1 ring-[var(--selection-border)]"
@@ -86,7 +89,7 @@ function LegendChip({ label, className }) {
   );
 }
 
-function SeatRow({ row, selectedSeatIds, onSeatClick, seatGridStyle }) {
+function SeatRow({ row, selectedSeatIds, onSeatClick, seatGridStyle, disabled }) {
   return (
     <div
       className="seat-grid grid items-center gap-x-2 lg:gap-x-1"
@@ -101,22 +104,24 @@ function SeatRow({ row, selectedSeatIds, onSeatClick, seatGridStyle }) {
           seat={seat}
           isSelected={selectedSeatIds.includes(seat.id)}
           onSeatClick={onSeatClick}
+          disabled={disabled}
         />
       ))}
     </div>
   );
 }
 
-function SeatButton({ seat, isSelected, onSeatClick }) {
+function SeatButton({ seat, isSelected, onSeatClick, disabled }) {
   const isReserved = seat.status === "reserved";
+  const isHeld = seat.status === "held";
 
   return (
     <button
       type="button"
-      disabled={isReserved}
+      disabled={disabled || isReserved}
       aria-pressed={isSelected}
       aria-label={`${seat.label || seat.id} ${
-        isReserved ? "予約済み" : isSelected ? "選択中" : "利用可能"
+        isReserved ? "予約済み" : isHeld ? "仮押さえ中・残り時間を確認" : isSelected ? "選択中" : "利用可能"
       }`}
       onClick={() => onSeatClick(seat)}
       className={[
@@ -124,12 +129,14 @@ function SeatButton({ seat, isSelected, onSeatClick }) {
         "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]",
         isReserved
           ? "cursor-not-allowed border-[var(--border-subtle)] bg-[var(--disabled-bg)] text-[var(--disabled-text)]"
+          : isHeld
+            ? "border-amber-400 bg-amber-50 text-amber-900 hover:bg-amber-100"
           : isSelected
             ? "border-[var(--selection-border)] bg-[var(--selection-bg)] text-[var(--selection-text)] shadow-sm"
             : "border-[var(--border-subtle)] bg-[var(--surface-bg)] hover:-translate-y-[1px] hover:bg-[var(--surface-muted)] active:translate-y-[1px]",
       ].join(" ")}
     >
-      {isReserved ? "×" : isSelected ? "✓" : seat.column}
+      {isReserved ? "×" : isHeld ? "仮" : isSelected ? "✓" : seat.column}
     </button>
   );
 }

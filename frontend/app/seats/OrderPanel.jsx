@@ -18,6 +18,7 @@ export default function OrderPanel({
   validationAttempt = 0,
   availableTicketTypes = ticketTypes,
   movieId,
+  holdNotice,
 }) {
   const ticketCount = ticketSelection.totalQuantity;
   const totalPrice = ticketSelection.totalPrice;
@@ -27,6 +28,7 @@ export default function OrderPanel({
     <aside className={"md:sticky md:top-28 md:h-fit" + " " + panelStyles.panel}>
       <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-bg)] p-5 shadow-sm">
         <PanelTitle selectedScreening={selectedScreening} />
+        {holdNotice}
         <div className="mt-4 flex items-center justify-between gap-3 border-b border-[var(--border-soft)] pb-4 text-sm">
           <div><p className="font-bold">{selectedScreening.label} ～ {selectedScreening.endDayOffset ? "翌" : ""}{selectedScreening.endTime}</p><p className="mt-1 text-xs text-[var(--text-secondary)]">{selectedScreening.screenName}</p></div>
           <Link href={movieId ? `/movie-detail?movieId=${encodeURIComponent(movieId)}` : "/movie-detail"} className="shrink-0 text-xs font-bold text-[var(--accent)] underline underline-offset-4">上映回を変更</Link>

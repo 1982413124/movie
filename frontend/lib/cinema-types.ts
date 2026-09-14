@@ -15,6 +15,6 @@ export type AdminSession = { user: { id: number; name: string; email: string; ro
 export type Showing = {
   id: string; movie_id: string; movie_title: string; screen_id: string; screen_name: string;
   capacity: number; theater_name: string; show_date: string; start_time: string; end_time: string;
-  reserved_count: number; has_reservations: boolean;
+  reserved_count: number; held_count?: number; has_reservations: boolean;
 };
 export type Screen = { id: string; name: string; seat_count: number; theater_name: string };

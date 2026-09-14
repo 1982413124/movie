@@ -160,6 +160,7 @@ class AutoScheduleApiTest(unittest.TestCase):
         showing_id = detail["showings"][0]["id"]
         seats = self.client.get(f"/api/screenings/{showing_id}").json["seats"]
         self.assertEqual(len(seats), 20)
+        fixtures.hold_seats(self.customer, showing_id, [seats[0]["id"]])
         booking = self.customer.post("/api/reservations", headers=self.customer_headers, json={"movie_id": movie["id"], "screening_id": showing_id,
             "seat_ids": [seats[0]["id"]], "ticket_count": 1, "ticket_types": [{"ticket_type_id": "general", "quantity": 1}],
             "payment_method": "credit-card", "user_email": "user@example.test"})
