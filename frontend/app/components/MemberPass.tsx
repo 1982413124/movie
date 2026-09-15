@@ -88,7 +88,6 @@ export default function MemberPass({
           </p>
           <h2 className="mt-2 text-xl font-black text-[var(--member-card-text)]">会員エリア</h2>
         </div>
-        <p className="text-xs font-bold text-[var(--member-card-muted)]">表示を切り替え</p>
       </header>
 
       <div
