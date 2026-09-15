@@ -20,6 +20,9 @@ from seat_holds import holds, consume_holds, lock_showing
 app = Flask(__name__)
 CORS(app, resources={r"/api/(?!admin).*": {"origins": "*"}})
 app.config["UPLOAD_DIRECTORY"] = os.getenv("UPLOAD_DIRECTORY", str(Path(__file__).with_name("uploads")))
+app.config["MOVIE_IMAGE_STORAGE"] = os.getenv("MOVIE_IMAGE_STORAGE", "local")
+if app.config["MOVIE_IMAGE_STORAGE"] not in ("local", "database"):
+    raise RuntimeError("MOVIE_IMAGE_STORAGE must be local or database")
 app.config["ADMIN_COOKIE_SECURE"] = os.getenv("ADMIN_COOKIE_SECURE", "false" if os.getenv("FLASK_ENV") == "development" else "true").lower() == "true"
 app.register_blueprint(auth)
 app.register_blueprint(member_auth)
@@ -63,8 +66,9 @@ def health_db():
 
         return jsonify({"status": "ok", "db": row[0]})
 
-    except Exception as exc:
-        return jsonify({"status": "error", "message": str(exc)}), 500
+    except Exception:
+        app.logger.exception("Database health check failed")
+        return jsonify({"status": "error", "message": "DBに接続できません。"}), 503
 
 
 def normalize_seat_ids(value):

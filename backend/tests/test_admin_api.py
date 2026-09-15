@@ -228,7 +228,7 @@ class AdminApiTest(unittest.TestCase):
             self.assertEqual(cur.fetchone()[0], 0)
 
     def test_upload_storage_failure_has_retryable_feedback(self):
-        with patch("movie_routes.Path.mkdir", side_effect=OSError("private disk path")):
+        with patch("movie_image_storage.Path.mkdir", side_effect=OSError("private disk path")):
             response = self.client.post("/api/admin/uploads", data={"image": (io.BytesIO(png_bytes()), "poster.png")}, headers=self.headers)
         self.assertEqual(response.status_code, 503)
         self.assertNotIn("private disk", response.text)
