@@ -34,6 +34,18 @@ export function validDate(value) {
   return !Number.isNaN(+date) && date.toISOString().slice(0, 10) === value && +value.slice(0, 4) >= 1900 && +value.slice(0, 4) <= 2200;
 }
 
+export function officialSiteUrl(value) {
+  if (typeof value !== "string" || /[\u0000-\u001f\u007f\\]/.test(value)) return null;
+  const trimmed = value.trim();
+  if (!/^https?:\/\/[^/?#\s]+/i.test(trimmed) || /\s/.test(trimmed)) return null;
+  try {
+    const url = new URL(trimmed);
+    const authority = trimmed.split("/")[2];
+    if (authority.includes("@") || !/^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?\.?$/i.test(url.hostname) || url.port === "0") return null;
+    return trimmed;
+  } catch { return null; }
+}
+
 export function validateMovie(input) {
   /** @type {Record<string, string>} */
   const errors = {};
@@ -47,6 +59,12 @@ export function validateMovie(input) {
   }
   if (!errors.screening_start && !errors.screening_end && input.screening_end < input.screening_start) errors.screening_end = "終了日は開始日以降にしてください。";
   if (input.trailer_url && !youtubeId(input.trailer_url)) errors.trailer_url = "有効なYouTube動画のURLを入力してください。";
+  for (const [field, limit] of Object.entries({ director: 255, cast_members: 4000, distributor: 255, official_site_url: 2000 })) {
+    const value = input[field];
+    if (value != null && typeof value !== "string") errors[field] = "文字列で入力してください。";
+    else if ((value?.trim().length ?? 0) > limit) errors[field] = `${limit}文字以内で入力してください。`;
+  }
+  if (typeof input.official_site_url === "string" && input.official_site_url.trim() && !officialSiteUrl(input.official_site_url)) errors.official_site_url = "http:// または https:// で始まる公式サイトのURLを入力してください。";
   return errors;
 }
 

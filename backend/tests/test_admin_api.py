@@ -36,6 +36,22 @@ def png_bytes():
 
 
 class MovieRulesTest(unittest.TestCase):
+    def test_optional_credits_and_official_url_validation(self):
+        for url in ("https://example.com/movie/?lang=ja#staff", "http://example.jp", "https://映画.jp/作品"):
+            _, errors = validate_movie({"official_site_url": url})
+            self.assertNotIn("official_site_url", errors)
+        for url in ("javascript:alert(1)", "data:text/html,test", "//example.com", "https://user:pass@example.com", "https://example.com\\@evil.test", "https://example.com/\npath", "https:///example.com", "https://", "https://example.com:99999", 123):
+            with self.subTest(url=url):
+                _, errors = validate_movie({"official_site_url": url})
+                self.assertIn("official_site_url", errors)
+        for field, limit in (("director", 255), ("cast_members", 4000), ("distributor", 255), ("official_site_url", 2000)):
+            for value in ("", None):
+                _, errors = validate_movie({field: value})
+                self.assertNotIn(field, errors)
+            for value in ("a" * (limit + 1), ["invalid"]):
+                _, errors = validate_movie({field: value})
+                self.assertIn(field, errors)
+
     def test_status_includes_both_boundary_days(self):
         start, end = date(2026, 9, 10), date(2026, 9, 20)
         for day, expected in ((9, "COMING_SOON"), (10, "NOW_SHOWING"), (20, "NOW_SHOWING"), (21, "ENDED")):
@@ -135,6 +151,36 @@ class AdminApiTest(unittest.TestCase):
         with db_conn() as conn, conn.cursor() as cur:
             cur.execute("UPDATE admin_sessions SET expires_at=CURRENT_TIMESTAMP-INTERVAL '1 second'")
         self.assertEqual(self.client.get("/api/admin/session").status_code, 401)
+
+    def test_movie_credits_roundtrip_preserves_omitted_fields_and_allows_clearing(self):
+        credits = {"director": "監督 一", "cast_members": "出演者 一\n出演者 二", "distributor": "配給会社", "official_site_url": "https://example.com/film/"}
+        self.payload.update(credits)
+        movie = self.create()
+        for endpoint in (f"/api/movies/{movie['id']}", f"/api/admin/movies/{movie['id']}"):
+            saved = self.client.get(endpoint).json["movie"]
+            self.assertEqual({key: saved[key] for key in credits}, credits)
+        listed = self.client.get("/api/movies").json[0]
+        self.assertEqual({key: listed[key] for key in credits}, credits)
+        legacy_payload = {key: value for key, value in self.payload.items() if key not in credits}
+        result = self.client.put(f"/api/admin/movies/{movie['id']}", json={**legacy_payload, "title": "旧フォームから更新", "updated_at": movie["updated_at"]}, headers=self.headers)
+        self.assertEqual(result.status_code, 200, result.json)
+        saved = result.json["movie"]
+        self.assertEqual({key: saved[key] for key in credits}, credits)
+        cleared = self.client.put(f"/api/admin/movies/{movie['id']}", json={**legacy_payload, **dict.fromkeys(credits, ""), "updated_at": saved["updated_at"]}, headers=self.headers)
+        self.assertEqual(cleared.status_code, 200, cleared.json)
+        self.assertTrue(all(cleared.json["movie"][key] == "" for key in credits))
+        with db_conn() as conn, conn.cursor() as cur:
+            cur.execute("SELECT director, cast_members, distributor, official_site_url FROM movies WHERE id = %s", (movie["id"],))
+            self.assertEqual(cur.fetchone(), ("", "", "", ""))
+
+    def test_movie_official_url_is_validated_by_api_and_member_cannot_edit(self):
+        movie = self.create()
+        payload = {**self.payload, "official_site_url": "javascript:alert(1)", "updated_at": movie["updated_at"]}
+        for response in (self.client.post("/api/admin/movies", json=payload, headers=self.headers), self.client.put(f"/api/admin/movies/{movie['id']}", json=payload, headers=self.headers)):
+            self.assertEqual(response.status_code, 422, response.json)
+            self.assertIn("official_site_url", response.json["errors"])
+        response = self.customer.put(f"/api/admin/movies/{movie['id']}", json={**payload, "official_site_url": "https://example.com"}, headers=self.customer_headers)
+        self.assertIn(response.status_code, (401, 403))
 
     def test_cookies_logout_and_rate_limit(self):
         client = app.test_client()

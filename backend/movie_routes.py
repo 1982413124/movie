@@ -11,7 +11,7 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 
 from admin_auth import admin_required, failure
 from database.db import db_conn
-from movie_domain import IMAGE_TYPES, MAX_IMAGE_BYTES, MOVIE_FIELDS, validate_movie
+from movie_domain import IMAGE_TYPES, MAX_IMAGE_BYTES, MOVIE_DETAIL_LIMITS, MOVIE_FIELDS, validate_movie
 from movie_repository import get_movie, list_movies, list_showings
 from auto_schedule import ScheduleInputError, allocate_showings, daily_showings_from, schedule_message
 from movie_image_storage import image_exists, read_database_image, save_image, upload_directory, uses_database
@@ -149,8 +149,10 @@ def update_movie(movie_id):
         cur.execute("SELECT 1 FROM showings WHERE movie_id = %s AND (show_date < %s OR show_date > %s) LIMIT 1", (movie_id, clean["screening_start"], clean["screening_end"]))
         if cur.fetchone():
             return jsonify({"message": "登録済みの上映回が期間外になります。", "errors": {"screening_end": "すべての上映回を含む期間にしてください。"}}), 422
-        cur.execute(f"UPDATE movies SET {', '.join(field + ' = %s' for field in MOVIE_FIELDS)}, updated_at = clock_timestamp() WHERE id = %s",
-                    (*(clean[field] for field in MOVIE_FIELDS), movie_id))
+        # Older clients omit credits; only an explicit empty value clears them.
+        fields = [field for field in MOVIE_FIELDS if field not in MOVIE_DETAIL_LIMITS or field in payload]
+        cur.execute(f"UPDATE movies SET {', '.join(field + ' = %s' for field in fields)}, updated_at = clock_timestamp() WHERE id = %s",
+                    (*(clean[field] for field in fields), movie_id))
     return jsonify({"movie": get_movie(movie_id), "message": "変更を保存しました。"})
 
 
