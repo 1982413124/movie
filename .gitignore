@@ -61,6 +61,7 @@
 .env
 .env.*
 !.env.example
+!.env.shared.example
 secrets/
 credentials/
 *.pem
@@ -154,6 +155,7 @@ skills-lock.json
 
 # ローカルDBバックアップ
 /backups/*.sql
+/backups/
 /backend/uploads/
 /backend/test-uploads/
 

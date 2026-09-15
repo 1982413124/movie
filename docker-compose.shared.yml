@@ -1,0 +1,55 @@
+name: hal-cinema-shared
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: dockerfile
+    # Schema changes are applied once by the database operator, not by every member.
+    command: sh -c "python manage.py check-shared-db && flask run --debug --host=0.0.0.0 --port=5000"
+    ports:
+      - "127.0.0.1:${FLASK_PORT:-5000}:5000"
+    volumes:
+      - ./backend:/app
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?Set the Neon direct connection string in .env.shared}
+      FLASK_APP: app.py
+      FLASK_ENV: development
+      ADMIN_COOKIE_SECURE: "false"
+      ADMIN_ORIGINS: http://localhost:${FRONTEND_PORT:-3000},http://127.0.0.1:${FRONTEND_PORT:-3000}
+      MOVIE_IMAGE_STORAGE: database
+
+  mail-worker:
+    build:
+      context: ./backend
+      dockerfile: dockerfile
+    command: sh -c "python manage.py check-shared-db && python manage.py mail-worker"
+    volumes:
+      - ./backend:/app
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?Set the Neon direct connection string in .env.shared}
+      MAIL_ENABLED: ${MAIL_ENABLED:-false}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      MOVIE_IMAGE_STORAGE: database
+
+  frontend:
+    profiles: [frontend]
+    build:
+      context: ./frontend
+      dockerfile: dockerfile.dev
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-3000}:3000"
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+      - frontend_next:/app/.next
+    environment:
+      NODE_ENV: development
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:${FLASK_PORT:-5000}
+      API_INTERNAL_URL: http://backend:5000
+    depends_on: [backend]
+
+volumes:
+  frontend_node_modules:
+  frontend_next:

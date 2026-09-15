@@ -2,9 +2,8 @@ import io
 import re
 import uuid
 import warnings
-from pathlib import Path
 
-from flask import Blueprint, current_app, jsonify, request, send_from_directory
+from flask import Blueprint, current_app, jsonify, request, send_file, send_from_directory
 from psycopg import errors
 from psycopg.rows import dict_row
 from werkzeug.exceptions import RequestEntityTooLarge
@@ -15,13 +14,10 @@ from database.db import db_conn
 from movie_domain import IMAGE_TYPES, MAX_IMAGE_BYTES, MOVIE_FIELDS, validate_movie
 from movie_repository import get_movie, list_movies, list_showings
 from auto_schedule import ScheduleInputError, allocate_showings, daily_showings_from, schedule_message
+from movie_image_storage import image_exists, read_database_image, save_image, upload_directory, uses_database
 
 movies = Blueprint("movie_management", __name__, url_prefix="/api")
 Image.MAX_IMAGE_PIXELS = 20_000_000
-
-
-def upload_directory():
-    return Path(current_app.config["UPLOAD_DIRECTORY"])
 
 
 @movies.before_request
@@ -81,7 +77,7 @@ def validated_input():
     payload = request.get_json(silent=True)
     clean, problems = validate_movie(payload)
     poster = clean.get("poster_image", "")
-    if poster.startswith("/api/cinema/media/") and not (upload_directory() / poster.split("/")[-1]).is_file():
+    if poster.startswith("/api/cinema/media/") and not image_exists(poster.split("/")[-1]):
         problems["poster_image"] = "画像が見つかりません。もう一度アップロードしてください。"
     return payload, clean, problems
 
@@ -201,11 +197,14 @@ def upload():
                 picture = ImageOps.exif_transpose(original).convert("RGB")
                 picture.thumbnail((2400, 2400))
                 try:
-                    directory = upload_directory()
-                    directory.mkdir(parents=True, exist_ok=True)
+                    encoded = io.BytesIO()
+                    picture.save(encoded, "WEBP", quality=88)
+                    content = encoded.getvalue()
+                    if len(content) > MAX_IMAGE_BYTES:
+                        return failure("変換後の画像が5MBを超えています。小さい画像を選んでください。", 413)
                     filename = uuid.uuid4().hex + ".webp"
-                    picture.save(directory / filename, "WEBP", quality=88)
-                except OSError:
+                    save_image(filename, content)
+                except Exception:
                     current_app.logger.exception("Image storage failed")
                     return failure("画像を保存できませんでした。時間をおいて再試行してください。", 503)
         return jsonify({"url": f"/api/cinema/media/{filename}", "message": "画像を追加しました。"}), 201
@@ -219,4 +218,13 @@ def upload():
 def media(filename):
     if not re.fullmatch(r"[a-f0-9]{32}\.webp", filename):
         return failure("画像が見つかりません。", 404)
+    if uses_database():
+        try:
+            content = read_database_image(filename)
+        except Exception:
+            current_app.logger.exception("Image retrieval failed")
+            return failure("画像を取得できませんでした。再試行してください。", 503)
+        if content is None:
+            return failure("画像が見つかりません。", 404)
+        return send_file(io.BytesIO(content), mimetype="image/webp", max_age=31536000, etag=filename)
     return send_from_directory(upload_directory(), filename, mimetype="image/webp", max_age=31536000)

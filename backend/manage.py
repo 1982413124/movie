@@ -5,7 +5,6 @@ import json
 import os
 import re
 import secrets
-import time
 from pathlib import Path
 
 from werkzeug.security import generate_password_hash
@@ -18,6 +17,7 @@ def migrate():
         cur.execute(sql)
         cur.execute(Path(__file__).with_name("database").joinpath("booking_benefits_migration.sql").read_text(encoding="utf-8"))
         cur.execute(Path(__file__).with_name("database").joinpath("seat_holds_migration.sql").read_text(encoding="utf-8"))
+        cur.execute(Path(__file__).with_name("database").joinpath("shared_images_migration.sql").read_text(encoding="utf-8"))
         cur.execute("CREATE TABLE IF NOT EXISTS cinema_migrations (name TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)")
         cur.execute("INSERT INTO cinema_migrations (name) VALUES ('existing-catalog-20260910') ON CONFLICT DO NOTHING RETURNING name")
         if cur.fetchone():
@@ -28,7 +28,24 @@ def migrate():
                 cur.execute("INSERT INTO ticket_types (id, label, current_price) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING", (ticket["id"], ticket["label"], ticket["price"]))
             # Preserve the image used by the former public catalog for this existing row.
             cur.execute("UPDATE movies SET poster_image = '/images/man.jpg' WHERE id = 'movie-001' AND (poster_image IS NULL OR poster_image = '')")
+        cur.execute("INSERT INTO cinema_migrations (name) VALUES ('shared-images-20260915') ON CONFLICT DO NOTHING")
     print("Admin schema migration applied. Existing records preserved.")
+
+
+def check_shared_db():
+    if not os.getenv("DATABASE_URL"):
+        raise SystemExit("DATABASE_URL is required for shared development.")
+    with db_conn() as conn, conn.cursor() as cur:
+        cur.execute("SELECT 1 FROM cinema_migrations WHERE name = 'shared-images-20260915'")
+        if not cur.fetchone():
+            raise SystemExit("Ask the database operator to apply the latest migration first.")
+        cur.execute("""SELECT count(*) FROM movies m
+            WHERE m.poster_image LIKE '/api/cinema/media/%'
+              AND NOT EXISTS (SELECT 1 FROM movie_images i
+                  WHERE m.poster_image = '/api/cinema/media/' || i.filename)""")
+        if cur.fetchone()[0]:
+            raise SystemExit("Shared movie images are missing. Ask the operator to import-movie-images first.")
+    print("Shared database and movie images are ready.")
 
 
 def admin(email, name):
@@ -62,15 +79,8 @@ def prepare_admin(email, name):
 
 
 def prune_uploads():
-    directory = Path(os.getenv("UPLOAD_DIRECTORY", str(Path(__file__).with_name("uploads"))))
-    with db_conn() as conn, conn.cursor() as cur:
-        cur.execute("SELECT poster_image FROM movies WHERE poster_image IS NOT NULL")
-        used = {row[0].rsplit("/", 1)[-1] for row in cur.fetchall()}
-    count = 0
-    for file in directory.glob("*.webp"):
-        if re.fullmatch(r"[a-f0-9]{32}\.webp", file.name) and file.name not in used and file.stat().st_mtime < time.time() - 86400:
-            file.unlink()
-            count += 1
+    from movie_image_storage import prune_images
+    count = prune_images()
     print(f"Removed {count} unreferenced uploads older than 24 hours.")
 
 
@@ -78,6 +88,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("migrate")
+    commands.add_parser("check-shared-db")
     account = commands.add_parser("admin")
     account.add_argument("--email", required=True)
     account.add_argument("--name", required=True)
@@ -85,15 +96,22 @@ if __name__ == "__main__":
     prepared.add_argument("--email", required=True)
     prepared.add_argument("--name", required=True)
     commands.add_parser("prune-uploads")
+    images = commands.add_parser("import-movie-images")
+    images.add_argument("--directory", default=os.getenv("UPLOAD_DIRECTORY", str(Path(__file__).with_name("uploads"))))
     commands.add_parser("mail-worker")
     commands.add_parser("send-emails")
     args = parser.parse_args()
     if args.command == "migrate":
         migrate()
+    elif args.command == "check-shared-db":
+        check_shared_db()
     elif args.command == "admin":
         admin(args.email, args.name)
     elif args.command == "prepare-admin":
         prepare_admin(args.email, args.name)
+    elif args.command == "import-movie-images":
+        from movie_image_storage import import_local_images
+        print(json.dumps(import_local_images(args.directory)))
     elif args.command == "mail-worker":
         from reservation_mail import run_worker
         run_worker()
