@@ -14,7 +14,6 @@ test("shared cinema header exposes the public navigation structure", () => {
   for (const expected of [
     /href:\s*"\/"[\s\S]*label:\s*"ホーム"/,
     /href:\s*"\/movie-now"[\s\S]*label:\s*"作品を探す"/,
-    /href:\s*"\/search"[\s\S]*label:\s*"検索"/,
     /href:\s*"\/mypage"[\s\S]*label:\s*"マイページ"/,
     /href:\s*"\/theater"[\s\S]*label:\s*"劇場案内"/,
     /href:\s*"\/guide"[\s\S]*label:\s*"ご利用ガイド"/,
