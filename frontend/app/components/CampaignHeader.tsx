@@ -12,7 +12,6 @@ gsap.registerPlugin(useGSAP);
 const primaryNavItems = [
   { href: "/", label: "ホーム", meta: "Home" },
   { href: "/movie-now", label: "作品を探す", meta: "Films" },
-  { href: "/search", label: "検索", meta: "Search" },
   { href: "/mypage", label: "マイページ", meta: "My Page" },
 ];
 const menuItems = [

@@ -50,7 +50,7 @@ test("shared header keeps public menu links accessible", () => {
   assert.match(source, /aria-expanded=\{isMenuOpen\}/);
   assert.match(source, /aria-label="メインナビゲーション"/);
 
-  for (const navLabel of ["ホーム", "作品を探す", "検索", "マイページ", "劇場案内", "ご利用ガイド"]) {
+  for (const navLabel of ["ホーム", "作品を探す", "マイページ", "劇場案内", "ご利用ガイド"]) {
     assert.match(source, new RegExp(navLabel));
   }
 });
