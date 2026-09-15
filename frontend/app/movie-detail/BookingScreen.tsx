@@ -8,6 +8,7 @@ import { formatCinemaDate } from "@/lib/cinemaDate.mjs";
 import BookingCalendar from "./BookingCalendar";
 import ScreeningList from "./ScreeningList";
 import StickyBookingBar from "./StickyBookingBar";
+import MovieInformation from "./MovieInformation";
 import { useScreeningSelection } from "./useScreeningSelection";
 import styles from "./booking.module.css";
 
@@ -33,10 +34,9 @@ export default function BookingScreen({ movieId }: { movieId: string }) {
             <h1>{movie.title}</h1>
             <div className={styles.filmDescription}>
               <div className={styles.filmMeta}><span>{movie.genre}</span><span>{movie.age_rating}</span><span>{movie.duration_minutes}分</span></div>
-              <p className={styles.catchphrase} style={{ whiteSpace: "pre-line" }}>{movie.synopsis || "あらすじは準備中です。"}</p>
             </div>
           </header>
-          {movie.youtube_id && <iframe className="mb-8 aspect-video w-full max-w-xl rounded-lg" src={`https://www.youtube-nocookie.com/embed/${movie.youtube_id}`} title={`${movie.title} 公式予告編`} loading="lazy" allow="encrypted-media; picture-in-picture" allowFullScreen />}
+          <MovieInformation key={movie.id} movie={movie} />
           {booking.loadState === "ready" && !booking.schedule?.dates.length ? <p role="status" className="cinema-card my-8 p-6 text-sm">上映スケジュールは準備中です。上映情報の公開をお待ちください。</p> : <><div className={styles.dateSection}>
             <BookingCalendar selectedDate={booking.selectedDate} today={booking.schedule?.today} dates={booking.schedule?.dates ?? []}
               disabled={booking.isProceeding || !booking.schedule} onSelect={booking.chooseDate} />

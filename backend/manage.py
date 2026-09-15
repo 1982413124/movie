@@ -18,6 +18,7 @@ def migrate():
         cur.execute(Path(__file__).with_name("database").joinpath("booking_benefits_migration.sql").read_text(encoding="utf-8"))
         cur.execute(Path(__file__).with_name("database").joinpath("seat_holds_migration.sql").read_text(encoding="utf-8"))
         cur.execute(Path(__file__).with_name("database").joinpath("shared_images_migration.sql").read_text(encoding="utf-8"))
+        cur.execute(Path(__file__).with_name("database").joinpath("movie_details_migration.sql").read_text(encoding="utf-8"))
         cur.execute("CREATE TABLE IF NOT EXISTS cinema_migrations (name TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)")
         cur.execute("INSERT INTO cinema_migrations (name) VALUES ('existing-catalog-20260910') ON CONFLICT DO NOTHING RETURNING name")
         if cur.fetchone():
@@ -29,6 +30,7 @@ def migrate():
             # Preserve the image used by the former public catalog for this existing row.
             cur.execute("UPDATE movies SET poster_image = '/images/man.jpg' WHERE id = 'movie-001' AND (poster_image IS NULL OR poster_image = '')")
         cur.execute("INSERT INTO cinema_migrations (name) VALUES ('shared-images-20260915') ON CONFLICT DO NOTHING")
+        cur.execute("INSERT INTO cinema_migrations (name) VALUES ('movie-details-20260915') ON CONFLICT DO NOTHING")
     print("Admin schema migration applied. Existing records preserved.")
 
 
@@ -36,8 +38,8 @@ def check_shared_db():
     if not os.getenv("DATABASE_URL"):
         raise SystemExit("DATABASE_URL is required for shared development.")
     with db_conn() as conn, conn.cursor() as cur:
-        cur.execute("SELECT 1 FROM cinema_migrations WHERE name = 'shared-images-20260915'")
-        if not cur.fetchone():
+        cur.execute("SELECT count(*) FROM cinema_migrations WHERE name IN ('shared-images-20260915', 'movie-details-20260915')")
+        if cur.fetchone()[0] != 2:
             raise SystemExit("Ask the database operator to apply the latest migration first.")
         cur.execute("""SELECT count(*) FROM movies m
             WHERE m.poster_image LIKE '/api/cinema/media/%'

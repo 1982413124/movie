@@ -6,9 +6,11 @@ from zoneinfo import ZoneInfo
 
 MAX_IMAGE_BYTES = 5 * 1024 * 1024
 IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
+MOVIE_DETAIL_LIMITS = {"director": 255, "cast_members": 4000, "distributor": 255, "official_site_url": 2000}
 MOVIE_FIELDS = (
     "title", "genre", "duration_minutes", "age_rating", "synopsis",
     "poster_image", "release_date", "screening_start", "screening_end", "trailer_url",
+    *MOVIE_DETAIL_LIMITS,
 )
 
 
@@ -49,16 +51,31 @@ def youtube_id(value):
         return None
 
 
+def valid_official_site_url(value):
+    if not isinstance(value, str) or re.search(r"[\x00-\x20\x7f\\]", value):
+        return False
+    try:
+        url = urlparse(value)
+        host = (url.hostname or "").encode("idna").decode("ascii")
+        return bool(url.scheme in ("http", "https") and url.netloc and "@" not in url.netloc
+                    and re.fullmatch(r"[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?\.?", host)
+                    and (url.port is None or 1 <= url.port <= 65535))
+    except (ValueError, UnicodeError):
+        return False
+
+
 def validate_movie(payload):
     if not isinstance(payload, dict):
         return {}, {"form": "入力内容を確認してください。"}
     clean, problems = {}, {}
-    limits = {"title": 255, "genre": 100, "synopsis": 10000, "age_rating": 20, "poster_image": 500, "trailer_url": 500}
+    limits = {"title": 255, "genre": 100, "synopsis": 10000, "age_rating": 20, "poster_image": 500, "trailer_url": 500, **MOVIE_DETAIL_LIMITS}
     for field, limit in limits.items():
         value = payload.get(field, "")
         clean[field] = value.strip() if isinstance(value, str) else ""
         if len(clean[field]) > limit:
             problems[field] = f"{limit}文字以内で入力してください。"
+        if field in MOVIE_DETAIL_LIMITS and value is not None and not isinstance(value, str):
+            problems[field] = "文字列で入力してください。"
     for field, label in (("title", "タイトル"), ("genre", "ジャンル"), ("poster_image", "サムネイル"), ("synopsis", "あらすじ")):
         if not clean[field]:
             problems[field] = f"{label}を入力してください。"
@@ -88,4 +105,7 @@ def validate_movie(payload):
             problems["trailer_url"] = "有効なYouTube動画のURLを入力してください。"
         else:
             clean["trailer_url"] = f"https://www.youtube.com/watch?v={video_id}"
+    if clean["official_site_url"] and (not valid_official_site_url(clean["official_site_url"])
+            or re.search(r"[\x00-\x1f\x7f]", payload["official_site_url"])):
+        problems["official_site_url"] = "http:// または https:// で始まる公式サイトのURLを入力してください。"
     return clean, problems

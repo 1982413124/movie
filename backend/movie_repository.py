@@ -4,7 +4,8 @@ from movie_domain import movie_status, youtube_id
 
 MOVIE_COLUMNS = """m.id, m.title, m.genre, m.duration_minutes, m.age_rating,
     m.synopsis, m.poster_image, m.release_date, m.screening_start, m.screening_end,
-    m.trailer_url, m.created_at, m.updated_at"""
+    m.trailer_url, m.director, m.cast_members, m.distributor, m.official_site_url,
+    m.created_at, m.updated_at"""
 
 
 def serialize_movie(row):

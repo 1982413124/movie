@@ -32,6 +32,22 @@ test("images reject unsupported types, zero length and oversized files", () => {
   assert.ok(validateImage({ type: "image/png", size: 0 }));
 });
 
+test("optional movie credits and official links accept text but reject unsafe or oversized input", () => {
+  for (const url of ["https://example.com/movie/?lang=ja#staff", "http://example.jp", "https://映画.jp/作品"]) {
+    assert.equal(validateMovie({ official_site_url: url }).official_site_url, undefined);
+  }
+  for (const url of ["javascript:alert(1)", "data:text/html,test", "//example.com", "https://user:pass@example.com", "https://example.com\\@evil.test", "https://example.com/\npath", "https:///example.com", "https://", "https://example.com:99999", 123]) {
+    assert.ok(validateMovie({ official_site_url: url }).official_site_url, String(url));
+  }
+  for (const [field, limit] of [["director", 255], ["cast_members", 4000], ["distributor", 255], ["official_site_url", 2000]]) {
+    assert.equal(validateMovie({ [field]: "" })[field], undefined);
+    assert.equal(validateMovie({})[field], undefined);
+    assert.ok(validateMovie({ [field]: "a".repeat(limit + 1) })[field]);
+    assert.ok(validateMovie({ [field]: ["invalid"] })[field]);
+  }
+  assert.equal(validateMovie({ cast_members: "出演者 一\n出演者 二" }).cast_members, undefined);
+});
+
 test("50 films can be searched, filtered and sorted without mutating source", () => {
   const movies = Array.from({ length: 50 }, (_, index) => ({ id: String(index), title: `作品 ${index}`, genre: index % 2 ? "ドラマ" : "SF", status: index % 2 ? "COMING_SOON" : "NOW_SHOWING", updated_at: String(index).padStart(2, "0"), screening_start: "2026-09-10" }));
   assert.equal(filterMovies(movies, "ＳＦ", "NOW_SHOWING").length, 25);

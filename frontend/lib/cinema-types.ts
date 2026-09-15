@@ -4,12 +4,14 @@ export type Movie = {
   age_rating: string | null; synopsis: string | null; poster_image: string | null;
   release_date: string | null; screening_start: string | null; screening_end: string | null;
   trailer_url: string | null; youtube_id: string | null; status: MovieStatus;
+  director: string; cast_members: string; distributor: string; official_site_url: string;
   created_at: string; updated_at: string; showing_count?: number; has_reservations?: boolean;
 };
 export type MovieInput = {
   title: string; genre: string; duration_minutes: number; age_rating: string;
   synopsis: string; poster_image: string; release_date: string; screening_start: string;
   screening_end: string; trailer_url: string; updated_at?: string;
+  director: string; cast_members: string; distributor: string; official_site_url: string;
 };
 export type AdminSession = { user: { id: number; name: string; email: string; role: "ADMIN" }; csrf_token: string };
 export type Showing = {
