@@ -1,0 +1,63 @@
+{
+  "fps": 24,
+  "source": "../cat-login-transparent.webm",
+  "clips": {
+    "idle": [
+      148,
+      196
+    ],
+    "look": [
+      0,
+      60
+    ],
+    "groom": [
+      60,
+      148
+    ],
+    "tail": [
+      148,
+      202
+    ],
+    "stretch": [
+      202,
+      288
+    ],
+    "start": [
+      288,
+      312
+    ],
+    "walk": [
+      312,
+      344
+    ],
+    "settle": [
+      344,
+      426
+    ],
+    "rest": [
+      426,
+      492
+    ],
+    "success": [
+      492,
+      520
+    ],
+    "error": [
+      520,
+      549
+    ]
+  },
+  "loops": {
+    "idle": "forward then reverse; 4 seconds, continuous seated ear/tail motion"
+  },
+  "repairs": {
+    "success": {
+      "omittedRelativeFrames": [
+        10,
+        11,
+        12
+      ],
+      "method": "hold adjacent complete frames at 24 fps"
+    }
+  }
+}

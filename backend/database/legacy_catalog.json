@@ -1,0 +1,87 @@
+{
+  "description": "One-time import of the existing food and ticket catalog; preserve existing DB prices.",
+  "foods": [
+    {
+      "id": "set-a",
+      "name": "シネマセットA",
+      "price": 980
+    },
+    {
+      "id": "popcorn-salt",
+      "name": "塩ポップコーン",
+      "price": 520
+    },
+    {
+      "id": "drink-cola",
+      "name": "コーラ",
+      "price": 380
+    },
+    {
+      "id": "churros",
+      "name": "チュロス",
+      "price": 420
+    },
+    {
+      "id": "popcorn-caramel",
+      "name": "キャラメルポップコーン",
+      "price": 580
+    },
+    {
+      "id": "popcorn-butter-soy",
+      "name": "バター醤油ポップコーン",
+      "price": 600
+    },
+    {
+      "id": "drink-melon-soda",
+      "name": "メロンソーダ",
+      "price": 390
+    },
+    {
+      "id": "drink-iced-tea",
+      "name": "アイスティー",
+      "price": 360
+    },
+    {
+      "id": "hot-dog",
+      "name": "ホットドッグ",
+      "price": 620
+    },
+    {
+      "id": "fries",
+      "name": "ポテト",
+      "price": 460
+    },
+    {
+      "id": "ice-cream",
+      "name": "アイスクリーム",
+      "price": 420
+    },
+    {
+      "id": "chocolate",
+      "name": "チョコレート",
+      "price": 360
+    }
+  ],
+  "tickets": [
+    {
+      "id": "general",
+      "label": "一般",
+      "price": 1800
+    },
+    {
+      "id": "student",
+      "label": "大学生等",
+      "price": 1600
+    },
+    {
+      "id": "junior",
+      "label": "中学・高校",
+      "price": 1400
+    },
+    {
+      "id": "child",
+      "label": "小学生・幼児",
+      "price": 1000
+    }
+  ]
+}

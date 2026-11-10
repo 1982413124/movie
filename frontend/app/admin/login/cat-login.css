@@ -1,0 +1,46 @@
+.cat-login{--cat-navy:#303d5d;--cat-ink:#2c3545;min-height:100svh;display:flex;flex-direction:column;align-items:center;background:radial-gradient(ellipse at 50% 45%,#fdfcf8 0%,#f3f2ec 65%,#ecefe7 100%);color:var(--cat-ink);padding:0 28px;overflow-x:clip}
+.cat-login-header{width:100%;max-width:1450px;display:flex;align-items:center;justify-content:space-between;padding:30px 12px 24px;gap:20px}
+.cat-login-brand{display:flex;align-items:center;gap:12px;font-size:17px;font-weight:750;letter-spacing:.08em;line-height:1.2}
+.cat-login-brand small{display:block;font-size:8px;font-weight:550;letter-spacing:.22em;margin-top:7px;color:#5f6959}
+.cat-login-mark{width:38px;height:42px;border:1px solid #c5cbbd;border-radius:10px;display:grid;place-items:center;background:#e5eadb;color:#405342}
+.cat-login-access{font-size:10px;letter-spacing:.13em;color:#5f6959;display:flex;align-items:center;gap:8px}
+.cat-login-access>span{width:5px;height:5px;background:#738466;border-radius:50%}
+.cat-login-card{width:100%;max-width:466px;background:#fffefa;border:1px solid #e1e4da;border-radius:24px;box-shadow:0 18px 70px #29382309,0 2px 7px #29382304;margin:auto;padding:13px 38px 27px;position:relative;transition:border-color .2s,box-shadow .2s}
+.cat-login-card.is-success{border-color:#97b292;box-shadow:0 14px 65px #4c794315}
+.hal-cat-scene{position:relative;margin:0 -22px}
+.hal-cat-stage{height:206px;position:relative;overflow:hidden;isolation:isolate;pointer-events:none}
+.hal-cat-halo{position:absolute;left:50%;bottom:17px;width:158px;height:158px;transform:translateX(-50%);border-radius:50%;background:radial-gradient(circle at 50% 35%,#f3f1de,#eaf0e2 73%);opacity:.8;transition:background .2s}
+.hal-cat-scene[data-mood=success] .hal-cat-halo{background:#e5efd9}
+.hal-cat-scene[data-mood=error] .hal-cat-halo{background:#f5e9df}
+.hal-cat-sprite{position:absolute;width:min(270px,62%);aspect-ratio:16/9;left:23%;bottom:8px;will-change:transform}
+.hal-cat-facing{position:absolute;inset:0;transform-origin:44% 100%;transition:transform .25s ease-in-out}
+.hal-cat-video,.hal-cat-poster{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.hal-cat-poster{opacity:1}.hal-cat-video{opacity:0;transition:opacity .1s linear}.hal-cat-sprite.is-ready .hal-cat-poster{opacity:0}.hal-cat-sprite.is-ready .hal-cat-video.is-active{opacity:1}
+.hal-cat-sparkles{position:absolute;inset:0;pointer-events:none;color:#b79845}
+.hal-cat-sparkles>span{position:absolute;top:0;left:20%;font-size:21px;animation:cat-sparkle 1.8s ease-out both}
+.hal-cat-sparkles>span:nth-child(2){left:63%;top:14%;font-size:27px;animation-delay:.15s}
+.hal-cat-sparkles>span:nth-child(3){left:45%;top:-13%;font-size:16px;animation-delay:.3s}
+@keyframes cat-sparkle{0%{opacity:0;transform:translateY(8px) scale(.4)}25%,70%{opacity:1;transform:translateY(-5px) scale(1)}100%{opacity:0;transform:translateY(-16px) scale(.8)}}
+.hal-cat-floor{height:1px;position:absolute;bottom:13px;left:12%;right:12%;background:linear-gradient(90deg,transparent,#d5dccb 23%,#d5dccb 77%,transparent);z-index:-1}
+.cat-login-intro{text-align:center;margin:3px 0 24px}
+.cat-login-eyebrow{font-size:9px;font-weight:650;letter-spacing:.2em;color:#6d7965}
+.cat-login-intro h1{font-size:25px;letter-spacing:.015em;line-height:1.5;font-weight:700;margin:6px 0}
+.cat-login-intro p{font-size:12px;color:#70766c}
+.cat-login-form>label{display:block;font-size:12px;font-weight:620;margin:17px 0 7px;color:#434d4a}
+.cat-login-form>input{display:block;width:100%;height:47px;border:1px solid #d9dfd4;border-radius:8px;background:#fff;color:#283445;padding:0 13px;font-size:13px;outline-offset:3px}
+.cat-login-form>input::placeholder{color:#92988c;font-size:12px}
+.cat-login-form>input:focus{border-color:#718866;box-shadow:0 0 0 3px #9aae7921;outline:none}
+.cat-login-form>input:disabled{background:#f4f5ef;color:#77816e;opacity:1}
+.cat-login-submit{width:100%;min-height:47px;border:1px solid var(--cat-navy);border-radius:8px;display:flex;align-items:center;justify-content:center;gap:10px;padding:11px 15px;background:var(--cat-navy);color:#fff;font-size:13px;font-weight:600}
+.cat-login-submit>span:not(.admin-spinner){flex:1}
+.cat-login-submit>svg{width:17px;height:17px}
+.cat-login-submit:hover:not(:disabled){background:#405071;border-color:#405071;box-shadow:0 4px 10px #303d5d1b}
+.cinema-admin .cat-login-submit:disabled{opacity:1;cursor:wait}
+.cat-login-card.is-success .cat-login-submit{background:#3d6247;border-color:#3d6247}
+.cat-login-result{min-height:30px;display:flex;align-items:center;justify-content:center;gap:6px;color:#366344;font-size:12px;font-weight:650;padding:4px 0}
+.cat-login-help{text-align:center;font-size:10px;line-height:1.8;color:#5f6959;margin-top:18px!important}
+.cat-login-notice,.cat-login-error{font-size:12px;line-height:1.7;padding:11px 13px;border-radius:7px;background:#f7eeea;color:#974b3d;border:1px solid #eed7cd;margin:10px 0}
+.cat-login-footer{width:100%;max-width:1450px;display:flex;justify-content:space-between;gap:20px;padding:27px 12px 24px;font-size:9px;letter-spacing:.13em;color:#5f6959}
+@media(min-height:850px){.cat-login-card{padding-top:20px;padding-bottom:34px}.hal-cat-stage{height:224px}.hal-cat-sprite{width:min(290px,66%)}.hal-cat-halo{width:174px;height:174px}.cat-login-intro{margin-bottom:28px}}
+@media(max-width:540px){.cat-login{padding:0 18px}.cat-login-header{padding:21px 2px 24px}.cat-login-brand{font-size:15px;gap:9px}.cat-login-mark{width:32px;height:36px}.cat-login-access{font-size:8px;letter-spacing:.08em}.cat-login-card{padding:8px 24px 25px;border-radius:20px}.hal-cat-scene{margin:0 -14px}.hal-cat-stage{height:180px}.hal-cat-sprite{width:62%}.hal-cat-halo{width:140px;height:140px}.cat-login-intro{margin-bottom:21px}.cat-login-intro h1{font-size:23px}.cat-login-form>input{font-size:16px}.cat-login-footer{padding:25px 1px 20px;font-size:8px}.cat-login-footer>span:last-child{display:none}.cat-login-help{font-size:10px}}
+@media(prefers-reduced-motion:reduce){.cat-login *{transition:none!important;animation:none!important}.hal-cat-sprite{will-change:auto}}

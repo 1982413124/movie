@@ -61,6 +61,7 @@
 .env
 .env.*
 !.env.example
+!.env.shared.example
 secrets/
 credentials/
 *.pem
@@ -151,3 +152,15 @@ proxy/
 .agents/
 .codegraph/
 skills-lock.json
+
+# ローカルDBバックアップ
+/backups/*.sql
+/backups/
+/backend/uploads/
+/backend/test-uploads/
+
+# 管理者ログインで使用する透過動画
+!/frontend/public/images/UI/login/cat-actions/*.webm
+
+# ダウンロード時の補助情報
+*Zone.Identifier

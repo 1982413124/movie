@@ -29,6 +29,7 @@ test("register stores an account and auto-selects it even when phone is blank", 
   const storage = createStorage();
 
   const result = registerAccount(storage, {
+    createdAt: "2026-04-01T00:00:00+09:00",
     email: "user@example.com",
     name: "Test User",
     password: "secret123",
@@ -38,6 +39,7 @@ test("register stores an account and auto-selects it even when phone is blank", 
   assert.equal(result.ok, true);
   assert.equal(result.account.phone, "");
   assert.deepEqual(getCurrentAccount(storage), {
+    createdAt: "2026-04-01T00:00:00+09:00",
     email: "user@example.com",
     name: "Test User",
     password: "secret123",
@@ -49,6 +51,7 @@ test("register rejects duplicate emails", () => {
   const storage = createStorage();
 
   registerAccount(storage, {
+    createdAt: "2026-04-01T00:00:00+09:00",
     email: "user@example.com",
     name: "Test User",
     password: "secret123",
@@ -103,6 +106,7 @@ test("updating the current account persists profile edits", () => {
   const storage = createStorage();
 
   registerAccount(storage, {
+    createdAt: "2026-04-01T00:00:00+09:00",
     email: "user@example.com",
     name: "Test User",
     password: "secret123",
@@ -116,6 +120,7 @@ test("updating the current account persists profile edits", () => {
 
   assert.equal(result.ok, true);
   assert.deepEqual(getCurrentAccount(storage), {
+    createdAt: "2026-04-01T00:00:00+09:00",
     email: "user@example.com",
     name: "Updated User",
     password: "secret123",

@@ -4,10 +4,10 @@ export default function CompletionActions() {
   return (
     <nav className="grid gap-3 sm:grid-cols-2" aria-label="購入完了後の操作">
       <Link
-        href="/purchase-history"
+        href="/mypage"
         className="rounded-lg bg-[var(--button-bg)] px-5 py-4 text-center text-sm font-bold text-[var(--button-text)] transition-colors hover:bg-[var(--button-hover)]"
       >
-        購入履歴へ
+        マイページで確認
       </Link>
       <Link
         href="/"

@@ -2,3 +2,7 @@ __pycache__
 *.pyc
 .venv
 .git
+uploads
+test-uploads
+.env
+.env.*

@@ -1,44 +1,29 @@
 export default function CompletionHeader({ details }) {
   return (
-    <section className="border border-[#1C0800]/14 bg-white p-8 shadow-[0_18px_60px_rgba(28,8,0,0.08)]">
-      <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
-        <div>
-          <p className="text-[10px] font-black uppercase tracking-[0.32em] text-[#8C5D2A]">
+    <section className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-bg)] p-8 shadow-sm">
+      <div>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-[10px] font-black uppercase tracking-wide text-[var(--text-muted)]">
             購入完了
           </p>
-          <h1 className="mt-3 text-3xl font-black uppercase leading-tight text-[#1C0800]">
+          <span className="shrink-0 border border-[var(--success)]/35 bg-[var(--success)]/8 px-4 py-2 text-sm font-bold text-[var(--success)]">
+            支払い済み
+          </span>
+        </div>
+        <div>
+          <h1 className="cinema-page-title mt-3   uppercase leading-tight text-[var(--text-primary)]">
             {details.completeTitle}
           </h1>
-          <p className="mt-5 max-w-[58ch] text-sm leading-7 text-[#5C3010]">
+          <p className="mt-5 max-w-[58ch] text-sm leading-7 text-[var(--text-secondary)]">
             {details.completeMessage}
           </p>
-          <p className="mt-2 max-w-[58ch] text-sm leading-7 text-[#8C5D2A]">
+          <p className="mt-2 max-w-[58ch] text-sm leading-7 text-[var(--text-muted)]">
             {details.mailGuide}
           </p>
         </div>
-
-        <div
-          aria-label="完了アイコン"
-          className="grid h-20 w-20 shrink-0 place-items-center border border-[#C8860A]/40 bg-[#FFE9A0] text-[#C8860A]"
-        >
-          <svg
-            aria-hidden="true"
-            className="h-10 w-10"
-            fill="none"
-            viewBox="0 0 48 48"
-          >
-            <path
-              d="M13 24.8 20.2 32 36 16"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="3.5"
-            />
-          </svg>
-        </div>
       </div>
 
-      <dl className="mt-8 grid gap-4 border-t border-[#1C0800]/14 pt-6 sm:grid-cols-2">
+      <dl className="mt-8 grid gap-4 border-t border-[var(--border-subtle)] pt-6 sm:grid-cols-2">
         <HeaderMetric label="注文番号" value={details.orderNum} />
         <HeaderMetric label="購入日時" value={details.purchaseDatetime} />
       </dl>
@@ -49,8 +34,8 @@ export default function CompletionHeader({ details }) {
 function HeaderMetric({ label, value }) {
   return (
     <div>
-      <dt className="text-[10px] font-black uppercase tracking-[0.28em] text-[#8C5D2A]">{label}</dt>
-      <dd className="mt-1 font-mono text-lg font-semibold text-[#1C0800]">
+      <dt className="text-[10px] font-black uppercase tracking-wide text-[var(--text-muted)]">{label}</dt>
+      <dd className="mt-1 font-mono text-lg font-semibold text-[var(--text-primary)]">
         {value}
       </dd>
     </div>
