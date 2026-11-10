@@ -5,8 +5,9 @@ export const movieDetail = {
   genre: "ジャンル",
   durationMinutes: 124,
   ageRating: "G",
-  synopsis:
-    "映画のあらすじがここに入る",
+  synopsis: "映画のあらすじがここに入る",
+  imageSrc: "/images/man.jpg",
+  imageAlt: "映画のタイトル ポスター",
 };
 
 export const screenings = [

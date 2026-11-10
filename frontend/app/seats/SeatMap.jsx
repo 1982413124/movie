@@ -10,14 +10,14 @@ export default function SeatMap({
     <div className="p-6">
       <SeatMapHeader selectedScreening={selectedScreening} />
 
-      <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 md:p-6">
-        <div className="mx-auto mb-9 h-10 max-w-3xl border-t-2 border-gray-700 pt-3 text-center text-xs font-semibold text-gray-700">
+      <div className="border border-[#1C0800]/14 bg-[#FFF8E1] p-4 md:p-6">
+        <div className="mx-auto mb-9 h-10 max-w-3xl border-t-2 border-[#1C0800] pt-3 text-center text-[10px] font-black uppercase tracking-[0.32em] text-[#1C0800]">
           スクリーン
         </div>
 
         <div className="overflow-x-auto pb-2">
           <div className="mx-auto min-w-[620px] max-w-4xl">
-            <div className="mb-3 grid grid-cols-[34px_repeat(7,minmax(48px,1fr))] gap-x-7 text-center font-mono text-[11px] text-gray-600">
+            <div className="mb-3 grid grid-cols-[34px_repeat(7,minmax(48px,1fr))] gap-x-7 text-center font-mono text-[11px] text-[#8C5D2A]">
               <span />
               {columns.map((column) => (
                 <span key={column}>{column}</span>
@@ -45,20 +45,20 @@ function SeatMapHeader({ selectedScreening }) {
   return (
     <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
       <div>
-        <h2 className="text-lg font-bold text-gray-800">
+        <h2 className="text-lg font-black uppercase tracking-[0.08em] text-[#1C0800]">
           {selectedScreening.theaterName}
         </h2>
-        <p className="mt-1 text-sm text-gray-600">
+        <p className="mt-1 text-xs text-[#8C5D2A]">
           空席のみ複数選択できます。選択済みの座席は再度押すと解除されます。
         </p>
       </div>
 
-      <div className="flex gap-4 text-xs text-gray-600">
-        <LegendChip label="利用可能" className="border border-gray-300 bg-white" />
-        <LegendChip label="予約済み" className="bg-gray-400" />
+      <div className="flex gap-4 text-xs text-[#8C5D2A]">
+        <LegendChip label="利用可能" className="border border-[#1C0800]/22 bg-white" />
+        <LegendChip label="予約済み" className="bg-[#1C0800]/30" />
         <LegendChip
           label="選択中"
-          className="bg-[var(--selection-bg)] ring-1 ring-[var(--selection-border)]"
+          className="bg-[#1C0800] ring-1 ring-[#1C0800]"
         />
       </div>
     </div>
@@ -77,7 +77,7 @@ function LegendChip({ label, className }) {
 function SeatRow({ row, selectedSeatIds, onSeatClick }) {
   return (
     <div className="grid grid-cols-[34px_repeat(7,minmax(48px,1fr))] items-center gap-x-7">
-      <span className="font-mono text-[11px] font-semibold text-gray-600">
+      <span className="font-mono text-[11px] font-semibold text-[#8C5D2A]">
         {row.row}
       </span>
       {row.seats.map((seat) => (
@@ -106,12 +106,12 @@ function SeatButton({ seat, isSelected, onSeatClick }) {
       onClick={() => onSeatClick(seat)}
       className={[
         "h-8 rounded-sm border text-[0px] transition duration-200",
-        "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-700",
+        "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1C0800]",
         isReserved
-          ? "cursor-not-allowed border-gray-400 bg-gray-400 opacity-70"
+          ? "cursor-not-allowed border-[#1C0800]/20 bg-[#1C0800]/20 opacity-70"
           : isSelected
-            ? "border-[var(--selection-border)] bg-[var(--selection-bg)] shadow-sm"
-            : "border-gray-300 bg-white hover:-translate-y-[1px] hover:bg-gray-100 active:translate-y-[1px]",
+            ? "border-[#1C0800] bg-[#1C0800] shadow-sm"
+            : "border-[#1C0800]/22 bg-white hover:-translate-y-[1px] hover:bg-[#FFF0C0] active:translate-y-[1px]",
       ].join(" ")}
     >
       {seat.id}

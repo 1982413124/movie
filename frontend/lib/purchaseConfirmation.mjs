@@ -42,11 +42,14 @@ export function buildPurchaseConfirmation(draft) {
   return {
     movieTitle: movieDetail.title,
     posterLabel: movieDetail.title,
+    posterSrc: draft?.posterSrc ?? movieDetail.imageSrc ?? "",
+    posterAlt: draft?.posterAlt ?? movieDetail.imageAlt ?? "",
     theaterName: screening.theaterName,
     screeningDatetime: `${screening.dateLabel} ${draft?.screeningTime ?? screening.label}`,
     screenName: draft?.screenName ?? screening.screenName,
     seatNum: formatSeatNumbers(seatIds),
     ticketNum,
+    foodItems: Array.isArray(draft?.foodItems) ? draft.foodItems : [],
     totalPrice: draft?.totalPrice ?? screening.price * ticketNum,
   };
 }

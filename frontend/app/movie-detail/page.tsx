@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import Header from "../components/Header";
+import { useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import CampaignHeader from "../components/CampaignHeader";
+import { getMovieById } from "../../lib/movieData";
 
-// サンプル上映日・上映時間データ
 const days = ["11", "12", "13", "14", "15", "16"];
+
 const timeTable: Record<string, { time: string; seats: string }[]> = {
   "11": [
     { time: "08:30 - 10:40", seats: "40/70" },
@@ -34,101 +36,178 @@ const timeTable: Record<string, { time: string; seats: string }[]> = {
   ],
 };
 
-export default function MovieDetailPage() {
+function MovieDetailContent() {
+  const searchParams = useSearchParams();
+  const id = Number(searchParams.get("id"));
+  const movie = getMovieById(id);
+
   const [selectedDay, setSelectedDay] = useState(days[0]);
   const [selectedTime, setSelectedTime] = useState(timeTable[days[0]][0].time);
 
-  // 日付が変わったら時間もリセット
   const handleDayClick = (day: string) => {
     setSelectedDay(day);
     setSelectedTime(timeTable[day][0].time);
   };
 
-  return (
-    <div className="font-sans bg-gray-100 min-h-screen">
-      {/* ヘッダー */}
-      <Header />
+  if (!movie) {
+    return (
+      <div className="py-24 text-center">
+        <p className="text-sm font-bold text-[#A0703A]">映画が見つかりません</p>
+        <Link href="/movie-now" className="mt-6 inline-block text-xs font-black uppercase tracking-[0.18em] text-[#E82020] underline">
+          一覧に戻る
+        </Link>
+      </div>
+    );
+  }
 
-      {/* メイン */}
-      <main className="flex p-12 max-w-5xl mx-auto bg-white mt-12 rounded-xl shadow-lg">
-        {/* ポスター画像 */}
-        <div className="w-56 h-80 bg-gray-300 flex items-center justify-center text-sm text-gray-500 mr-8">
-          ポスター画像
+  return (
+    <section className="grid gap-8 border border-[#1C0800]/14 bg-white p-4 shadow-[0_24px_80px_rgba(0,0,0,0.10)] lg:grid-cols-[360px_1fr] lg:p-6">
+      <div className="relative overflow-hidden">
+        <img
+          src={movie.imageSrc}
+          alt={movie.imageAlt}
+          className="w-full h-auto"
+        />
+        <div className="absolute left-4 top-4 bg-[#1C0800] px-4 py-2 text-xs font-black uppercase tracking-[0.22em] text-white">
+          {movie.screen}
         </div>
-        {/* 映画情報 */}
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold mb-1">映画タイトル</h1>
-          <div className="text-gray-500 mb-2">
-            サブタイトル（例：HOME COMING）
-          </div>
-          <div className="flex gap-2 mb-2">
-            <span className="border border-gray-500 rounded px-2 py-0.5 text-xs">
-              ジャンル
+      </div>
+
+      <div className="flex flex-col">
+        <div className="border-b border-[#1C0800]/14 pb-6">
+          <p className="text-xs font-black uppercase tracking-[0.28em] text-[#A0703A]">
+            {movie.genre}
+          </p>
+
+          <h2 className="mt-4 text-4xl font-black uppercase leading-none sm:text-6xl">
+            {movie.titleEn}
+          </h2>
+
+          <p className="mt-3 text-sm font-bold text-[#8C5D2A]">
+            {movie.title}
+          </p>
+
+          <div className="mt-5 flex flex-wrap gap-2">
+            <span className="border border-[#1C0800]/25 px-3 py-1 text-xs font-bold">
+              {movie.genre}
             </span>
-            <span className="border border-gray-500 rounded px-2 py-0.5 text-xs">
-              アクション
+            <span className="border border-[#1C0800]/25 px-3 py-1 text-xs font-bold">
+              {movie.rating}
             </span>
           </div>
-          <div className="flex items-center gap-4 mb-2">
-            <span>上映時間 2時間13分</span>
-            <span>13+</span>
+        </div>
+
+        <div className="grid gap-6 border-b border-[#1C0800]/14 py-6 sm:grid-cols-3">
+          <Info label="上映時間" value={`${movie.hours}時間${movie.minutes}分`} />
+          <Info label="上映スクリーン" value={movie.screen} />
+          <Info label="本日の上映" value={movie.schedule} />
+        </div>
+
+        <div className="border-b border-[#1C0800]/14 py-6">
+          <h3 className="text-sm font-black uppercase tracking-[0.22em]">
+            Story
+          </h3>
+          <p className="mt-3 text-sm leading-7 text-[#5C3010]">
+            {movie.synopsis}
+          </p>
+        </div>
+
+        <div className="py-6">
+          <h3 className="text-sm font-black uppercase tracking-[0.22em]">
+            Select Date
+          </h3>
+
+          <div className="mt-4 grid grid-cols-6 gap-2">
+            {days.map((day) => (
+              <button
+                key={day}
+                type="button"
+                onClick={() => handleDayClick(day)}
+                className={`min-h-14 border text-lg font-black transition ${
+                  selectedDay === day
+                    ? "bg-[#1C0800] text-white"
+                    : "bg-white text-[#1C0800] hover:bg-[#FFF0C0]"
+                }`}
+              >
+                {day}
+              </button>
+            ))}
           </div>
-          <div className="mb-4">
-            <strong>あらすじ</strong>
-            <div className="text-sm text-gray-700 mt-1">
-              ここに映画のあらすじが入ります。ここに映画のあらすじが入ります。ここに映画のあらすじが入ります。
-            </div>
-          </div>
-          {/* 上映日選択 */}
-          <div className="mb-3">
-            <div className="font-bold mb-1">上映日を選択</div>
-            <div className="flex gap-2">
-              {days.map((day) => (
-                <button
-                  key={day}
-                  className={`px-3 py-2 rounded border border-gray-500 text-base ${selectedDay === day ? "bg-gray-200 font-bold" : "bg-white"}`}
-                  onClick={() => handleDayClick(day)}
-                >
-                  {day}
-                </button>
-              ))}
-            </div>
-          </div>
-          {/* 上映時間選択 */}
-          <div className="mb-4">
-            <div className="font-bold mb-1">上映時間を選択</div>
-            <div className="flex gap-3">
-              {timeTable[selectedDay].map((slot) => (
+        </div>
+
+        <div className="pb-6">
+          <h3 className="text-sm font-black uppercase tracking-[0.22em]">
+            Select Time
+          </h3>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {timeTable[selectedDay].map((slot) => {
+              const soldOut = slot.seats === "70/70";
+              const selected = selectedTime === slot.time;
+
+              return (
                 <button
                   key={slot.time}
-                  className={`px-4 py-2 rounded border text-left ${
-                    selectedTime === slot.time
-                      ? "border-[var(--selection-border)] bg-[var(--selection-bg)] font-bold text-[var(--selection-text)]"
-                      : "border-gray-500 bg-white"
-                  } ${
-                    slot.seats === "70/70"
-                      ? "text-gray-400"
-                      : selectedTime === slot.time
-                        ? "text-[var(--selection-text)]"
-                        : "text-gray-900"
-                  }`}
+                  type="button"
+                  disabled={soldOut}
                   onClick={() => setSelectedTime(slot.time)}
-                  disabled={slot.seats === "70/70"}
+                  className={`border p-4 text-left transition ${
+                    selected
+                      ? "border-[#1C0800] bg-[#1C0800] text-white"
+                      : "border-[#1C0800]/20 bg-white text-[#1C0800] hover:border-[#1C0800]"
+                  } ${soldOut ? "cursor-not-allowed opacity-35" : ""}`}
                 >
-                  <div>{slot.time}</div>
-                  <div className="text-xs text-gray-500">{slot.seats} 席</div>
+                  <div className="text-lg font-black">{slot.time}</div>
+                  <div className="mt-2 text-xs font-bold tracking-[0.14em]">
+                    {soldOut ? "SOLD OUT" : `${slot.seats} 席`}
+                  </div>
                 </button>
-              ))}
-            </div>
+              );
+            })}
           </div>
-          {/* 座席選択ボタン */}
-          <Link href="/seats">
-            <button className="w-full py-3 bg-gray-700 text-white rounded-lg text-lg font-bold hover:bg-gray-800 transition-colors">
-              座席を選択する
-            </button>
-          </Link>
         </div>
+
+        <Link
+          href="/food"
+          className="mt-auto flex min-h-14 items-center justify-center bg-[#1C0800] text-sm font-black uppercase tracking-[0.2em] text-white transition hover:bg-[#2b2b2b]"
+        >
+          座席を選択する
+        </Link>
+      </div>
+    </section>
+  );
+}
+
+export default function MovieDetailPage() {
+  return (
+    <div className="min-h-screen bg-[#FFF8E1] text-[#1C0800]">
+      <CampaignHeader />
+
+      <main className="mx-auto max-w-7xl px-5 py-12 sm:px-8 lg:px-12">
+        <div className="mb-8 border-b border-[#1C0800]/14 pb-6">
+          <p className="text-xs font-black uppercase tracking-[0.38em] text-[#8C5D2A]">
+            Movie Reservation
+          </p>
+          <h1 className="mt-3 text-5xl font-black uppercase leading-none sm:text-7xl">
+            DETAIL
+          </h1>
+        </div>
+
+        <Suspense fallback={<div className="py-24 text-center text-sm text-[#A0703A]">読み込み中...</div>}>
+          <MovieDetailContent />
+        </Suspense>
       </main>
+    </div>
+  );
+}
+
+function Info({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div className="text-xs font-black uppercase tracking-[0.2em] text-[#A0703A]">
+        {label}
+      </div>
+      <div className="mt-2 text-lg font-black">{value}</div>
     </div>
   );
 }

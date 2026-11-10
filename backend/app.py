@@ -1,6 +1,7 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 from database.db import db_conn
+from werkzeug.security import generate_password_hash
 
 
 # Flaskアプリ
@@ -73,7 +74,66 @@ def get_movies():
 
     except Exception as exc:
         return jsonify({"status": "error", "message": str(exc)}), 500
+    
+@app.post("/api/register")
+def register():
+    """
+    ユーザー新規登録API
+    """
+    # JSON送信(fetch)と通常フォーム送信(x-www-form-urlencoded)の両方を受ける
+    payload = request.get_json(silent=True) or request.form.to_dict() or {}
 
+    name = str(payload.get("name", "")).strip() # 前後の空白を削除
+    email = str(payload.get("email", "")).strip().lower() # 前後の空白を削除と小文字統一
+    password = str(payload.get("password", "")).strip()
+
+    if not name or not email or not password:
+        return (
+            jsonify({"status": "error", "message": "名前とメールアドレスとパスワードは必須です"}),
+            400,
+        )
+    
+    try:
+        # DB接続とメアド重複チェック
+        with db_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT 1 FROM users WHERE email = %s;", (email,))
+                if cur.fetchone():
+                    return (
+                        jsonify({"status": "error", "message": "このメールアドレスは既に登録されています"}),
+                        409,
+                    )
+                
+                # パスワードハッシュ化
+                hashed_password = generate_password_hash(password)
+
+                # DBにINSERT
+                cur.execute(
+                    """
+                    INSERT INTO users (name, email, password)
+                    VALUES (%s, %s, %s)
+                    RETURNING id, name, email, created_at
+                    """,
+                    (name, email, hashed_password) # ←VALUESに入れる中身
+                )
+                user_row = cur.fetchone()
+        return (
+            jsonify(
+                {
+                    "status": "ok",
+                    "user": {
+                        "id": user_row[0],
+                        "name": user_row[1],
+                        "email": user_row[2],
+                        "created_at": user_row[3].isoformat() if user_row[3] else None,
+                    }
+                }
+            ),
+            201,
+        )
+
+    except Exception as exc:
+        return jsonify({"status": "error", "message": str(exc)}), 500
 
 # このファイルを直接実行したときだけ起動する
 if __name__ == "__main__":

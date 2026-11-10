@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import Header from "../components/Header";
+import CampaignHeader from "../components/CampaignHeader";
 import {
   getCurrentAccount,
   logoutAccount,
@@ -121,7 +121,7 @@ export default function MyPage() {
   if (currentAccount === undefined) {
     return (
       <div className="min-h-screen bg-[var(--page-bg)] font-sans text-[var(--text-primary)]">
-        <Header />
+        <CampaignHeader />
         <main className="mx-auto flex min-h-[calc(100vh-97px)] max-w-3xl items-center justify-center px-6 py-10">
           <p className="text-sm text-[var(--text-muted)]">読み込み中...</p>
         </main>
@@ -144,7 +144,7 @@ export default function MyPage() {
 
   return (
     <div className="min-h-screen bg-[var(--page-bg)] font-sans text-[var(--text-primary)]">
-      <Header />
+      <CampaignHeader />
 
       <div className="mx-6 mt-4 flex items-center gap-5 rounded-lg bg-[var(--surface-bg)] px-6 py-4">
         <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full bg-[var(--surface-muted)]">

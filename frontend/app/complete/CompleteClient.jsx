@@ -17,7 +17,7 @@ export default function CompleteClient() {
   }
 
   return (
-    <main className="mx-auto grid w-full max-w-6xl gap-6 px-4 py-8 text-gray-800 md:grid-cols-[minmax(0,0.85fr)_minmax(420px,1.15fr)]">
+    <main className="mx-auto grid w-full max-w-6xl gap-6 px-4 py-8 text-[#1C0800] md:grid-cols-[minmax(0,0.85fr)_minmax(420px,1.15fr)]">
       <div className="space-y-6">
         <CompletionHeader details={details} />
         <CompletionActions />

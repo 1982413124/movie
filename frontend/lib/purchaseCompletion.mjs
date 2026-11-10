@@ -17,6 +17,8 @@ export function buildPurchaseCompletion(draft, options = {}) {
     purchaseDatetime: formatPurchaseDatetime(now),
     movieTitle: movieDetail.title,
     posterLabel: movieDetail.title,
+    posterSrc: draft?.posterSrc ?? movieDetail.imageSrc ?? "",
+    posterAlt: draft?.posterAlt ?? movieDetail.imageAlt ?? "",
     screeningDatetime: `${screening.dateLabel} ${draft?.screeningTime ?? screening.label}`,
     screenName: draft?.screenName ?? screening.screenName,
     theaterName: screening.theaterName,
